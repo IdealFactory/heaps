@@ -42,6 +42,7 @@ class Buffers {
 	public var fragment : ShaderBuffers;
 
 	public function new( s : hxsl.RuntimeShader ) {
+		trace(s.vertex);
 		vertex = new ShaderBuffers(s.vertex);
 		fragment = new ShaderBuffers(s.fragment);
 	}

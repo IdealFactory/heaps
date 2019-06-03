@@ -43,7 +43,7 @@ class Text extends Drawable {
 		this.font = font;
 		textAlign = Left;
 		letterSpacing = 1;
-		lineSpacing = 0;
+        lineSpacing = 0;
 		text = "";
 		textColor = 0xFFFFFF;
 	}
@@ -52,13 +52,13 @@ class Text extends Drawable {
 		if( this.font == font ) return font;
 		this.font = font;
 		if ( font != null ) {
-			#if lime
-			if( font.tile.getTexture().format == ALPHA ){
-				if( waShader == null ) addShader( waShader = new h3d.shader.WhiteAlpha() );
-			}else{
-				if( waShader != null ) removeShader( waShader );
-			}
-			#end
+            #if lime
+            if( font.tile.getTexture().format == RGBA ){
+                if( waShader == null ) addShader( waShader = new h3d.shader.WhiteAlpha() );
+            }else{
+                if( waShader != null ) removeShader( waShader );
+            }
+            #end
 			switch( font.type ) {
 				case BitmapFont:
 					if ( sdfShader != null ) {
@@ -253,7 +253,7 @@ class Text extends Drawable {
 			var offs = e.getKerningOffset(prevChar);
 			var esize = e.width + offs;
 			// if the next word goes past the max width, change it into a newline
-
+			
 			if( cc == '\n'.code ) {
 				if( x > xMax ) xMax = x;
 				if( calcLines ) lines.push(Math.ceil(x));

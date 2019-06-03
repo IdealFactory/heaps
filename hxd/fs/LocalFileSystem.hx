@@ -81,6 +81,10 @@ class LocalEntry extends FileEntry {
 		image.src = "file://"+file;
 		#elseif (macro || dataOnly)
 		throw "Not implemented";
+		#elseif lime
+		lime.graphics.Image.loadFromFile(file).onComplete(function(image) {
+    		onLoaded(new LoadedBitmap(image));
+		});
 		#else
 		var bmp = new hxd.res.Image(this).toBitmap();
 		onLoaded(new hxd.fs.LoadedBitmap(bmp));

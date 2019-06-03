@@ -55,6 +55,8 @@ class CacheFile extends Cache {
 		return "gl";
 		#elseif hldx
 		return "dx";
+		#elseif lime
+		return "gl";
 		#else
 		return "unk";
 		#end

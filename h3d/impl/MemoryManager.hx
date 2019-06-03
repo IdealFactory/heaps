@@ -97,9 +97,13 @@ class MemoryManager {
 			garbage();
 			cleanManagedBuffers();
 			if( usedMemory - freeMemorySize() == size ) {
+				#if lime
+				// TODO
+				#else
 				if( bufferCount >= MAX_BUFFERS )
 					throw "Too many buffers";
 				throw "Memory full (" + Math.fceil(size / 1024) + " KB," + bufferCount + " buffers)";
+				#end
 			}
 		}
 		usedMemory += mem;

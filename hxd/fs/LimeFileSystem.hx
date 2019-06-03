@@ -54,8 +54,8 @@ private class LimeEntry extends FileEntry {
 	}
 	
 	override function open() {
-		if(lime.Assets.isLocal(name)) {
-			var inBytes = lime.Assets.getBytes(name);
+		if(lime.utils.Assets.isLocal(name)) {
+			var inBytes = lime.utils.Assets.getBytes(name);
 			if( inBytes == null ) throw "Missing resource " + name;
 			#if flash
 			bytes = inBytes.getData();
@@ -69,7 +69,7 @@ private class LimeEntry extends FileEntry {
 			//#if flash
 			//	throw "Non embeded files are not supported on flash platform with Lime";
 			//#else
-			lime.Assets.loadBytes(name).onComplete(function(inBytes) {
+			lime.utils.Assets.loadBytes(name).onComplete(function(inBytes) {
 				#if flash
 				bytes = inBytes.getData();
 				bytes.position = 0;
@@ -137,7 +137,8 @@ private class LimeEntry extends FileEntry {
 		close(); // flash will copy bytes content in loadBytes() !
 		#else
 		
-		lime.graphics.Image.fromBytes(bytes, function(img) {
+		var f = lime.graphics.Image.loadFromBytes(bytes);
+		f.onComplete(function(img) {
 			onLoaded(new hxd.fs.LoadedBitmap(img));
 		});
 		close();
@@ -189,7 +190,7 @@ class LimeFileSystem #if !macro implements FileSystem #end {
 
 	function subFiles( path : String ) : Array<FileEntry> {
 		var out:Array<FileEntry> = [];
-		var all = lime.Assets.list();
+		var all = lime.utils.Assets.list();
 		for( f in all )
 		{
 			if( f != path && StringTools.startsWith(f, path) )
@@ -203,10 +204,11 @@ class LimeFileSystem #if !macro implements FileSystem #end {
 	}
 
 	public function exists( path : String ) {
-		return lime.Assets.exists(path);
+		return lime.utils.Assets.exists(path);
 	}
 
 	public function get( path : String ) {
+		trace('path', path);
 		if( !exists(path) )
 			throw new NotFound(path);
 		return new LimeEntry(this, path.split("/").pop(), path);

@@ -122,6 +122,7 @@ class Default extends Base {
 			if( prevShader != p.shader ) {
 				prevShader = p.shader;
 				ctx.engine.selectShader(p.shader);
+				trace('Default draw()');
 				if( buf == null )
 					buf = ctx.shaderBuffers = new h3d.shader.Buffers(p.shader);
 				else
