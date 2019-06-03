@@ -287,7 +287,7 @@ class FontBuilder {
 		do {
 			font.glyphs = new Map();
 			all = [];
-			var x = 0, y = 0, lineH = font.lineHeight;
+			var x = 0, y:Float = 0, lineH = font.lineHeight;
 			px = haxe.io.Bytes.alloc( width * height  );
 			for( i in 0...options.chars.length ) {
 				var size = tmp[i];
@@ -307,7 +307,7 @@ class FontBuilder {
 				if( size.w > 0 && size.h > 0 ){
 					var ib = size.i.buffer.data.toBytes();
 					for( ty in 0...size.h )
-						px.blit( (gx+x+(y+gy+ty)*width), ib, ty*size.w, size.w );
+						px.blit( Std.int(gx+x+(y+gy+ty)*width), ib, ty*size.w, size.w );
 				}
 				var t = new h2d.Tile(innerTex, x, y, gx+size.w, gy+size.h);
 				all.push(t);
