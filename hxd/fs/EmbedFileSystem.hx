@@ -122,6 +122,9 @@ private class EmbedEntry extends FileEntry {
 		open();
 		loader.loadBytes(bytes);
 		close(); // flash will copy bytes content in loadBytes() !
+		#elseif lime
+		open();
+		onLoaded( new LoadedBitmap(lime.graphics.Image.fromBytes(bytes)) );
 		#elseif js
 		// directly get the base64 encoded data from resources
 		var rawData = null;
@@ -140,9 +143,6 @@ private class EmbedEntry extends FileEntry {
 		for( i in 0...(3-(bytes*4)%3)%3 )
 			extra += "=";
 		image.src = "data:image/" + extension + ";base64," + rawData + extra;
-		#elseif lime
-		open();
-		onLoaded( new LoadedBitmap(lime.graphics.Image.fromBytes(bytes)) );
 		#else
 		throw "TODO";
 		#end

@@ -115,15 +115,12 @@ class RenderContext extends h3d.impl.RenderContext {
 	function initShaders( shaders ) {
 		currentShaders = shaders;
 		compiledShader = manager.compileShaders(shaders);
-		//trace('RenderContext initShaders()');
 		if( buffers == null )
 			buffers = new h3d.shader.Buffers(compiledShader);
 		else
 			buffers.grow(compiledShader);
-		//trace('calling fillGlobals');
 		manager.fillGlobals(buffers, compiledShader);
 		engine.selectShader(compiledShader);
-		//trace('calling uploadShaderBuffers');
 		engine.uploadShaderBuffers(buffers, Globals);
 	}
 

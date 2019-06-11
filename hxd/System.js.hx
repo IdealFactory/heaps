@@ -61,6 +61,7 @@ class System {
 	}
 
 	public static function setNativeCursor( c : Cursor ) : Void {
+		#if !lime
 		if( c.equals(currentNativeCursor) )
 			return;
 		currentNativeCursor = c;
@@ -88,7 +89,9 @@ class System {
 				cur.alloc[cur.frameIndex];
 			};
 		}
+		#end
 	}
+
 
 	public static function getDeviceName() : String {
 		return "Unknown";
@@ -105,6 +108,7 @@ class System {
 	public static function exit() : Void {
 	}
 
+	#if !lime
 	static function updateCursor() : Void {
 		if ( currentCustomCursor != null ) {
 			var change = currentCustomCursor.update(hxd.Timer.elapsedTime);
@@ -116,6 +120,7 @@ class System {
 			}
 		}
 	}
+	#end
 
 	// getters
 
@@ -127,8 +132,10 @@ class System {
 	static function get_allowTimeout() return false;
 	static function set_allowTimeout(b) return false;
 
+	#if !lime
 	static function __init__() : Void {
 		haxe.MainLoop.add(updateCursor, -1);
 	}
+	#end
 
 }

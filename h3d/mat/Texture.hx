@@ -31,7 +31,7 @@ class Texture {
 	public var format(default, null) : TextureFormat;
 
 	var lastFrame : Int;
-	var bits : Int;
+	var bits : Int = 0;
 	var waitLoads : Array<Void -> Void>;
 	public var mipMap(default,set) : MipMap;
 	public var filter(default,set) : Filter;

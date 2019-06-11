@@ -181,7 +181,11 @@ class Cache {
 			with high priority might be prepended at later stage (eg: Base2D)
 			So let's sort again just in case.
 		*/
+		#if neko
+		haxe.ds.ArraySort.sort(shaderDatas, function(s1, s2) { var s2p=s2.p==null ? 0 :s2.p; var s1p=s1.p==null ? 0 : s1.p; return s2p - s1p; });
+		#else
 		haxe.ds.ArraySort.sort(shaderDatas, function(s1, s2) return s2.p - s1.p);
+		#end
 
 		#if debug
 		for( s in shaderDatas ) Printer.check(s.inst.shader);

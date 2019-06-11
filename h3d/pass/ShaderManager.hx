@@ -24,7 +24,7 @@ class ShaderManager {
 	}
 
 	@:noDebug
-	function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : #if hl hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int ) {
+	function fillRec( v : Dynamic, type : hxsl.Ast.Type, out : #if (hl && !lime) hl.BytesAccess<hl.F32> #else h3d.shader.Buffers.ShaderBufferData #end, pos : Int ) {
 		switch( type ) {
 		case TInt:
 			out[pos] = v;
@@ -164,7 +164,7 @@ class ShaderManager {
 	}
 
 	inline function getPtr( data : h3d.shader.Buffers.ShaderBufferData ) {
-		#if hl
+		#if (hl && !lime)
 		return (hl.Bytes.getArray((cast data : Array<Single>)) : hl.BytesAccess<hl.F32>);
 		#else
 		return data;
@@ -192,7 +192,6 @@ class ShaderManager {
 			var g = s.globals;
 			var ptr = getPtr(buf.globals);
 			while( g != null ) {
-				trace('fill in fillGlobals');
 				var v = globals.fastGet(g.gid);
 				if( v == null ) {
 					if( g.path == "__consts__" ) {

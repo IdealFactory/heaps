@@ -2,7 +2,7 @@ package hxd.fs;
 
 #if (flash || openfl)
 typedef LoadedBitmapData = flash.display.BitmapData;
-#elseif lime
+#elseif (lime && !macro)
 typedef LoadedBitmapData = lime.graphics.Image;
 #elseif js
 typedef LoadedBitmapData = js.html.Image;
@@ -19,7 +19,7 @@ abstract LoadedBitmap(LoadedBitmapData) {
 	public function toBitmap() : hxd.BitmapData {
 		#if (flash || openfl)
 		return hxd.BitmapData.fromNative(this);
-		#elseif lime
+		#elseif (lime && !macro)
 		var bmp = new hxd.BitmapData(this.width, this.height);
 			//TODO  test this
 			#if js @:privateAccess bmp.pixel = this.src;

@@ -5,7 +5,7 @@ typedef BitmapInnerData =
 	flash.display.BitmapData;
 #elseif js
 	js.html.CanvasRenderingContext2D;
-#elseif lime
+#elseif (lime && !macro)
 	lime.graphics.Image;
 #else
 	BitmapInnerDataImpl;
@@ -37,6 +37,8 @@ class BitmapData {
 	var ctx : js.html.CanvasRenderingContext2D;
 	var lockImage : js.html.ImageData;
 	var pixel : js.html.ImageData;
+#elseif (lime && !macro)
+	var data : lime.graphics.Image;
 #else
 	var data : BitmapInnerData;
 #end
@@ -55,7 +57,7 @@ class BitmapData {
 			canvas.width = width;
 			canvas.height = height;
 			ctx = canvas.getContext2d();
-			#elseif lime
+			#elseif (lime && !macro)
 			data = new lime.graphics.Image( null, 0, 0, width, height );
 			#else
 			data = new BitmapInnerData();
@@ -110,7 +112,7 @@ class BitmapData {
 		for( dy in 0...height ) {
 			var p = x + (y + dy) * data.width;
 			for( dx in 0...width )
-				#if lime
+				#if (lime && !macro)
 				data.buffer.data[p++] = color;
 				#else
 				data.pixels[p++] = color;
@@ -212,7 +214,7 @@ class BitmapData {
 		m.a = 1;
 		m.d = 1;
 
-		#elseif hl
+		#elseif (hl && !lime)
 
 		if( blendMode != None ) throw "BitmapData.drawScaled blendMode no supported : " + blendMode;
 		if( x < 0 || y < 0 || width < 0 || height < 0 || srcX < 0 || srcY < 0 || srcWidth < 0 || srcHeight < 0 ||
@@ -556,7 +558,7 @@ class BitmapData {
 			i = ctx.getImageData(x, y, 1, 1);
 		}
 		return (i.data[a] << 16) | (i.data[a|1] << 8) | i.data[a|2] | (i.data[a|3] << 24);
-		#elseif lime
+		#elseif (lime && !macro)
 		return if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.buffer.data[x + y * data.width] else 0;
 		#else
 		return if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.pixels[x + y * data.width] else 0;
@@ -589,7 +591,7 @@ class BitmapData {
 		i.data[2] = c & 0xFF;
 		i.data[3] = (c >>> 24) & 0xFF;
 		ctx.putImageData(i, x, y);
-		#elseif lime
+		#elseif (lime && !macro)
 		if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.buffer.data[x + y * data.width] = c;
 		#else
 		if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.pixels[x + y * data.width] = c;
@@ -627,7 +629,7 @@ class BitmapData {
 		var data = ctx.getImageData(0, 0, w, h).data;
 		var pixels = data.buffer;
 		return new Pixels(w, h, haxe.io.Bytes.ofData(pixels), RGBA);
-		#elseif lime
+		#elseif (lime && !macro)
 		var p = new Pixels(width, height, this.data.data.buffer, RGBA);
 		return p;
 		#else
@@ -663,7 +665,7 @@ class BitmapData {
 		#elseif (nme || openfl)
 		pixels.convert(BGRA);
 		bmp.setPixels(bmp.rect, flash.utils.ByteArray.fromBytes(pixels.bytes));
-		#elseif lime
+		#elseif (lime && !macro)
 		// TODO format
 		pixels.convert(BGRA);
 		var src = pixels.bytes;

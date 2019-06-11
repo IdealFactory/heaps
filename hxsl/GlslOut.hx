@@ -662,7 +662,7 @@ class GlslOut {
 			add("\n\n");
 		}
 
-		#if lime
+		#if (lime && !hl && !js)
 		if (version > 120) version = 120;
 		#end
 
@@ -683,7 +683,7 @@ class GlslOut {
 		#if js
 		out.glES = 1;
 		out.version = 100;
-		#elseif lime
+		#elseif (lime && !hl)
 		out.glES = 2;
 		out.version = 120;
 		#end

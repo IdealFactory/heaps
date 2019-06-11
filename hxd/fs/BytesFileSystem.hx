@@ -61,6 +61,9 @@ class BytesFileEntry extends FileEntry {
 			loader.unload();
 		});
 		loader.loadBytes(bytes.getData());
+		#elseif lime
+		open();
+		onLoaded( new LoadedBitmap(lime.graphics.Image.fromBytes(bytes)) );
 		#elseif js
 		var mime = switch fullPath.extension().toLowerCase() {
 			case 'jpg' | 'jpeg': 'image/jpeg';

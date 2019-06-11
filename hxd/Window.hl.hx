@@ -19,7 +19,10 @@ class Window {
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
-	#if hlsdl
+	#if lime
+	public static var CURRENT:lime.app.Application;
+	var window : lime.app.Application;
+	#elseif hlsdl
 	var window : sdl.Window;
 	var fullScreenMode : sdl.Window.DisplayMode = Borderless;
 	#elseif hldx
@@ -38,12 +41,24 @@ class Window {
 		this.windowHeight = height;
 		eventTargets = new List();
 		resizeEvents = new List();
-		#if hlsdl
+		#if lime
+		if (CURRENT != null) {
+			window = CURRENT;
+			this.windowWidth = CURRENT.window.width;
+			this.windowHeight = CURRENT.window.height;
+		}
+		#elseif hlsdl
 		window = new sdl.Window(title, width, height);
 		#elseif hldx
 		window = new dx.Window(title, width, height);
 		#end
 	}
+
+	#if lime
+	public function execLimeApp() {
+		window.exec();
+	}
+	#end
 
 	public dynamic function onClose() : Bool {
 		return true;
@@ -84,7 +99,7 @@ class Window {
 	}
 
 	public function resize( width : Int, height : Int ) : Void {
-		#if (hldx || hlsdl)
+		#if (hldx || hlsdl && !lime)
 		window.resize(width, height);
 		#end
 		windowWidth = width;
@@ -93,7 +108,7 @@ class Window {
 	}
 
 	public function setFullScreen( v : Bool ) : Void {
-		#if (hldx || hlsdl)
+		#if (hldx || hlsdl && !lime)
 		window.displayMode = v ? fullScreenMode : Windowed;
 		#end
 	}
@@ -123,7 +138,7 @@ class Window {
 		return false;
 	}
 
-	#if (hldx||hlsdl)
+	#if (hldx||hlsdl&&!lime)
 
 	function get_vsync() : Bool return window.vsync;
 

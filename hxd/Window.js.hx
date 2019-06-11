@@ -14,6 +14,13 @@ class Window {
 	public var isFocused(get, never) : Bool;
 	public var propagateKeyEvents : Bool;
 
+	#if lime
+	public static var CURRENT:lime.app.Application;
+	var limeApp : lime.app.Application;
+	var windowWidth = 800;
+	var windowHeight = 600;
+	#end
+
 	var curMouseX : Float = 0.;
 	var curMouseY : Float = 0.;
 
@@ -38,6 +45,17 @@ class Window {
 		eventTargets = new List();
 		resizeEvents = new List();
 
+		#if lime
+		if (CURRENT != null) {
+			limeApp = CURRENT;
+			this.windowWidth = CURRENT.window.width;
+			this.windowHeight = CURRENT.window.height;
+			@:privateAccess this.canvas = this.limeApp.__window.__backend.canvas;
+			canvasPos = { width: windowWidth, height: windowHeight, left: 0, top: 0 };
+			timer = new haxe.Timer(100);
+			timer.run = checkResize;
+		}
+		#else
 		if( canvas == null ) {
 			canvas = cast js.Browser.document.getElementById("webgl");
 			if( canvas == null ) throw "Missing canvas #webgl";
@@ -94,7 +112,14 @@ class Window {
 		curH = this.height;
 		timer = new haxe.Timer(100);
 		timer.run = checkResize;
+		#end
 	}
+
+	#if lime
+	public function execLimeApp() {
+		limeApp.exec();
+	}
+	#end
 
 	function checkResize() {
 		canvasPos = canvas.getBoundingClientRect();

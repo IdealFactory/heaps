@@ -1,6 +1,6 @@
 package hxd;
 
-class Stage {
+class Window {
 
 	var resizeEvents : List<Void -> Void>;
 	var eventTargets : List<Event -> Void>;
@@ -13,17 +13,28 @@ class Stage {
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
-	public var limeApp: LimeApp;
+	#if lime
+	public static var CURRENT:lime.app.Application;
+	#end
+	
+	public var limeApp: lime.app.Application;//LimeApp;
 	var windowWidth = 800;
 	var windowHeight = 600;
 
 	function new(title:String, width:Int, height:Int) : Void {
-		trace('Stage new');
 		eventTargets = new List();
 		resizeEvents = new List();
 		this.windowWidth = width;
 		this.windowHeight = height;
-		limeApp = new LimeApp(this, width, height);
+		
+		if (CURRENT == null) {
+			limeApp = new LimeApp(this, width, height);
+		} else {
+			limeApp = CURRENT;
+			this.windowWidth = CURRENT.window.width;
+			this.windowHeight = CURRENT.window.height;
+		}
+		
 	}
 
 	public function execLimeApp() {
@@ -74,8 +85,8 @@ class Stage {
 	public function setFullScreen( v : Bool ) : Void {
 	}
 
-	static var inst : Stage = null;
-	public static function getInstance() : Stage {
+	static var inst : Window = null;
+	public static function getInstance() : Window {
 		return inst;
 	}
 
@@ -116,18 +127,15 @@ class Stage {
 }
 
 class LimeApp extends lime.app.Application {
-	private var stage: Stage;
+	private var parentWindow: Window;
 
-	public function new(stage: Stage, width: Int, height: Int) {
-		trace('LimeApp new');
+	public function new(window: Window, width: Int, height: Int) {
 		super();
-		this.stage = stage;
+		this.parentWindow = window;
 		createWindow ({ width: width, height: height });
 	}
 
 	public override function update (deltaTime:Int) {
-		//stage.loopFunc();
-		//trace('update');
 		@:privateAccess System.mainLoop();
 	}
 	public override function render (context:lime.graphics.RenderContext):Void {

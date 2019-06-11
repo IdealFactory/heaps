@@ -54,6 +54,7 @@ class System {
 
 	static function mainLoop() : Bool {
 		// process events
+		#if !lime
 		#if usesys
 		if( !haxe.System.emitEvents(@:privateAccess hxd.Window.inst.event) )
 			return false;
@@ -63,6 +64,7 @@ class System {
 		#elseif hlsdl
 		if( !sdl.Sdl.processEvents(@:privateAccess hxd.Window.inst.onEvent) )
 			return false;
+		#end
 		#end
 
 		// loop
@@ -95,7 +97,10 @@ class System {
 			height = Std.parseInt(p[1]);
 		}
 		timeoutTick();
-		#if hlsdl
+		#if lime
+			@:privateAccess Window.inst = new Window(title, width, height);
+			init();
+		#elseif hlsdl
 			sdl.Sdl.init();
 			@:privateAccess Window.initChars();
 			@:privateAccess Window.inst = new Window(title, width, height);
@@ -109,10 +114,21 @@ class System {
 		#end
 		#end
 
+		#if lime
+		runMainLoop();
+		#else
 		timeoutTick();
 		haxe.Timer.delay(runMainLoop, 0);
+		#end
+
 	}
 
+	#if lime
+	static function runMainLoop() {
+		@:privateAccess Window.inst.execLimeApp();
+		Sys.exit(0);
+	}
+	#else
 	static function runMainLoop() {
 		var reportError = function(e) reportError(e);
 		#if hxtelemetry
@@ -136,6 +152,7 @@ class System {
 		}
 		Sys.exit(0);
 	}
+	#end
 
 	#if hot_reload
 	@:hlNative("std","sys_check_reload")

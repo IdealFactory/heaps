@@ -13,6 +13,11 @@ class Window {
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
+	#if lime
+	public static var CURRENT:lime.app.Application;
+	var window : lime.app.Application;
+	#end
+
 	// FLASH
 	var stage : flash.display.Stage;
 	var fsDelayed : Bool;
@@ -21,13 +26,26 @@ class Window {
 		eventTargets = new List();
 		resizeEvents = new List();
 
+		#if lime
+		if (CURRENT != null) {
+			window = CURRENT;
+			stage = CURRENT.window.stage;
+		}
+		#else
 		stage = flash.Lib.current.stage;
+		#end
 		stage.scaleMode = flash.display.StageScaleMode.NO_SCALE;
 		stage.addEventListener(flash.events.Event.RESIZE, onResize);
 		initGesture(false);
 		if( isAir() )
 			setupOnCloseEvent();
 	}
+
+	#if lime
+	public function execLimeApp() {
+		window.exec();
+	}
+	#end
 
 	inline function isAir() {
 		return @:privateAccess hxd.System.isAir();
