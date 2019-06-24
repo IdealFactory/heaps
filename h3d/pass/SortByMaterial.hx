@@ -15,9 +15,9 @@ class SortByMaterial {
 	public function sort( passes : PassList ) {
 		var shaderStart = shaderCount, textureStart = textureCount;
 		for( p in passes ) {
-			if( shaderIdMap[p.shader.id] < shaderStart #if js || shaderIdMap[p.shader.id] == null #end )
+			if( shaderIdMap[p.shader.id] < shaderStart #if (js || neko) || shaderIdMap[p.shader.id] == null #end )
 				shaderIdMap[p.shader.id] = shaderCount++;
-			if( textureIdMap[p.texture] < textureStart #if js || textureIdMap[p.shader.id] == null #end )
+			if( textureIdMap[p.texture] < textureStart #if (js || neko) || textureIdMap[p.shader.id] == null #end )
 				textureIdMap[p.texture] = textureCount++;
 		}
 		passes.sort(function(o1, o2) {

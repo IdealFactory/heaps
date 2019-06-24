@@ -235,10 +235,6 @@ class GlDriver extends Driver {
 		if( reg.match(v) )
 			glES = Std.parseFloat(reg.matched(1));
 
-		#if (lime && !js)
-		glES = 2;
-		#end
-
 		#if !js
 		if( glES == null ) {
 			commonVA = gl.createVertexArray();
@@ -293,11 +289,6 @@ class GlDriver extends Driver {
 	override function begin(frame) {
 		this.frame = frame;
 		resetStream();
-		#if cpp
-		curAttribs = new Array<Bool>();
-		maxIdxCurAttribs = 0;
-		curMatBits = -1;
-		#end
 		gl.useProgram(null);
 		curShader = null;
 		curBuffer = null;
@@ -391,7 +382,7 @@ class GlDriver extends Driver {
 			p.fragment = compileShader(glout,shader.fragment);
 
 			p.p = gl.createProgram();
-			#if ((hlsdl || usegl) && !hlmesa && !lime)
+			#if (((lime && !js) || hlsdl || usegl) && !hlmesa)
 			if( glES == null ) {
 				var outCount = 0;
 				for( v in shader.fragment.data.vars )

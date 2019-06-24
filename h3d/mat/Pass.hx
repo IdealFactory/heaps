@@ -8,7 +8,7 @@ import h3d.mat.Data;
 class Pass implements hxd.impl.Serializable {
 
 	@:s public var name(default, null) : String;
-	var flags : Int;
+	var flags : Int = 0;
 	var passId : Int;
 	@:s var bits : Int = 0;
 	@:s var parentPass : Pass;

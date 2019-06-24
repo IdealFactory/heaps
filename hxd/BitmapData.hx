@@ -3,10 +3,10 @@ package hxd;
 typedef BitmapInnerData =
 #if (flash || openfl || nme)
 	flash.display.BitmapData;
-#elseif js
-	js.html.CanvasRenderingContext2D;
 #elseif (lime && !macro)
 	lime.graphics.Image;
+#elseif js
+	js.html.CanvasRenderingContext2D;
 #else
 	BitmapInnerDataImpl;
 
@@ -33,12 +33,13 @@ class BitmapData {
 
 #if (flash||openfl||nme)
 	var bmp : flash.display.BitmapData;
+#elseif (lime && !macro)
+	var data : lime.graphics.Image;
+	var tmpRect : lime.math.Rectangle;
 #elseif js
 	var ctx : js.html.CanvasRenderingContext2D;
 	var lockImage : js.html.ImageData;
 	var pixel : js.html.ImageData;
-#elseif (lime && !macro)
-	var data : lime.graphics.Image;
 #else
 	var data : BitmapInnerData;
 #end
@@ -52,13 +53,13 @@ class BitmapData {
 		} else {
 			#if (flash||openfl||nme)
 			bmp = new flash.display.BitmapData(width, height, true, 0);
+			#elseif (lime && !macro)
+			data = new lime.graphics.Image( null, 0, 0, width, height );
 			#elseif js
 			var canvas = js.Browser.document.createCanvasElement();
 			canvas.width = width;
 			canvas.height = height;
 			ctx = canvas.getContext2d();
-			#elseif (lime && !macro)
-			data = new lime.graphics.Image( null, 0, 0, width, height );
 			#else
 			data = new BitmapInnerData();
 			#if hl
@@ -93,6 +94,13 @@ class BitmapData {
 		r.width = width;
 		r.height = height;
 		bmp.fillRect(r, color);
+		#elseif (lime && !macro)
+		var r = tmpRect;
+		r.x = x;
+		r.y = y;
+		r.width = width;
+		r.height = height;
+		data.fillRect(r, color);
 		#elseif js
 		ctx.fillStyle = 'rgba(${(color>>16)&0xFF}, ${(color>>8)&0xFF}, ${color&0xFF}, ${(color>>>24)/255})';
 		ctx.fillRect(x, y, width, height);
@@ -112,11 +120,7 @@ class BitmapData {
 		for( dy in 0...height ) {
 			var p = x + (y + dy) * data.width;
 			for( dx in 0...width )
-				#if (lime && !macro)
-				data.buffer.data[p++] = color;
-				#else
 				data.pixels[p++] = color;
-				#end
 		}
 		#end
 	}
@@ -471,6 +475,8 @@ class BitmapData {
 	public inline function dispose() {
 		#if (flash||openfl||nme)
 		bmp.dispose();
+		#elseif lime
+		data = null;
 		#elseif js
 		ctx = null;
 		pixel = null;
@@ -488,6 +494,9 @@ class BitmapData {
 		var b = new flash.display.BitmapData(w, h);
 		b.copyPixels(bmp, new flash.geom.Rectangle(x, y, w, h), new flash.geom.Point(0, 0));
 		return fromNative(b);
+		#elseif lime
+		notImplemented();
+		return null;
 		#elseif js
 		var canvas = js.Browser.document.createCanvasElement();
 		canvas.width = w;
@@ -495,9 +504,6 @@ class BitmapData {
 		var ctx = canvas.getContext2d();
 		ctx.drawImage(this.ctx.canvas, x, y, w, h, 0, 0, w, h);
 		return fromNative(ctx);
-		#elseif lime
-		notImplemented();
-		return null;
 		#else
 		if( x < 0 || y < 0 || w < 0 || h < 0 || x + w > width || y + h > height ) throw "Outside bounds";
 		var b = new BitmapInnerData();
@@ -522,7 +528,7 @@ class BitmapData {
 	public function lock() {
 		#if flash
 		bmp.lock();
-		#elseif js
+		#elseif (js && !lime)
 		if( lockImage == null )
 			lockImage = ctx.getImageData(0, 0, width, height);
 		#end
@@ -534,7 +540,7 @@ class BitmapData {
 	public function unlock() {
 		#if flash
 		bmp.unlock();
-		#elseif js
+		#elseif (js && !lime)
 		if( lockImage != null ) {
 			ctx.putImageData(lockImage, 0, 0);
 			lockImage = null;
@@ -548,6 +554,8 @@ class BitmapData {
 	public #if (flash || openfl || nme) inline #end function getPixel( x : Int, y : Int ) : Int {
 		#if ( flash || openfl || nme )
 		return bmp.getPixel32(x, y);
+		#elseif (lime && !macro)
+		return if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.buffer.data[x + y * data.width] else 0;
 		#elseif js
 		var i = lockImage;
 		var a;
@@ -558,8 +566,6 @@ class BitmapData {
 			i = ctx.getImageData(x, y, 1, 1);
 		}
 		return (i.data[a] << 16) | (i.data[a|1] << 8) | i.data[a|2] | (i.data[a|3] << 24);
-		#elseif (lime && !macro)
-		return if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.buffer.data[x + y * data.width] else 0;
 		#else
 		return if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.pixels[x + y * data.width] else 0;
 		#end
@@ -571,6 +577,8 @@ class BitmapData {
 	public #if (flash || openfl || nme) inline #end function setPixel( x : Int, y : Int, c : Int ) {
 		#if ( flash || openfl || nme)
 		bmp.setPixel32(x, y, c);
+		#elseif (lime && !macro)
+		if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.buffer.data[x + y * data.width] = c;
 		#elseif js
 		var i : js.html.ImageData = lockImage;
 		if( i != null ) {
@@ -591,8 +599,6 @@ class BitmapData {
 		i.data[2] = c & 0xFF;
 		i.data[3] = (c >>> 24) & 0xFF;
 		ctx.putImageData(i, x, y);
-		#elseif (lime && !macro)
-		if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.buffer.data[x + y * data.width] = c;
 		#else
 		if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.pixels[x + y * data.width] = c;
 		#end
@@ -601,6 +607,8 @@ class BitmapData {
 	inline function get_width() : Int {
 		#if (flash || nme || openfl)
 		return bmp.width;
+		#elseif lime
+		return data.width;
 		#elseif js
 		return ctx.canvas.width;
 		#else
@@ -611,6 +619,8 @@ class BitmapData {
 	inline function get_height() {
 		#if (flash || nme || openfl)
 		return bmp.height;
+		#elseif lime
+		return data.height;
 		#elseif js
 		return ctx.canvas.height;
 		#else
@@ -623,15 +633,14 @@ class BitmapData {
 		var p = new Pixels(width, height, haxe.io.Bytes.ofData(bmp.getPixels(bmp.rect)), ARGB);
 		p.flags.set(AlphaPremultiplied);
 		return p;
+		#elseif (lime && !macro)
+		return new Pixels(width, height, data.getPixels(data.rect), BGRA);
 		#elseif js
 		var w = width;
 		var h = height;
 		var data = ctx.getImageData(0, 0, w, h).data;
 		var pixels = data.buffer;
 		return new Pixels(w, h, haxe.io.Bytes.ofData(pixels), RGBA);
-		#elseif (lime && !macro)
-		var p = new Pixels(width, height, this.data.data.buffer, RGBA);
-		return p;
 		#else
 		var out = haxe.io.Bytes.alloc(data.width * data.height * 4);
 		for( i in 0...data.width*data.height )
@@ -657,14 +666,6 @@ class BitmapData {
 			bytes.endian = flash.utils.Endian.LITTLE_ENDIAN;
 		}
 		bmp.setPixels(bmp.rect, bytes);
-		#elseif js
-		var img = ctx.createImageData(pixels.width, pixels.height);
-		pixels.convert(RGBA);
-		for( i in 0...pixels.width*pixels.height*4 ) img.data[i] = pixels.bytes.get(i);
-		ctx.putImageData(img, 0, 0);
-		#elseif (nme || openfl)
-		pixels.convert(BGRA);
-		bmp.setPixels(bmp.rect, flash.utils.ByteArray.fromBytes(pixels.bytes));
 		#elseif (lime && !macro)
 		// TODO format
 		pixels.convert(BGRA);
@@ -676,6 +677,14 @@ class BitmapData {
 				i++;
 			}
 		}
+		#elseif js
+		var img = ctx.createImageData(pixels.width, pixels.height);
+		pixels.convert(RGBA);
+		for( i in 0...pixels.width*pixels.height*4 ) img.data[i] = pixels.bytes.get(i);
+		ctx.putImageData(img, 0, 0);
+		#elseif (nme || openfl)
+		pixels.convert(BGRA);
+		bmp.setPixels(bmp.rect, flash.utils.ByteArray.fromBytes(pixels.bytes));
 		#else
 		pixels.convert(BGRA);
 		var src = pixels.bytes;
@@ -687,6 +696,8 @@ class BitmapData {
 	public inline function toNative() : BitmapInnerData {
 		#if (flash || nme || openfl)
 		return bmp;
+		#elseif lime
+		return data;
 		#elseif js
 		return ctx;
 		#else
@@ -698,6 +709,8 @@ class BitmapData {
 		var b = new BitmapData( -101, -102 );
 		#if (flash || nme || openfl)
 		b.bmp = data;
+		#elseif lime
+		b.data = data;
 		#elseif js
 		b.ctx = data;
 		#else

@@ -41,6 +41,7 @@ class Material extends BaseMaterial {
 	function new(?texture) {
 		mshader = new h3d.shader.BaseMesh();
 		blendMode = None;
+		staticShadows = false;
 		super(mshader);
 		this.texture = texture;
 	}

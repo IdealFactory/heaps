@@ -1,6 +1,6 @@
 package hxd.impl;
 
-private typedef InnerData = #if hl hl.Bytes #elseif js TypedArray.Uint8Array #else haxe.io.BytesData #end
+private typedef InnerData = #if lime lime.utils.UInt8Array #elseif hl hl.Bytes #elseif js TypedArray.Uint8Array #else haxe.io.BytesData #end
 
 abstract UncheckedBytes(InnerData) {
 
@@ -9,24 +9,18 @@ abstract UncheckedBytes(InnerData) {
 	}
 
 	@:arrayAccess inline function get( i : Int ) : Int {
-		#if neko
-		return untyped $sget(b,i);
-		#else
 		return this[i];
-		#end
 	}
 
 	@:arrayAccess inline function set( i : Int, v : Int ) : Int {
-		#if neko
-		untyped $sset(b,i,v);
-		#else
 		this[i] = v;
-		#end
 		return v;
 	}
 
 	@:from public static inline function fromBytes( b : haxe.io.Bytes ) : UncheckedBytes {
-		#if hl
+		#if lime
+		return new UncheckedBytes(lime.utils.UInt8Array.fromBytes( b ));
+		#elseif hl
 		return new UncheckedBytes(b);
 		#elseif js
 		return new UncheckedBytes(@:privateAccess b.b);

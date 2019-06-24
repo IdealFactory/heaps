@@ -52,11 +52,12 @@ private abstract LimeFloat32Expand({ pos : Int, array : lime.utils.Float32Array 
 		this = { pos : 0, array : new lime.utils.Float32Array(length) };
 	}
 
-	inline function get_length() return this.pos;
-	inline function set_length(v:Int) {
-		if( length != v ) {
+	 function get_length() return this.pos;
+	 function set_length(v:Int) {
+		if( length != v || this.array == null) {
 			var newArray = new lime.utils.Float32Array(v);
-			newArray.set(this.array);
+			if (this.array != null)
+				newArray.set(this.array);
 			this.array = newArray;
 		}
 		this.pos = v;
@@ -123,8 +124,8 @@ abstract FloatBuffer(InnerData) {
 		#end
 	}
 
-	public inline function grow( v : Int ) {
-		#if flash
+	public function grow( v : Int ) {
+		#if (flash || lime)
 		if( v > this.length ) this.length = v;
 		#elseif js
 		for( i in this.length...v )

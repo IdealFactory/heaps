@@ -21,10 +21,7 @@ abstract LoadedBitmap(LoadedBitmapData) {
 		return hxd.BitmapData.fromNative(this);
 		#elseif (lime && !macro)
 		var bmp = new hxd.BitmapData(this.width, this.height);
-			//TODO  test this
-			#if js @:privateAccess bmp.pixel = this.src;
-			#else @:privateAccess bmp.data = this;
-			#end
+		@:privateAccess bmp.data = this;
 		return bmp;
 		#elseif js
 		var bmp = new hxd.BitmapData(this.width, this.height);

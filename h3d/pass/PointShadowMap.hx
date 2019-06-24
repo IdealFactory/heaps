@@ -33,6 +33,9 @@ class PointShadowMap extends Shadows {
 		customDepth = h3d.Engine.getCurrent().driver.hasFeature(AllocDepthBuffer);
 		if( !customDepth ) depth = h3d.mat.DepthBuffer.getDefault();
 
+		#if neko
+		faceMask = haxe.EnumFlags.ofInt(0);
+		#end
 		faceMask.set(Front);
 		faceMask.set(Back);
 		faceMask.set(Top);

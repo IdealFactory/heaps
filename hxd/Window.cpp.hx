@@ -17,7 +17,7 @@ class Window {
 	public static var CURRENT:lime.app.Application;
 	#end
 	
-	public var limeApp: lime.app.Application;//LimeApp;
+	public var limeApp: lime.app.Application;
 	var windowWidth = 800;
 	var windowHeight = 600;
 

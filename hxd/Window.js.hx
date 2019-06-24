@@ -50,7 +50,9 @@ class Window {
 			limeApp = CURRENT;
 			this.windowWidth = CURRENT.window.width;
 			this.windowHeight = CURRENT.window.height;
-			@:privateAccess this.canvas = this.limeApp.__window.__backend.canvas;
+			@:privateAccess this.canvas = canvas = this.limeApp.__window.__backend.canvas;
+			@:privateAccess useScreenPixels = this.limeApp.__window.__attributes.allowHighDPI;
+			customCanvas = true;
 			canvasPos = { width: windowWidth, height: windowHeight, left: 0, top: 0 };
 			timer = new haxe.Timer(100);
 			timer.run = checkResize;
@@ -62,8 +64,10 @@ class Window {
 			if( canvas.getAttribute("globalEvents") == "1" )
 				globalEvents = true;
 		}
-
+		
 		this.canvas = canvas;
+		#end
+
 		this.propagateKeyEvents = globalEvents;
 		focused = globalEvents;
 		element = globalEvents ? js.Browser.window : canvas;
@@ -110,6 +114,8 @@ class Window {
 		}
 		curW = this.width;
 		curH = this.height;
+
+		#if !lime
 		timer = new haxe.Timer(100);
 		timer.run = checkResize;
 		#end

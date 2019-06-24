@@ -60,6 +60,7 @@ class Engine {
 		this.hardware = !SOFTWARE_DRIVER;
 		this.antiAlias = ANTIALIASING;
 		this.autoResize = true;
+		this.shaderSwitches = this.drawTriangles = this.drawCalls = 0;
 		fullScreen = !hxd.System.getValue(IsWindowed);
 		window = hxd.Window.getInstance();
 		realFps = hxd.System.getDefaultFrameRate();

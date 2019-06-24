@@ -583,7 +583,7 @@ class NanoJpeg {
 			cout[po] = CF(CF3X * cin[pi] + CF3Y * cin[pi+s1] + CF3Z * cin[pi+s2]);  po += w;
 			cout[po] = CF(CF3A * cin[pi] + CF3B * cin[pi+s1] + CF3C * cin[pi+s2]);  po += w;
 			pi += s1;
-			for( y in 0...c.height-2 ) {
+			for( y in 0...c.height-3 ) {
 				cout[po] = CF(CF4A * cin[pi-s1] + CF4B * cin[pi] + CF4C * cin[pi+s1] + CF4D * cin[pi+s2]);  po += w;
 				cout[po] = CF(CF4D * cin[pi-s1] + CF4C * cin[pi] + CF4B * cin[pi+s1] + CF4A * cin[pi+s2]);  po += w;
 				pi += s1;

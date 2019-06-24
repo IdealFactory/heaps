@@ -246,6 +246,10 @@ class MemoryManager {
 	}
 
 	function sortByLRU( t1 : h3d.mat.Texture, t2 : h3d.mat.Texture ) {
+		#if neko
+		t1.lastFrame = t1.lastFrame == null ? 0 : t1.lastFrame;
+		t2.lastFrame = t2.lastFrame == null ? 0 : t2.lastFrame;
+		#end
 		return t1.lastFrame - t2.lastFrame;
 	}
 
