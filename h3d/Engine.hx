@@ -68,10 +68,10 @@ class Engine {
 		window.addResizeEvent(onWindowResize);
 		#if macro
 		driver = new h3d.impl.NullDriver();
-		#elseif (js || lime || hlsdl || usegl || neko)
-		driver = new h3d.impl.GlDriver(antiAlias);
 		#elseif flash
 		driver = new h3d.impl.Stage3dDriver(antiAlias);
+		#elseif (js || lime || hlsdl || usegl || neko)
+		driver = new h3d.impl.GlDriver(antiAlias);
 		#elseif hldx
 		driver = new h3d.impl.DirectXDriver();
 		#elseif usesys
