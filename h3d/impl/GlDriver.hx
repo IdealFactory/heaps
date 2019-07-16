@@ -137,6 +137,9 @@ private class CompiledProgram {
 }
 
 @:access(h3d.impl.Shader)
+#if openfl
+@:access(openfl.display.HeapsContainer)
+#end
 #if (cpp||hlsdl||usegl||neko||lime)
 @:build(h3d.impl.MacroHelper.replaceGL())
 #end
@@ -611,7 +614,7 @@ class GlDriver extends Driver {
 			output texture coordinates. We also need to flip our culling.
 			The result is inverted if we are using a right handed camera.
 		*/
-		if( (curTarget == null) == rightHanded ) {
+		if( (curTarget == null) == rightHanded #if openfl && openfl.display.HeapsContainer.heapsRenderTargets.indexOf( curTarget ) == -1 #end ) { 
 			switch( pass.culling ) {
 			case Back: bits = (bits & ~Pass.culling_mask) | (2 << Pass.culling_offset);
 			case Front: bits = (bits & ~Pass.culling_mask) | (1 << Pass.culling_offset);
@@ -695,7 +698,7 @@ class GlDriver extends Driver {
 			var cop = Pass.getBlendOp(bits);
 			var aop = Pass.getBlendAlphaOp(bits);
 			if( cop == aop ) {
-				#if (nme || openfl)
+				#if (nme)
 				if( OP[cop] != GL.FUNC_ADD )
 					throw "blendEquation() disable atm (crash)";
 				#else
@@ -1492,7 +1495,7 @@ class GlDriver extends Driver {
 	}
 
 	override function isDisposed() {
-		#if (nme || openfl) //lime ??
+		#if (nme)// || openfl) //lime ??
 		return false;
 		#else
 		return gl.isContextLost();

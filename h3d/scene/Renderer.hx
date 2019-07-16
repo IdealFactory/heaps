@@ -29,6 +29,11 @@ class Renderer extends hxd.impl.AnyProps {
 	var frontToBack : h3d.pass.PassList -> Void;
 	var backToFront : h3d.pass.PassList -> Void;
 
+	#if openfl
+	var lastCullingState = h3d.mat.Data.Face.None;
+	#end
+
+
 	public var effects : Array<h3d.impl.RendererFX> = [];
 
 	public var renderMode : RenderMode = Default;
@@ -161,8 +166,12 @@ class Renderer extends hxd.impl.AnyProps {
 		hasSetTarget = false;
 		for( p in allPasses )
 			p.setContext(ctx);
-		for( p in passes )
+		for( p in passes ) {
 			passObjects.set(p.name, p);
+			#if openfl
+			@:privateAccess lastCullingState = p.passes.current.pass.culling;
+			#end
+		}
 		ctx.textures.begin();
 		if( ctx.computingStatic )
 			computeStatic();

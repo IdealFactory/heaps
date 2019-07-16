@@ -44,6 +44,9 @@ class App implements h3d.IDrawable {
 		} else {
 			hxd.System.start(function() {
 				this.engine = engine = @:privateAccess new h3d.Engine();
+				#if openfl
+				engine.backgroundColor = 0xff000000 | Window.CURRENT.window.context.attributes.background;
+				#end
 				engine.onReady = setup;
 				engine.init();
 			});
@@ -171,7 +174,9 @@ class App implements h3d.IDrawable {
 		var dt = hxd.Timer.dt; // fetch again in case it's been modified in update()
 		s2d.setElapsedTime(dt);
 		s3d.setElapsedTime(dt);
+		#if !openfl
 		engine.render(this);
+		#end
 	}
 
 	/**

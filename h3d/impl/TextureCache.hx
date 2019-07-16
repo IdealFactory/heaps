@@ -13,7 +13,9 @@ class TextureCache {
 		cache = [];
 		var engine = h3d.Engine.getCurrent();
 		defaultFormat = h3d.mat.Texture.nativeFormat;
+		// #if !openfl
 		defaultDepthBuffer = h3d.mat.DepthBuffer.getDefault();
+		// #end
 	}
 
 	public inline function get( index = 0 ) {

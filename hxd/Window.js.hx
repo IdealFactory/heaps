@@ -21,6 +21,11 @@ class Window {
 	var windowHeight = 600;
 	#end
 
+	#if openfl
+	var openFLMouseX : Float = 0.;
+	var openFLMouseY : Float = 0.;
+	#end
+
 	var curMouseX : Float = 0.;
 	var curMouseY : Float = 0.;
 
@@ -200,19 +205,35 @@ class Window {
 	}
 	
 	function get_width() {
+		#if !openfl
 		return Math.round(canvasPos.width * getPixelRatio());
+		#else
+		return windowWidth; 
+		#end
 	}
 
 	function get_height() {
+		#if !openfl
 		return Math.round(canvasPos.height * getPixelRatio());
+		#else
+		return windowHeight; 
+		#end
 	}
 
 	function get_mouseX() {
+		#if !openfl
 		return Math.round((curMouseX - canvasPos.left) * getPixelRatio());
+		#else
+		return Math.round(openFLMouseX);
+		#end
 	}
 
 	function get_mouseY() {
+		#if !openfl
 		return Math.round((curMouseY - canvasPos.top) * getPixelRatio());
+		#else
+		return Math.round(openFLMouseY);
+		#end
 	}
 
 	function get_mouseLock() : Bool {

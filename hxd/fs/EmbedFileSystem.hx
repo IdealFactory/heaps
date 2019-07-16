@@ -109,7 +109,7 @@ private class EmbedEntry extends FileEntry {
 	}
 
 	override function loadBitmap( onLoaded : LoadedBitmap -> Void ) : Void {
-		#if (flash || openfl)
+		#if flash
 		var loader = new flash.display.Loader();
 		loader.contentLoaderInfo.addEventListener(flash.events.IOErrorEvent.IO_ERROR, function(e:flash.events.IOErrorEvent) {
 			throw Std.string(e) + " while loading " + relPath;

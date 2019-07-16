@@ -63,7 +63,7 @@ class BytesFileEntry extends FileEntry {
 		loader.loadBytes(bytes.getData());
 		#elseif lime
 		open();
-		onLoaded( new LoadedBitmap(lime.graphics.Image.fromBytes(bytes)) );
+		onLoaded( new hxd.fs.LoadedBitmap(lime.graphics.Image.fromBytes(bytes)) );
 		#elseif js
 		var mime = switch fullPath.extension().toLowerCase() {
 			case 'jpg' | 'jpeg': 'image/jpeg';

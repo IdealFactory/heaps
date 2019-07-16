@@ -16,7 +16,13 @@ class Window {
 	#if lime
 	public static var CURRENT:lime.app.Application;
 	#end
-	
+
+	#if openfl
+	var openFLMouseX : Float = 0.;
+	var openFLMouseY : Float = 0.;
+	#end
+
+
 	public var limeApp: lime.app.Application;
 	var windowWidth = 800;
 	var windowHeight = 600;
