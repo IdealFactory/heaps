@@ -252,6 +252,10 @@ class GlDriver extends Driver {
 			glES = Std.parseFloat(reg.matched(0));
 			#end
 			shaderVersion = Math.round( Std.parseFloat(reg.matched(0)) * 100 );
+			#if lime
+			if (shaderVersion <= 120)
+				glES = 2;
+			#end
 		}
 
 		drawMode = GL.TRIANGLES;
