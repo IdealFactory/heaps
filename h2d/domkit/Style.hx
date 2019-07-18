@@ -73,12 +73,13 @@ class Style extends domkit.CssStyle {
 			if( errorsText == null ) {
 				if( currentObjects.length == 0 ) return;
 				var scene = getDocument(currentObjects[0]).root.obj.getScene();
-				var fl = new h2d.Flow(scene);
+				var fl = new h2d.Flow();
+				scene.addChildAt(fl,100);
 				fl.backgroundTile = h2d.Tile.fromColor(0x400000,0.9);
 				fl.padding = 10;
 				errorsText = new h2d.Text(hxd.res.DefaultFont.get(), fl);
 			}
-			var fl = Std.instance(errorsText.parent, h2d.Flow);
+			var fl = hxd.impl.Api.downcast(errorsText.parent, h2d.Flow);
 			var sc = fl.getScene();
 			fl.maxWidth = sc.width;
 			errorsText.text = errors.join("\n");

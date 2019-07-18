@@ -111,12 +111,16 @@ class CacheFile extends Cache {
 		if( wait.length > 0 ) {
 			waitCount += wait.length;
 			#if hlmulti
-			for( r in wait )
+			for( r in wait ) {
 				addNewShader(r);
+				hxd.System.timeoutTick();
+			}
 			#else
 			haxe.Timer.delay(function() {
-				for( r in wait )
+				for( r in wait ) {
 					addNewShader(r);
+					hxd.System.timeoutTick();
+				}
 			},1000); // wait until engine correctly initialized
 			#end
 		}
@@ -279,6 +283,8 @@ class CacheFile extends Cache {
 					var signParts = [for( i in rt.spec.instances ) i.shader.data.name+"_" + i.bits + "_" + i.index];
 					throw "assert";
 				}
+				var rt2 = rttMap.get(r.specSign);
+				if( rt2 != null ) throw "assert";
 				runtimeShaders.push(rt);
 				rttMap.set(r.specSign, rt);
 			}
@@ -554,6 +560,7 @@ class CacheFile extends Cache {
 	**/
 	function cleanRuntime( r : RuntimeShader ) {
 		var rc = new RuntimeShader();
+		@:privateAccess RuntimeShader.UID--; // unalloc id
 		rc.id = 0;
 		rc.signature = r.spec.signature; // store by spec, not by sign (dups)
 		rc.vertex = cleanRuntimeData(r.vertex);
@@ -748,8 +755,10 @@ class CacheFile extends Cache {
 				if( engine == null ) engine = @:privateAccess new h3d.Engine();
 				engine.driver.selectShader(s);
 			}
+			// same shader id is shared between multiple runtime shaders because they have the same signature
+			// hopefully, the other shader will make it through addSource just a bit after
 			if( s.vertex.code == null || s.fragment.code == null )
-				throw "Missing shader code";
+				return;
 			compiledSources.set(s.signature, { vertex : allocSource(s.vertex.code), fragment : allocSource(s.fragment.code) });
 		}
 	}

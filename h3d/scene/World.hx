@@ -50,6 +50,7 @@ class WorldMaterial {
 	public var blend : h3d.mat.BlendMode;
 	public var killAlpha : Null<Float>;
 	public var emissive : Null<Float>;
+	public var stencil : Null<Int>;
 	public var lights : Bool;
 	public var shadows : Bool;
 	public var shaders : Array<hxsl.Shader>;
@@ -60,15 +61,37 @@ class WorldMaterial {
 		shadows = true;
 		shaders = [];
 	}
+
+	public function clone() : WorldMaterial {
+		var wm = new WorldMaterial();
+		wm.bits = this.bits;
+		wm.t = this.t;
+		wm.spec = this.spec;
+		wm.normal = this.normal;
+		wm.mat = this.mat;
+		wm.culling = this.culling;
+		wm.blend = this.blend;
+		wm.killAlpha = this.killAlpha;
+		wm.emissive = this.emissive;
+		wm.stencil = this.stencil;
+		wm.lights = this.lights;
+		wm.shadows = this.shadows;
+		wm.shaders = this.shaders.copy();
+		wm.name = this.name;
+		return wm;
+	}
+
+
 	public function updateBits() {
-		bits = (t.t == null ? 0 : t.t.id    << 10)
-			| ((normal == null ? 0 : 1)     << 9)
-			| (blend.getIndex()             << 6)
-			| ((killAlpha == null ? 0 : 1)  << 5)
-			| ((emissive == null ? 0 : 1)   << 4)
-			| ((lights ? 1 : 0)             << 3)
-			| ((shadows ? 1 : 0)            << 2)
-			| ((spec == null ? 0 : 1)       << 1)
+		bits = (t.t == null ? 0 : t.t.id   		<< 18)
+			| ((stencil == null ? 0 : stencil)  << 10)
+			| ((normal == null ? 0 : 1)     	<< 9)
+			| (blend.getIndex()             	<< 6)
+			| ((killAlpha == null ? 0 : 1)  	<< 5)
+			| ((emissive == null ? 0 : 1)   	<< 4)
+			| ((lights ? 1 : 0)             	<< 3)
+			| ((shadows ? 1 : 0)            	<< 2)
+			| ((spec == null ? 0 : 1)       	<< 1)
 			| (culling ? 1 : 0);
 	}
 }
@@ -275,7 +298,7 @@ class World extends Object {
 		}
 	}
 
-	function loadMaterialTexture( r : hxd.res.Model, mat : hxd.fmt.hmd.Data.Material ) : WorldMaterial {
+	function loadMaterialTexture( r : hxd.res.Model, mat : hxd.fmt.hmd.Data.Material, modelName : String ) : WorldMaterial {
 		var texturePath = resolveTexturePath(r, mat);
 		var m = textures.get(texturePath);
 		if( m != null )
@@ -347,6 +370,7 @@ class World extends Object {
 		m.emissive = null;
 		m.mat = mat;
 		m.culling = true;
+		m.stencil = null;
 		m.updateBits();
 		textures.set(texturePath, m);
 		return m;
@@ -393,7 +417,7 @@ class World extends Object {
 			for( mid in 0...m.materials.length ) {
 				var mat = lib.header.materials[m.materials[mid]];
 				if(mat == null || mat.diffuseTexture == null) continue;
-				var wmat = loadMaterialTexture(r, mat);
+				var wmat = loadMaterialTexture(r, mat, m.name);
 				if( wmat == null ) continue;
 				var data = lib.getBuffers(geom, format.fmt, format.defaults, mid);
 
