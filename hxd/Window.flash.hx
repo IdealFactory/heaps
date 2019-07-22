@@ -18,6 +18,11 @@ class Window {
 	var window : lime.app.Application;
 	#end
 
+	#if openfl
+	var windowWidth = 800;
+	var windowHeight = 600;
+	#end
+
 	// FLASH
 	var stage : flash.display.Stage;
 	var fsDelayed : Bool;
@@ -31,6 +36,10 @@ class Window {
 			window = CURRENT;
 			stage = CURRENT.window.stage;
 		}
+		#if openfl
+		windowWidth = stage.stageWidth;
+		windowHeight = stage.stageHeight;
+		#end
 		#else
 		stage = flash.Lib.current.stage;
 		#end
@@ -167,11 +176,19 @@ class Window {
 	}
 
 	inline function get_width() {
+		#if !openfl
 		return stage.stageWidth;
+		#else
+		return windowWidth;
+		#end
 	}
 
 	inline function get_height() {
+		#if !openfl
 		return stage.stageHeight;
+		#else
+		return windowHeight;
+		#end
 	}
 
 	inline function get_mouseLock() {
