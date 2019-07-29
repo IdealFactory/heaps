@@ -21,6 +21,8 @@ class Window {
 	#if openfl
 	var windowWidth = 800;
 	var windowHeight = 600;
+	var openFLMouseX : Float = 0.;
+	var openFLMouseY : Float = 0.;
 	#end
 
 	// FLASH
@@ -168,11 +170,19 @@ class Window {
 	var lastY : Float = -1.;
 
 	inline function get_mouseX() {
+		#if !openfl
 		return Std.int( multipleWindowsSupport ? lastX : stage.mouseX );
+		#else
+		return Std.int(openFLMouseX);
+		#end
 	}
 
 	inline function get_mouseY() {
+		#if !openfl
 		return Std.int( multipleWindowsSupport ? lastY : stage.mouseY );
+		#else
+		return Std.int(openFLMouseY);
+		#end
 	}
 
 	inline function get_width() {
