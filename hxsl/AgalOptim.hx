@@ -637,6 +637,8 @@ class AgalOptim {
 	}
 
 	inline function dist( a : Reg, b : Reg ) {
+		if (a==null && b==null) return 0;
+		if ((a==null && b!=null) || (a!=null && b==null)) return 1000;
 		return a.t == b.t && a.access == null && b.access == null ? b.index - a.index : 1000;
 	}
 

@@ -49,6 +49,11 @@ private class CompiledShader {
 	}
 }
 
+typedef BitmapSide = {
+	 bmp: hxd.BitmapData,
+	 side:Int
+}
+
 class Stage3dDriver extends Driver {
 
 	// standard profile was introduced with Flash14 but it causes problems with filters, only enable it for flash15+
@@ -82,6 +87,7 @@ class Stage3dDriver extends Driver {
 	var tdisposed : Texture;
 	var defaultDepth : h3d.mat.DepthBuffer;
 	var curColorMask = -1;
+	var generateMipMap : Map<h3d.mat.Texture, Array<BitmapSide> >;
 
 	@:allow(h3d.impl.VertexWrapper)
 	var empty : flash.utils.ByteArray;
@@ -98,6 +104,7 @@ class Stage3dDriver extends Driver {
 		curMultiBuffer = [];
 		defStencil = new Stencil();
 		defaultDepth = new h3d.mat.DepthBuffer( -1, -1);
+		generateMipMap = [];
 	}
 
 	override function logImpl( str : String ) {
@@ -309,8 +316,49 @@ class Stage3dDriver extends Driver {
 		}
 	}
 
+	function cacheBitmapForMipMap( t, bmpAndSide ) {
+		if (!generateMipMap.exists(t)) generateMipMap[ t ] = [];
+		generateMipMap[ t ].push( bmpAndSide );	
+	}
+
+	override function generateMipMaps( t : h3d.mat.Texture ) {
+		if( t.t == tdisposed ) return;
+
+		var mipmap = new hxd.BitmapData(t.width, t.height);
+		
+		for (bmpside in generateMipMap[ t ]) {
+			var w:UInt = t.width, h:UInt = t.height, i = 0;
+			var mipmapW = w;
+			var mipmapH = h;
+
+			var source = bmpside.bmp;
+			var side = bmpside.side;
+					
+			while (w >= 1 || h >= 1) {
+				mipmap.clear(0);
+				
+				mipmap.drawScaled(0, 0, mipmapW, mipmapH, source, 0, 0, source.width, source.height);
+				
+				if (t.flags.has(Cube)) {
+					var t = flash.Lib.as(t.t, flash.display3D.textures.CubeTexture);
+					t.uploadFromBitmapData(mipmap.toNative(), side, i++);
+				} else {
+					var t = flash.Lib.as(t.t, flash.display3D.textures.Texture);
+					t.uploadFromBitmapData(mipmap.toNative(), i++);
+				}
+				
+				w >>= 1;
+				h >>= 1;
+				
+				mipmapW = w > 1? w : 1;
+				mipmapH = h > 1? h : 1;
+			}
+		}
+	}
+
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
 		if( t.t == tdisposed ) return;
+		cacheBitmapForMipMap( t, { bmp: bmp, side: side } );
 		if( t.flags.has(Cube) ) {
 			var t = flash.Lib.as(t.t, flash.display3D.textures.CubeTexture);
 			t.uploadFromBitmapData(bmp.toNative(), side, mipLevel);
@@ -327,6 +375,9 @@ class Stage3dDriver extends Driver {
 
 	override function uploadTexturePixels( t : h3d.mat.Texture, pixels : hxd.Pixels, mipLevel : Int, side : Int ) {
 		if( t.t == tdisposed ) return;
+		var bmp = new hxd.BitmapData( t.width, t.height );
+		bmp.setPixels( pixels );
+		cacheBitmapForMipMap( t, { bmp: bmp, side: side } );
 		pixels.convert(BGRA);
 		var data = pixels.bytes.getData();
 		if( t.flags.has(Cube) ) {
