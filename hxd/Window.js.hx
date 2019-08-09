@@ -79,6 +79,7 @@ class Window {
 		canvasPos = canvas.getBoundingClientRect();
 		// add mousemove on window (track mouse even when outside of component)
 		// unless we're having a custom canvas (prevent leaking the listener)
+		#if !openfl
 		if( customCanvas )
 			canvas.addEventListener("mousemove", onMouseMove);
 		else
@@ -94,6 +95,7 @@ class Window {
 		element.addEventListener("keypress", onKeyPress);
 		element.addEventListener("blur", onFocus.bind(false));
 		element.addEventListener("focus", onFocus.bind(true));
+		#end
 		canvas.oncontextmenu = function(e){
 			e.stopPropagation();
 			e.preventDefault();

@@ -63,6 +63,7 @@ class Window {
 	}
 
 	function initGesture(b) {
+		#if !openfl
 		if( hxd.System.getValue(IsMobile) ) {
 			if( b )  {
 				flash.ui.Multitouch.inputMode = flash.ui.MultitouchInputMode.GESTURE;
@@ -91,6 +92,7 @@ class Window {
 			stage.addEventListener(flash.events.MouseEvent.RIGHT_MOUSE_DOWN, onRMouseDown);
 			stage.addEventListener(flash.events.MouseEvent.RIGHT_MOUSE_UP, onRMouseUp);
 		}
+		#end
 	}
 
 	public dynamic function onClose() : Bool {
