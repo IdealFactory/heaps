@@ -7,7 +7,7 @@ import hxd.fmt.gltf.Data;
 class Parser {
 	
 	public static function parse( data : Bytes, loadBuffer:String->Bytes ) : GltfContainer {
-		var gltf : Gltf;
+		var gltf : Gltf = null;
 		var bin:Array<Bytes> = new Array();
 		if ( bin == null ) new Array();
 		if ( data.getInt32(0) == 0x46546C67 ) {
@@ -33,14 +33,17 @@ class Parser {
 			gltf = Json.parse(data.toString());
 		}
 		
-		// TODO: Embedded data handling
-		if ( gltf.buffers != null ) {
+		if ( bin.length == 0 && gltf != null && gltf.buffers != null ) {
 			for ( buf in gltf.buffers ) {
 				if ( StringTools.startsWith(buf.uri, "data:") ) {
-					throw "Embedded buffer data not supported!";
+					bin.push( haxe.crypto.Base64.decode( buf.uri.substr( buf.uri.indexOf(",")+1)) );
 				} else {
-					bin.push(loadBuffer(buf.uri));
+					bin.push( loadBuffer(buf.uri) );
 				}
+				var bI = bin.length - 1;
+				var out = "";
+				for (i in 0...255) out += StringTools.hex(bin[bI].get(i), 2)+" ";
+				trace("Buffer URI:"+(StringTools.startsWith(buf.uri, "data:") ? buf.uri.substr(0, 100)+"..." : buf.uri)+" len="+bin[bI].length+"\nData="+out);
 			}
 		}
 

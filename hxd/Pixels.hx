@@ -4,6 +4,10 @@ enum Flags {
 	ReadOnly;
 	AlphaPremultiplied;
 	FlipY;
+	ChannelFlippedR;
+	ChannelFlippedG;
+	ChannelFlippedB;
+	ChannelFlippedA;
 }
 
 @:forward(bytes, width, height, offset, flags, clear, dispose, toPNG, clone, toVector, sub, blit)
@@ -269,6 +273,23 @@ class Pixels {
 				p1 += 4;
 				p2 += 4;
 			}
+		}
+	}
+
+	public function flipChannel( channel : Channel ) {
+		switch (channel) {
+			case R : if (flags.has(ChannelFlippedR)) return; else flags.set(ChannelFlippedR);
+			case G : if (flags.has(ChannelFlippedG)) return; else flags.set(ChannelFlippedG);
+			case B : if (flags.has(ChannelFlippedB)) return; else flags.set(ChannelFlippedB);
+			case A : if (flags.has(ChannelFlippedA)) return; else flags.set(ChannelFlippedA);
+		}
+		var chanOffset = channel.toInt();
+		var bytes : hxd.impl.UncheckedBytes = bytes;
+		var size = width*height - 1;
+		for( i in 0...width*((height>>1)+1) ) {
+			var p = (i << 2) + offset + offset;
+			var b = bytes[p];
+			bytes[p] = (0xFF - b) & 0xFF;
 		}
 	}
 

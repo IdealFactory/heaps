@@ -1,5 +1,9 @@
 package hxd.fmt.gltf;
 
+import haxe.io.Bytes;
+import hxd.FloatBuffer;
+import hxd.IndexBuffer;
+
 typedef GltfId = Int;
 
 typedef GltfProperty = {
@@ -53,12 +57,12 @@ typedef AccessorSparseValues = {
 enum abstract ComponentType(Int) {
 	
 	var CTByte = 5120;
-	var CTUnsignedByte;
-	var CTShort;
-	var CTUnsignedShort;
+	var CTUnsignedByte = 5121;
+	var CTShort = 5122;
+	var CTUnsignedShort = 5123;
 	// var CTInt;
-	var CTUnsignedInt = 5125;
-	var CTFloat;
+	// var CTUnsignedInt = 5125;
+	var CTFloat = 5126;
 
 	public inline function toInt():Int { return this; }
 
@@ -367,4 +371,113 @@ typedef MaterialSpecularGlossinessExt = {
 typedef GltfContainer = {
 	var header:Gltf;
 	var buffers:Array<haxe.io.Bytes>;
+}
+
+class GltfTools {
+
+	public static function getIndexBuffer( attribute, l, accId ) : IndexBuffer {
+		var buffer:IndexBuffer = new IndexBuffer();
+		var bytes = getBufferBytesByAccessor( l, accId );
+		var acc = l.root.accessors[ accId ];
+ 		var pos = 0;
+		var out = "";
+		while ( pos < bytes.length ) {
+			
+			switch (acc.componentType) {
+				case CTShort: 
+					if (pos < 64) out += ((bytes.get( pos++ ) << 8) | bytes.get( pos++ ))+" ";		
+					buffer.push( (bytes.get( pos++ ) << 8) | bytes.get( pos++ ));
+				case CTUnsignedShort : 
+					if (pos < 64) out += bytes.getUInt16( pos )+" ";
+					buffer.push( bytes.getUInt16( pos ));
+					pos += 2;
+				case CTFloat :
+				default:
+					if (pos < 32) out += bytes.get( pos )+" ";
+					buffer.push( bytes.get( pos++ ));
+
+			}
+		}
+		trace("IndexBuffer("+attribute+")="+out);
+
+		return buffer;
+	}
+
+	public static function getFloatBuffer( attribute, l, accId ) : FloatBuffer {
+		var buffer:FloatBuffer = new FloatBuffer();
+		var bytes = getBufferBytesByAccessor( l, accId );
+ 		var pos = 0;
+		var out = "";
+		while ( pos < bytes.length ) {
+			if (pos < (attribute=="TEXCOORD_0" ? bytes.length : 128)) out += bytes.getFloat( pos )+" ";
+			buffer.push( bytes.getFloat( pos ));
+			pos += 4;
+		}
+		trace("FloatBuffer("+attribute+")="+out);
+
+		return buffer;
+	}
+
+	public static function getBufferBytesByAccessor( l, accId ):Bytes {
+		var acc = l.root.accessors[ accId ];
+		var bvId = acc.bufferView;
+		var ct:ComponentType = acc.componentType;
+		var c:Int = acc.count;
+		var t:AccessorType = acc.type;
+		trace(" - getBufferBytesByAccessor:AccID="+accId+" componentType:"+t+" count:"+c+" type:"+t);
+		return getBufferBytes( l, bvId, acc );
+	}
+
+	public static function getBufferBytes( l, bvId, acc = null ):Bytes {
+		var bv = l.root.bufferViews[ bvId ];
+		var accOffset = acc==null ? 0 : (!Reflect.hasField( acc, "byteOffset") ? 0 : acc.byteOffset);
+		var offset = !Reflect.hasField( bv, "byteOffset") ? 0 : bv.byteOffset;
+		var stride = !Reflect.hasField( bv, "byteStride") ? 0 : bv.byteStride;
+		var d = " - getBufferBytes:BvID="+bvId+" accOffset:"+accOffset+" byteOffset:"+offset+" byteStride:"+stride;
+		
+		var bytes:Bytes;
+		var pos = 0;
+		var srcpos = accOffset + offset;
+		var buf = l.buffers[ bv.buffer ];
+		var componentSize = 1;
+		var componentCount = 1;
+		if (acc != null) {
+			switch (acc.componentType) {
+				case CTShort | CTUnsignedShort : componentSize = 2;
+				case CTFloat : componentSize = 4;
+				default: componentSize = 1;
+			}
+			switch (acc.type) {
+				case Vec2 : componentCount = 2;
+				case Vec3 : componentCount = 3;
+				case Vec4	| Mat2: componentCount = 4;
+				case Mat3 : componentCount = 9;
+				case Mat4 : componentCount = 16;
+				default: componentCount = 1;
+			}
+		}
+		d += " componentSize:"+componentSize+" componentCount:"+componentCount;
+
+		if (acc == null || stride == 0) {
+			var size = acc == null ? bv.byteLength : acc.count * componentSize * componentCount;
+			bytes = Bytes.alloc( size );
+			bytes.blit( pos, buf, srcpos, size);
+			d += " blitting:"+size;
+		} else {
+			var stripLength = componentSize * componentCount;
+			d += " stripLength:"+stripLength;
+			var ctr = 0;
+			bytes = Bytes.alloc( stripLength * acc.count );
+			while (ctr < acc.count) {
+				bytes.blit( pos, buf, srcpos, stripLength);
+				pos += stripLength;
+				srcpos += stride;
+				ctr++;
+			}
+		}
+		trace(d);
+		
+		return bytes;
+	}
+
 }

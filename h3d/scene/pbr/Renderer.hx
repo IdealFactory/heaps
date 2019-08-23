@@ -306,7 +306,7 @@ class Renderer extends h3d.scene.Renderer {
 
 		pbrDirect.cameraPosition.load(ctx.camera.pos);
 		pbrIndirect.cameraPosition.load(ctx.camera.pos);
-		pbrIndirect.emissivePower = props.emissive * props.emissive;
+		pbrIndirect.emissivePower = 1;//props.emissive * props.emissive;
 		pbrIndirect.irrPower = env.power * env.power;
 		pbrIndirect.irrLut = env.lut;
 		pbrIndirect.irrDiffuse = env.diffuse;

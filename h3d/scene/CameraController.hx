@@ -155,12 +155,13 @@ class CameraController extends h3d.scene.Object {
 				@:privateAccess scene.events.stopDrag();
 			}
 		case EMove:
+			var xR = (e.relX - pushX) * (getScene().camera.rightHanded ? -1 : 1);
 			switch( pushing ) {
 			case 0:
 				if( hxd.Key.isDown(hxd.Key.ALT) )
 					zoom(-((e.relX - pushX) +  (e.relY - pushY)) * 0.03);
 				else
-					rot(e.relX - pushX, e.relY - pushY);
+					rot(xR, e.relY - pushY);
 				pushX = e.relX;
 				pushY = e.relY;
 			case 1:
@@ -169,7 +170,7 @@ class CameraController extends h3d.scene.Object {
 				pushX = e.relX;
 				pushY = e.relY;
 			case 2:
-				rot(e.relX - pushX, e.relY - pushY);
+				rot( xR, e.relY - pushY);
 				pushX = e.relX;
 				pushY = e.relY;
 			default:
