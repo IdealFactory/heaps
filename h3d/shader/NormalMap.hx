@@ -32,7 +32,7 @@ class NormalMap extends hxsl.Shader {
 
 		function fragment() {
 			var n = transformedNormal;
-			var nf = unpackNormal(texture.get(calculatedUV));// * vec3( -1., -1., 1.);
+			var nf = unpackNormal(texture.get(calculatedUV));
 			var tanX = transformedTangent.xyz.normalize();
 			var tanY = n.cross(tanX) * -transformedTangent.w;
 			transformedNormal = (nf.x * tanX + nf.y * tanY + nf.z * n).normalize();

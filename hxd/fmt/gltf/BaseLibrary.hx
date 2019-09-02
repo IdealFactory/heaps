@@ -119,26 +119,28 @@ class BaseLibrary {
 				var tex = getTexture(pbrmr.baseColorTexture.index);
 				material = h3d.mat.Material.create( tex );
 			}
-			if ( pbrmr.baseColorFactor != null ) {
-				var a:Float = pbrmr.baseColorFactor[3];
-				var r:Float = pbrmr.baseColorFactor[0];
-				var g:Float = pbrmr.baseColorFactor[1];
-				var b:Float = pbrmr.baseColorFactor[2];
 
-				var col = ( Std.int(a * 0xFF) << 24) | (Std.int(r * 0xFF) << 16) | (Std.int(g * 0xFF) << 8) | Std.int(b * 0xFF);
-				if (material == null) material = h3d.mat.Material.create(h3d.mat.Texture.fromColor( col ));
-				var color = new h3d.Vector(r, g, b);
-				material.color.load(color);
-				trace("CreatingColorMaterial:0x"+StringTools.hex(col, 8));
+			var a:Float, r:Float, g:Float, b:Float;
+			a = r = g = b = 1;
+			if ( pbrmr.baseColorFactor != null ) {
+				a = pbrmr.baseColorFactor[3];
+				r = pbrmr.baseColorFactor[0];
+				g = pbrmr.baseColorFactor[1];
+				b = pbrmr.baseColorFactor[2];
 			}
+			var col = ( Std.int(a * 0xFF) << 24) | (Std.int(r * 0xFF) << 16) | (Std.int(g * 0xFF) << 8) | Std.int(b * 0xFF);
+			if (material == null) material = h3d.mat.Material.create(h3d.mat.Texture.fromColor( col ));
+			var color = new h3d.Vector(r, g, b);
+			material.color.load(color);
+			trace("BaseColor:0x"+StringTools.hex(col, 8));
 
 			if (pbrmr.metallicRoughnessTexture != null) {
 
 				if (pbrTexture == null) pbrTexture = new h3d.shader.pbr.PropsTexture();
 				pbrTexture.texture = getTexture(pbrmr.metallicRoughnessTexture.index);
 				
-				pbrValues.metalness = Reflect.hasField(pbrmr, "metallicFactor") ? pbrmr.metallicFactor : 0.6;
-				pbrValues.roughness = Reflect.hasField(pbrmr, "roughnessFactor") ? pbrmr.roughnessFactor : 0.3;
+				pbrValues.metalness = Reflect.hasField(pbrmr, "metallicFactor") ? pbrmr.metallicFactor : 1;
+				pbrValues.roughness = Reflect.hasField(pbrmr, "roughnessFactor") ? pbrmr.roughnessFactor : 1;
 			}
 		}
 
@@ -150,22 +152,27 @@ class BaseLibrary {
 				material.normalMap = getTexture( materialNode.normalTexture.index, true );
 
 		// TODO Implement RGB EmissiveFactor
-		// if ( materialNode.emissiveFactor != null ) {
-		// 	var eR:Float = materialNode.emissiveFactor[0];
-		// 	var eG:Float = materialNode.emissiveFactor[1];
-		// 	var eB:Float = materialNode.emissiveFactor[2];
-		// 	pbrValues.emissive = ( eR + eG + eB ) / 3; // Currently average the RGB to a single float
-		// }
+		if ( materialNode.emissiveFactor != null ) {
+			var eR:Float = materialNode.emissiveFactor[0];
+			var eG:Float = materialNode.emissiveFactor[1];
+			var eB:Float = materialNode.emissiveFactor[2];
+			pbrValues.emissive = ( eR + eG + eB ) / 3; // Currently average the RGB to a single float
+		} else {
+			pbrValues.emissive = 1;
+		}
 		// TODO Implement Emissive Map 
-		// if ( materialNode.emissiveTexture != null ) {
-		// 	pbrTexture.hasEmissiveMap = true;
-		// 	pbrTexture.emissiveMap = getTexture( materialNode.emissiveTexture.index );
-		// }
+		if ( materialNode.emissiveTexture != null ) {
+			pbrTexture.hasEmissiveMap = true;
+			pbrTexture.emissiveMap = getTexture( materialNode.emissiveTexture.index );
+		}
 
 		// TODO Implement Occlusion Map 
 			if ( materialNode.occlusionTexture != null ) {
 				pbrTexture.hasOcclusionMap = true;
 				pbrTexture.occlusionMap = getTexture( materialNode.occlusionTexture.index );
+			} else {
+				if (pbrTexture != null) 
+					pbrTexture.occlusionMap = h3d.mat.Texture.fromColor( 0xFFFFFFFF );
 			}
 
 			if ( materialNode.name != null ) material.name = materialNode.name;
@@ -184,8 +191,9 @@ class BaseLibrary {
 
 	function applySampler( index : Int, mat : h3d.mat.Texture ) {
 		var sampler = root.samplers[index];
-		mat.filter = Nearest;
-		mat.wrap = Clamp;
+		mat.mipMap = Linear;
+		mat.filter = Linear;
+		mat.wrap = Repeat;
 		// TODO: mag/min filter separately
 		if ( sampler.minFilter != null ) {
 			switch ( sampler.minFilter ) {
@@ -233,8 +241,9 @@ class BaseLibrary {
 			pixels.makeSquare();
 
 		if (remapNormals) {
-			// pixels.flipChannel( Channel.R );
+			pixels.flipChannel( Channel.R );
 			// pixels.flipChannel( Channel.G );
+			// pixels.flipChannel( Channel.B );
 		}
 
 		if ( Reflect.hasField(node, "sampler") ) 

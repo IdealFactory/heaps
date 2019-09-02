@@ -71,4 +71,14 @@ class Geometry {
 		return GltfTools.getFloatBuffer( "TEXCOORD_0", l, accId );
 	}
 
+	public function getUV2s() {
+		trace("GetUV2s-----------------------");
+		var accId:Null<Int> = root.attributes.get( "TEXCOORD_1" );
+		if (accId == null) { trace(" - getUV2s returning null"); return null; }
+
+		if (floatCache.exists( "TEXCOORD_1" )) return floatCache[ "TEXCOORD_1" ];
+
+		return GltfTools.getFloatBuffer( "TEXCOORD_1", l, accId );
+	}
+
 }

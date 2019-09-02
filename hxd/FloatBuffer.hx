@@ -9,7 +9,7 @@ private abstract Float32Expand({ pos : Int, array : hxd.impl.TypedArray.Float32A
 	public var length(get, set) : Int;
 
 	public function new(length) {
-		this = { pos : 0, array : new Float32Array(new ArrayBuffer(length<<2)) };
+		this = { pos : length, array : new Float32Array(new ArrayBuffer(length<<2)) };
 	}
 
 	inline function get_length() return this.pos;
@@ -49,7 +49,7 @@ private abstract LimeFloat32Expand({ pos : Int, array : lime.utils.Float32Array 
 	public var length(get, set) : Int;
 
 	public function new(length) {
-		this = { pos : 0, array : new lime.utils.Float32Array(length) };
+		this = { pos : length, array : new lime.utils.Float32Array(length) };
 	}
 
 	 function get_length() return this.pos;

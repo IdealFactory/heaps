@@ -88,6 +88,7 @@ class GltfModel extends MeshPrimitive {
 		var tangents = geom.getTangents();
 		var idx = geom.getIndices();
 		var uvs = geom.getUVs();
+		var uv2s = geom.getUV2s(); //TODO: Implement 2nd UV coords
 
 		if (idx == null) {
 			trace("Setting up sequential IndexBuffer");
@@ -109,6 +110,15 @@ class GltfModel extends MeshPrimitive {
 			trace(" - UV FloatBuffer len="+uvs.length);
 		}
 
+		if (uv2s == null) {
+			trace("Duplicating UV2s from UVs");
+			uv2s = new hxd.FloatBuffer();
+			for (i in 0...uvs.length) {
+				uv2s.push( uvs[i] );
+			}
+			trace(" - UV2 FloatBuffer len="+uvs.length);
+		}
+
 		if (norms == null) {
 			trace("Calculating Normals(0,1,0) based on verts FloatBuffer");
 			norms = new hxd.FloatBuffer();
@@ -123,10 +133,12 @@ class GltfModel extends MeshPrimitive {
 
 		if (tangents == null) {
 			trace("Setting up Tangents(n, n, n) tangent FloatBuffer");
-			tangents = new hxd.FloatBuffer();
+			tangents = new hxd.FloatBuffer( verts.length );
+			var bitangents = new hxd.FloatBuffer( verts.length );
 			var vi = 0;
 			var uvi = 0;
-
+			var i0, i1, i2;
+			var uvi0, uvi1, uvi2;
 			var v0 = new h3d.Vector();
 			var v1 = new h3d.Vector();
 			var v2 = new h3d.Vector();
@@ -137,44 +149,126 @@ class GltfModel extends MeshPrimitive {
 			var dP2 = new h3d.Vector();
 			var dUV1 = new h3d.Vector();
 			var dUV2 = new h3d.Vector();
+			var tangent = new h3d.Vector();
+			var bitangent = new h3d.Vector();
 
-			while (vi < verts.length) {
-				v0.set( verts[ vi ], verts[ vi+1 ], verts[ vi+2 ] );
-				v1.set( verts[ vi+3 ], verts[ vi+4 ], verts[ vi+5 ] );
-				v2.set( verts[ vi+6 ], verts[ vi+7 ], verts[ vi+8 ] );
+			var i = 0;
+			while (i < idx.length) {
+				i0 = idx[ i ] * 3;
+				i1 = idx[ i+1 ] * 3;
+				i2 = idx[ i+2 ] * 3;
+				v0.set( verts[ i0 ], verts[ i0+1 ], verts[ i0+2 ] );
+				v1.set( verts[ i1 ], verts[ i1+1 ], verts[ i1+2 ] );
+				v2.set( verts[ i2 ], verts[ i2+1 ], verts[ i2+2 ] );
 
-				uv0.set( uvs[ uvi ], uvs[ uvi+1 ] );
-				uv1.set( uvs[ uvi+2 ], uvs[ uvi+3 ] );
-				uv2.set( uvs[ uvi+4 ], uvs[ uvi+4 ] );
+				uvi0 = idx[ i ] * 2;
+				uvi1 = idx[ i+1 ] * 2;
+				uvi2 = idx[ i+2 ] * 2;
+				uv0.set( uvs[ uvi0 ], uvs[ uvi0+1 ] );
+				uv1.set( uvs[ uvi1 ], uvs[ uvi1+1 ] );
+				uv2.set( uvs[ uvi2 ], uvs[ uvi2+1 ] );
 
-				dP1.load( v1 );
-				dP1.sub( v0 );
+				// dP1.load( v1 );
+				// dP1 = dP1.sub( v0 );
 
-				dP2.load( v2 );
-				dP2.sub( v0 );
+				// dP2.load( v2 );
+				// dP2 = dP2.sub( v0 );
 
-				dUV1.load( uv1 );
-				dUV1.sub( uv0 );
 
-				dUV2.load( uv2 );
-				dUV2.sub( uv0 );
+				// dUV1.load( uv1 );
+				// dUV1 = dUV1.sub( uv0 );
 
-				var r = 1 / (dUV1.x * dUV2.y - dUV1.y * dUV2.x);
-				
-				var t = new Vector( (dP1.x * dUV2.y) + (dP2.x * -dUV1.y), (dP1.y * dUV2.y) + (dP2.y * -dUV1.y), (dP1.z * dUV2.y) + (dP2.z * -dUV1.y));
-				tangents.push( t.x );
-				tangents.push( t.y );
-				tangents.push( t.z );
-				tangents.push( t.x );
-				tangents.push( t.y );
-				tangents.push( t.z );
-				tangents.push( t.x );
-				tangents.push( t.y );
-				tangents.push( t.z );
+				// dUV2.load( uv2 );
+				// dUV2 = dUV2.sub( uv0 );
 
-				vi += 9;
-				uvi += 6;
+				// var area = (dUV1.x * dUV2.y - dUV1.y * dUV2.x);
+				// var tangent = new Vector();
+				// if (area != 0) {
+				// 	var r = 1 / area;
+					
+				// 	tangent.x = r * ((dP1.x * dUV2.y) + (dP2.x * -dUV1.y));
+				// 	tangent.y = r * ((dP1.y * dUV2.y) + (dP2.y * -dUV1.y));
+				// 	tangent.z = r * ((dP1.z * dUV2.y) + (dP2.z * -dUV1.y));
+				// }
+
+				var x1 = v1.x - v0.x;
+				var x2 = v2.x - v0.x;
+
+				var y1 = v1.y - v0.y;
+				var y2 = v2.y - v0.y;
+
+				var z1 = v1.z - v0.z;
+				var z2 = v2.z - v0.z;
+
+				var s1 = uv1.x - uv0.x;
+				var s2 = uv2.x - uv0.x;
+
+				var t1 = uv1.y - uv0.y;
+				var t2 = uv2.y - uv0.y;
+
+				var r = 1.0 / ( s1 * t2 - s2 * t1 );
+
+				tangent.set(
+					( t2 * x1 - t1 * x2 ) * r,
+					( t2 * y1 - t1 * y2 ) * r,
+					( t2 * z1 - t1 * z2 ) * r
+				);
+
+				bitangent.set(
+					( s1 * x2 - s2 * x1 ) * r,
+					( s1 * y2 - s2 * y1 ) * r,
+					( s1 * z2 - s2 * z1 ) * r
+				);
+
+				tangents[i0] = tangent.x;
+				tangents[i0+1] = tangent.y;
+				tangents[i0+2] = tangent.z;
+				tangents[i1] = tangent.x;
+				tangents[i1+1] = tangent.y;
+				tangents[i1+2] = tangent.z;
+				tangents[i2] = tangent.x;
+				tangents[i2+1] = tangent.y;
+				tangents[i2+2] = tangent.z;
+
+				bitangents[i0] = bitangent.x;
+				bitangents[i0+1] = bitangent.y;
+				bitangents[i0+2] = bitangent.z;
+				bitangents[i1] = bitangent.x;
+				bitangents[i1+1] = bitangent.y;
+				bitangents[i1+2] = bitangent.z;
+				bitangents[i2] = bitangent.x;
+				bitangents[i2+1] = bitangent.y;
+				bitangents[i2+2] = bitangent.z;
+
+				i+=3;
 			}
+
+			vi = 0;
+			var n = new h3d.Vector();
+			var t = new h3d.Vector();
+			var t2 = new h3d.Vector();
+			while (vi < verts.length) {
+				n.set( norms[ vi ], norms[ vi+1 ], norms[ vi+2 ] );
+				tangent.set( tangents[ vi ], tangents[ vi+1 ], tangents[ vi+2 ] );
+				bitangent.set( bitangents[ vi ], bitangents[ vi+1 ], bitangents[ vi+2 ] );
+
+				t.load( tangent );
+				n.scale3( n.dot3( tangent ));
+				t = t.sub( n );
+				t.normalize();
+				
+				t2.set( norms[ vi ], norms[ vi+1 ], norms[ vi+2 ] );
+				t2 = t2.cross( t );
+				var test = t2.dot3( bitangent );
+				var w = (test < 0.0) ? -1. : 1.;
+
+				tangents[vi] = -t.x;
+				tangents[vi+1] = -t.y;
+				tangents[vi+2] = t.z;
+
+				vi += 3;
+			}
+
 			trace(" - Tangents FloatBuffer len="+tangents.length);
 		}
 
@@ -191,6 +285,7 @@ class GltfModel extends MeshPrimitive {
 		var tangents = geom.getTangents();
 		var idx = geom.getIndices();
 		var uvs = geom.getUVs();
+		var uv2s = geom.getUV2s();
 
 		var faces:Array<TriFace> = [];
 		var i = 0;

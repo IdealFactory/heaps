@@ -286,10 +286,10 @@ class Pixels {
 		var chanOffset = channel.toInt();
 		var bytes : hxd.impl.UncheckedBytes = bytes;
 		var size = width*height - 1;
-		for( i in 0...width*((height>>1)+1) ) {
-			var p = (i << 2) + offset + offset;
+		for( i in 0...width*height ) {
+			var p = (i << 2) + chanOffset;
 			var b = bytes[p];
-			bytes[p] = (0xFF - b) & 0xFF;
+			bytes[p] = (0xFF - b);
 		}
 	}
 
