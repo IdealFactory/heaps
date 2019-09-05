@@ -37,10 +37,7 @@ class PropsValues extends hxsl.Shader {
 
 	};
 
-	public var ID = "";
 	public function new(metalness=0.,roughness=1.,occlusion=1.,emissive=null) {
-		ID = "0x" + StringTools.hex( Std.random(0xFFFFFF), 6);
-		trace("new PropsValues: ID="+ID+"\n"+haxe.CallStack.callStack());
 		super();
 		this.metalness = metalness;
 		this.roughness = roughness;
