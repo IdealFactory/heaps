@@ -10,7 +10,10 @@ class Library extends BaseLibrary {
         
         this.s3d = s3d;
 
+        #if debug_gltf
         trace("GLTF Loading scene:"+fileName);
+        #end
+        
         var gltfFile = hxd.Res.load( fileName );
         var gltfBytes = gltfFile.entry.getBytes();
 
@@ -38,16 +41,19 @@ class Library extends BaseLibrary {
 
         // Setup cameras
         if (root.cameras != null)
-            for (camera in root.cameras) cameras.push( createCamera( camera ) );
+            for (camera in root.cameras) {
+                var c = createCamera( camera );
+                cameras.push( c );
+            }
 
         // Setup images
         if (root.images != null)
             for (image in root.images) {
+                #if debug_gltf
                 trace("Loading image:"+image);
+                #end
                 images.push( loadImage( image ) );
             }
-
-        // Textures & Samplers can be done directly as they are indexes or properties
 
         // Setup materials
         if (root.materials != null)
@@ -63,11 +69,14 @@ class Library extends BaseLibrary {
 
         // Default scene
         var defaultSceneId = (root.scene == null) ? 0 : root.scene;
+        
+        #if debug_gltf
         trace("DefaultSceneId:"+defaultSceneId);
+        #end
 
         // Scenes
         for ( scene in root.scenes ) {
-            var s = s3d; //new h3d.scene.Scene();
+            var s = s3d;
             currentScene = s;
             var sceneContainer = new h3d.scene.Object( s3d);
 		    sceneContainer.rotate( Math.PI/2, 0, 0 );
@@ -79,12 +88,7 @@ class Library extends BaseLibrary {
     }
 
 	function traverseNodes( node : Node, parent:h3d.scene.Object ) {
-        var hasCam = (node.camera != null);
-        var hasMesh = (node.mesh != null);
-        var nodeType = (hasMesh ? "MeshNode ("+ root.meshes[node.mesh].name+ ")" : (hasCam ? "CameraNode" : "Node"));
-        trace("TraversingNodes:"+nodeType+" hasChildNodes:"+(node.children != null));
-
-        // Add meshes
+        // Get matrix transform
         var transform = new h3d.Matrix();
         transform.identity();
         if (node.matrix != null) transform.loadValues( node.matrix );
@@ -94,6 +98,12 @@ class Library extends BaseLibrary {
             transform.multiply( transform, q.toMatrix() );
         }
         if (node.scale != null) transform.scale( node.scale[0], node.scale[1], node.scale[2] );
+
+        if (node.camera != null) {
+            var c = cameras[ node.camera ];
+            //TODO: Set camera position/rotation/scale from Matrix
+            //Kind of inverse of Camera.makeCameraMatrix();
+        }
 
         // Add meshes
         if (node.mesh != null) {

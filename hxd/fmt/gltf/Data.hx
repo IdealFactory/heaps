@@ -398,8 +398,10 @@ class GltfTools {
 
 			}
 		}
+		#if debug_gltf
 		trace("IndexBuffer("+attribute+")="+out);
-
+		#end
+		
 		return buffer;
 	}
 
@@ -409,12 +411,14 @@ class GltfTools {
  		var pos = 0;
 		var out = "";
 		while ( pos < bytes.length ) {
-			if (pos < (attribute=="TEXCOORD_0" ? bytes.length : 128)) out += bytes.getFloat( pos )+" ";
+			if (pos < 128) out += bytes.getFloat( pos )+" ";
 			buffer.push( bytes.getFloat( pos ));
 			pos += 4;
 		}
-		trace("FloatBuffer("+attribute+")="+out);
-
+		#if debug_gltf
+		trace("FloatBuffer("+attribute+")="+out+" ...");
+		#end
+		
 		return buffer;
 	}
 
@@ -424,7 +428,9 @@ class GltfTools {
 		var ct:ComponentType = acc.componentType;
 		var c:Int = acc.count;
 		var t:AccessorType = acc.type;
+		#if debug_gltf
 		trace(" - getBufferBytesByAccessor:AccID="+accId+" componentType:"+t+" count:"+c+" type:"+t);
+		#end
 		return getBufferBytes( l, bvId, acc );
 	}
 
@@ -475,7 +481,9 @@ class GltfTools {
 				ctr++;
 			}
 		}
+		#if debug_gltf
 		trace(d);
+		#end
 		
 		return bytes;
 	}

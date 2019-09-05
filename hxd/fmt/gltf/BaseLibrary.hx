@@ -30,8 +30,7 @@ class BaseLibrary {
 		load( fileName, root, buffers );
 	}
 
-	function load( fileName:String, root:Gltf, buffers:Array<Bytes> ) {
-		
+	function load( fileName:String, root:Gltf, buffers:Array<Bytes> ) {	
 		reset();
 
 		this.fileName = fileName;
@@ -61,11 +60,14 @@ class BaseLibrary {
 		if ( StringTools.startsWith(uri, "data:") ) {
 			var mimeType = uri.split(";")[0].substr(5);
 			var data = uri.substr( uri.indexOf(",")+1 );
+			#if debug_gltf
 			trace("Process URI: Data URI:"+mimeType+"\ndat="+data.substr(0, 100)+"...");
-			trace(" - "+haxe.CallStack.callStack());
+			#end
 			return new DataURIEntry( "no-name-image-"+images.length, uri, haxe.crypto.Base64.decode( data ) );
 		} else {
+			#if debug_gltf
 			trace("Process URI: Loading URI:"+uri);
+			#end
 			return hxd.Res.load( uri ).entry;
 		}
 	}
@@ -110,7 +112,7 @@ class BaseLibrary {
 		if (materialNode == null) return h3d.mat.Material.create(h3d.mat.Texture.fromColor(0xFF808080));
 
 		var material:h3d.mat.Material = null;
-		var pbrValues = new h3d.shader.pbr.PropsValues();
+		var pbrValues:h3d.shader.pbr.PropsValues = null;
 		var pbrTexture:h3d.shader.pbr.PropsTexture = null;
 
 		if ( materialNode.pbrMetallicRoughness != null ) {
@@ -132,55 +134,63 @@ class BaseLibrary {
 			if (material == null) material = h3d.mat.Material.create(h3d.mat.Texture.fromColor( col ));
 			var color = new h3d.Vector(r, g, b);
 			material.color.load(color);
+
+			pbrValues = material.mainPass.getShader(h3d.shader.pbr.PropsValues);
+
+			#if debug_gltf
 			trace("BaseColor:0x"+StringTools.hex(col, 8));
+			#end
 
 			if (pbrmr.metallicRoughnessTexture != null) {
 
-				if (pbrTexture == null) pbrTexture = new h3d.shader.pbr.PropsTexture();
+				if (pbrTexture == null) {
+					pbrTexture = new h3d.shader.pbr.PropsTexture( true );
+					material.mainPass.addShader( pbrTexture );
+				}
 				pbrTexture.texture = getTexture(pbrmr.metallicRoughnessTexture.index);
 				
 				pbrValues.metalness = Reflect.hasField(pbrmr, "metallicFactor") ? pbrmr.metallicFactor : 1;
-				pbrValues.roughness = Reflect.hasField(pbrmr, "roughnessFactor") ? pbrmr.roughnessFactor : 1;
+				pbrValues.roughness = Reflect.hasField(pbrmr, "roughnessFactor") ? pbrmr.roughnessFactor : 0;
 			}
 		}
 
 		if (material != null) {
-			material.mainPass.addShader( pbrValues );
-			if ( pbrTexture!=null ) material.mainPass.addShader( pbrTexture );
 
 			if ( materialNode.normalTexture != null )
 				material.normalMap = getTexture( materialNode.normalTexture.index, true );
 
-		// TODO Implement RGB EmissiveFactor
-		if ( materialNode.emissiveFactor != null ) {
-			var eR:Float = materialNode.emissiveFactor[0];
-			var eG:Float = materialNode.emissiveFactor[1];
-			var eB:Float = materialNode.emissiveFactor[2];
-			pbrValues.emissive = ( eR + eG + eB ) / 3; // Currently average the RGB to a single float
-		} else {
-			pbrValues.emissive = 1;
-		}
-		// TODO Implement Emissive Map 
-		if ( materialNode.emissiveTexture != null ) {
-			pbrTexture.hasEmissiveMap = true;
-			pbrTexture.emissiveMap = getTexture( materialNode.emissiveTexture.index );
-		}
+			var emit = new h3d.Vector();
+			if ( materialNode.emissiveFactor != null ) {
+				emit.r = materialNode.emissiveFactor[0];
+				emit.g = materialNode.emissiveFactor[1];
+				emit.b = materialNode.emissiveFactor[2];
+			} 
+			pbrValues.emissive.set( emit.r, emit.g, emit.b );
 
-		// TODO Implement Occlusion Map 
+			if ( materialNode.emissiveTexture != null ) {
+				pbrTexture.hasEmissiveMap = true;
+				pbrTexture.emissiveMap = getTexture( materialNode.emissiveTexture.index );
+				pbrTexture.emissive.set( emit.r, emit.g, emit.b );
+			}
+
 			if ( materialNode.occlusionTexture != null ) {
 				pbrTexture.hasOcclusionMap = true;
 				pbrTexture.occlusionMap = getTexture( materialNode.occlusionTexture.index );
 			} else {
-				if (pbrTexture != null) 
-					pbrTexture.occlusionMap = h3d.mat.Texture.fromColor( 0xFFFFFFFF );
+				if (pbrTexture != null) {
+					pbrTexture.hasOcclusionMap = true;
+					pbrTexture.occlusionMap = h3d.mat.Texture.fromColor( 0xFFFFFF );
+				}
 			}
 
 			if ( materialNode.name != null ) material.name = materialNode.name;
 			if ( Reflect.hasField(materialNode, "doubleSided" )) material.mainPass.culling = materialNode.doubleSided ? None : Back;
 
+			#if debug_gltf
 			trace("Material:"+material.name+" m="+pbrValues.metalness+" r="+pbrValues.roughness+" o="+pbrValues.occlusion+" e="+pbrValues.emissive);
-
-		} else trace("Material is NULL");
+			#end
+		} else
+			material = h3d.mat.Material.create(h3d.mat.Texture.fromColor(0xFFFF0000));
 
 		return material;
 	} 
@@ -214,7 +224,7 @@ class BaseLibrary {
 				default: throw "Unsupported magFilter value!";
 			}
 		}
-		// TODO: Wrap separately
+		// TODO: Wrap separately - wrapS, wrapT
 		if ( sampler.wrapS != null ) {
 			switch ( sampler.wrapS ) {
 				case ClampToEdge: mat.wrap = Clamp;
@@ -240,11 +250,7 @@ class BaseLibrary {
 		if( pixels.width != tex.width || pixels.height != tex.height )
 			pixels.makeSquare();
 
-		if (remapNormals) {
-			pixels.flipChannel( Channel.R );
-			// pixels.flipChannel( Channel.G );
-			// pixels.flipChannel( Channel.B );
-		}
+		if (remapNormals) pixels.flipChannel( Channel.R );
 
 		if ( Reflect.hasField(node, "sampler") ) 
 			applySampler(node.sampler, tex);
@@ -275,60 +281,6 @@ class BaseLibrary {
 		// "TEXCOORD_1" =>
 	];
 
-	@:access(h3d.prim.MeshPrimitive)
-	function loadPrimitive( prim : MeshPrimitive, loadTexture : String->h3d.mat.Texture ) {
-		if (prim.mode == null) prim.mode = Triangles;
-		// TODO: Modes other than triangles?
-		if ( prim.mode != Triangles ) throw "Only triangles mode allowed in mesh primitive!";
-		var mat = getMaterial( prim.material );
-		var stride:Int = 0;
-		var vcount:Int = -1;
-		var attrs = prim.attributes.keys();
-
-		var baseFlags : Array<h3d.Buffer.BufferFlag> = [RawFormat];
-		if (prim.indices == null) throw "Primitives without indexes are not supported!"; // TODO
-
-		for ( attr in attrs ) {
-			var accessor = root.accessors[prim.attributes.get(attr)];
-			// TODO: Sparce accessor, non-float accessors
-			if (accessor.sparce != null) throw "Sparse accessors not supported!";
-			if (accessor.componentType != CTFloat) throw "Primitive attributes should be of type Float!";
-			var view = root.bufferViews[accessor.bufferView];
-			var bytes = buffers[view.buffer];
-			var attrBuf = new h3d.Buffer(accessor.count, view.byteStride >> 2, baseFlags);
-			// mprim.addBuffer("123", accessor.byteOffset)
-			// attrBuf.uploadBytes(buffers[buf.uri], accessor.byteOffset)
-		}
-
-		// var accessors:Array<Accessor>;
-		// for (attr in attrs) {
-		// 	var accessor = root.accessors[prim.attributes.get(attr)];
-		// 	accessors.push(accessor);
-		// 	if (accessor.sparce != null) throw "Sparse accessors not supported!";
-		// 	if (accessor.componentType != CTFloat) throw "Primitive attributes should be of type Float!";
-		// 	if (vcount == -1) vcount = accessor.count;
-		// 	else if (vcount != accessor.count) throw "Vertex data count mismatch!";
-		// 	stride += STRIDES[accessor.type];
-		// }
-		// var stride = 8;
-		
-		// for (i in 0...attrs.length)
-		// {
-		// 	var offset = ATTRIBUTE_OFFSETS[attrs[i]];
-		// 	var accessor = accessors[i];
-		// 	var size = STRIDES[accessor.type];
-		// 	if ( offset == null ) {
-		// 		offset = stride;
-		// 		stride += size;
-		// 	}
-		// 	for (k in 0...vcount)
-		// 	{
-				
-		// 	}
-		// }
-		// var idxAcc = root.accessors[prim.indices]
-	}
-
 	public function loadMesh( index : Int, transform : h3d.Matrix, parent:h3d.scene.Object ) : h3d.scene.Object {
 		var meshNode = root.meshes[ index ];
 		if (meshNode == null) {trace("meshNode returned NULL for idx:"+index); return null; }
@@ -342,7 +294,9 @@ class BaseLibrary {
 		mesh.name = meshName;
 		mesh.setTransform( transform );
 		meshes.push( mesh );
+		#if debug_gltf
 		trace("Create Mesh(Container):"+mesh.name+" parent:"+(parent.name == null ? Type.getClassName(Type.getClass(parent)) : parent.name)+" transform:"+transform);
+		#end
 
 		var primCounter = 0;
 		for ( prim in meshNode.primitives ) {
@@ -357,9 +311,12 @@ class BaseLibrary {
 
 			var primMesh = new h3d.scene.Mesh( meshPrim, mat, mesh );
 			primMesh.name = meshName+"_"+primCounter++;
-			trace(" - mesh primitive:"+primMesh.name);
 
 			#if debug_gltf
+			trace(" - mesh primitive:"+primMesh.name);
+			#end
+
+			#if debug_gltf_normals
 			primMesh.material.mainPass.wireframe = true;
 			
 			var nm = new h3d.scene.Graphics(primMesh);
@@ -411,28 +368,22 @@ class BaseLibrary {
 		return mesh;
 	}
 
-	public function loadModel() : h3d.scene.Object {
+	//TODO: Implement glTF animations
+	// function getAnimation( name : String ) {
+	// 	for ( a in root.animations )
+	// 		if ( a.name == name )
+	// 			return a;
+	// 	return null;
+	// }
 
-		return null;
+	// public function loadAnimation( name : String ) : h3d.anim.Animation {
+	// 	var anim = getAnimation(name);
+	// 	// var a = new h3d.anim.Animation(name, );
 
-	}
+	// 	return null;
+	// }
 
-	function getAnimation( name : String ) {
-		for ( a in root.animations )
-			if ( a.name == name )
-				return a;
-		return null;
-	}
-
-	public function loadAnimation( name : String ) : h3d.anim.Animation {
-		var anim = getAnimation(name);
-		// var a = new h3d.anim.Animation(name, );
-
-		return null;
-	}
-
-	public function getAnimationNames() : Array<String> {
-		return [for ( a in root.animations ) a.name];
-	}
-
+	// public function getAnimationNames() : Array<String> {
+	// 	return [for ( a in root.animations ) a.name];
+	// }
 }

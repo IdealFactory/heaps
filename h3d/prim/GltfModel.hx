@@ -91,36 +91,38 @@ class GltfModel extends MeshPrimitive {
 		var uv2s = geom.getUV2s(); //TODO: Implement 2nd UV coords
 
 		if (idx == null) {
-			trace("Setting up sequential IndexBuffer");
 			idx = new IndexBuffer();
 			var v = 0;
 			for (i in 0...Std.int(verts.length / 3)) {
 				idx.push( v++ );
 			}
-			trace(" - IndexBuffer len="+idx.length);
+			#if debug_gltf
+			trace("Setting up sequential IndexBuffer\n - IndexBuffer len="+idx.length);
+			#end
 		}
 		if (uvs == null) {
-			trace("Setting up UV(0,0) uv FloatBuffer");
 			uvs = new hxd.FloatBuffer();
 			var v = 0;
 			for (i in 0...Std.int(verts.length / 3)) {
 				uvs.push( 0. );
 				uvs.push( 0. );
 			}
-			trace(" - UV FloatBuffer len="+uvs.length);
+			#if debug_gltf
+			trace("Setting up UV(0,0) uv FloatBuffer\n - UV FloatBuffer len="+uvs.length);
+			#end
 		}
 
 		if (uv2s == null) {
-			trace("Duplicating UV2s from UVs");
 			uv2s = new hxd.FloatBuffer();
 			for (i in 0...uvs.length) {
 				uv2s.push( uvs[i] );
 			}
-			trace(" - UV2 FloatBuffer len="+uvs.length);
+			#if debug_gltf
+			trace("Duplicating UV2s from UVs\n - UV2 FloatBuffer len="+uvs.length);
+			#end
 		}
 
 		if (norms == null) {
-			trace("Calculating Normals(0,1,0) based on verts FloatBuffer");
 			norms = new hxd.FloatBuffer();
 			var v = 0;
 			for (i in 0...Std.int(verts.length / 3)) {
@@ -128,11 +130,12 @@ class GltfModel extends MeshPrimitive {
 				norms.push( 1. );
 				norms.push( 0. );
 			}
-			trace(" - Normals FloatBuffer len="+norms.length);
+			#if debug_gltf
+			trace("Calculating Normals(0,1,0) based on verts FloatBuffer\n - Normals FloatBuffer len="+norms.length);
+			#end
 		}
 
 		if (tangents == null) {
-			trace("Setting up Tangents(n, n, n) tangent FloatBuffer");
 			tangents = new hxd.FloatBuffer( verts.length );
 			var bitangents = new hxd.FloatBuffer( verts.length );
 			var vi = 0;
@@ -145,10 +148,6 @@ class GltfModel extends MeshPrimitive {
 			var uv0 = new h3d.Vector();
 			var uv1 = new h3d.Vector();
 			var uv2 = new h3d.Vector();
-			var dP1 = new h3d.Vector();
-			var dP2 = new h3d.Vector();
-			var dUV1 = new h3d.Vector();
-			var dUV2 = new h3d.Vector();
 			var tangent = new h3d.Vector();
 			var bitangent = new h3d.Vector();
 
@@ -167,29 +166,6 @@ class GltfModel extends MeshPrimitive {
 				uv0.set( uvs[ uvi0 ], uvs[ uvi0+1 ] );
 				uv1.set( uvs[ uvi1 ], uvs[ uvi1+1 ] );
 				uv2.set( uvs[ uvi2 ], uvs[ uvi2+1 ] );
-
-				// dP1.load( v1 );
-				// dP1 = dP1.sub( v0 );
-
-				// dP2.load( v2 );
-				// dP2 = dP2.sub( v0 );
-
-
-				// dUV1.load( uv1 );
-				// dUV1 = dUV1.sub( uv0 );
-
-				// dUV2.load( uv2 );
-				// dUV2 = dUV2.sub( uv0 );
-
-				// var area = (dUV1.x * dUV2.y - dUV1.y * dUV2.x);
-				// var tangent = new Vector();
-				// if (area != 0) {
-				// 	var r = 1 / area;
-					
-				// 	tangent.x = r * ((dP1.x * dUV2.y) + (dP2.x * -dUV1.y));
-				// 	tangent.y = r * ((dP1.y * dUV2.y) + (dP2.y * -dUV1.y));
-				// 	tangent.z = r * ((dP1.z * dUV2.y) + (dP2.z * -dUV1.y));
-				// }
 
 				var x1 = v1.x - v0.x;
 				var x2 = v2.x - v0.x;
@@ -268,8 +244,9 @@ class GltfModel extends MeshPrimitive {
 
 				vi += 3;
 			}
-
-			trace(" - Tangents FloatBuffer len="+tangents.length);
+			#if debug_gltf
+			trace("Setting up Tangents(n, n, n) tangent FloatBuffer\n - Tangents FloatBuffer len="+tangents.length);
+			#end
 		}
 
 		addBuffer("position", h3d.Buffer.ofFloats(verts, 3));
@@ -319,7 +296,6 @@ class GltfModel extends MeshPrimitive {
 			uv2 = new Vector( uvs[cI], uvs[cI+1] );
 
 			faces.push( new TriFace( v0, v1, v2, n0 ,n1, n2, uv0, uv1, uv2 ) );
-			// faces.push( new TriFace( verts[idx[i]], verts[idx[i+1]], verts[idx[i+2]], norms[idx[i]], norms[idx[i+1]], norms[idx[i+2]], uvs[idx[i]], uvs[idx[i+1]], uvs[idx[i+2]] ) );
 		}
 
 		return faces;
@@ -338,7 +314,6 @@ class GltfModel extends MeshPrimitive {
 		indexes = idx;
 		curMaterial = -1;
 	}
-
 }
 
 class TriFace {

@@ -45,7 +45,7 @@ typedef RenderProps = {
 	var exposure : Float;
 	var sky : SkyMode;
 	var tone : TonemapMap;
-	var emissive : Float;
+	var emissive : h3d.Vector;
 	var occlusion : Float;
 	var shadows : Bool;
 }
@@ -89,7 +89,8 @@ class Renderer extends h3d.scene.Renderer {
 		Value("output.color"),
 		Vec4([Value("output.normal",3),ALPHA]),
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), ALPHA]),
-		Vec4([Value("output.emissive"),Value("output.depth"),Const(0), ALPHA /* ? */])
+		Vec4([Value("output.emissive",3),ALPHA]),
+		Vec4([Value("output.depth"),Const(0),Const(0),ALPHA /* ? */])
 	]);
 	var decalsOutput = new h3d.pass.Output("decals",[
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
@@ -249,6 +250,7 @@ class Renderer extends h3d.scene.Renderer {
 		var albedo = allocTarget("albedo", true, 1.);
 		var normal = allocTarget("normal", false, 1., RGBA16F);
 		var pbr = allocTarget("pbr", false, 1.);
+		var emissive = allocTarget("emissive", false, 1., RGBA32F);
 		var other = allocTarget("other", false, 1., RGBA32F);
 
 		ctx.setGlobal("albedoMap", { texture : albedo, channel : hxsl.Channel.R });
@@ -262,7 +264,7 @@ class Renderer extends h3d.scene.Renderer {
 		if( ls != null ) drawShadows(ls);
 		if( ctx.lightSystem != null ) ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
 
-		setTargets([albedo,normal,pbr,other]);
+		setTargets([albedo,normal,pbr,emissive,other]);
 		clear(0, 1, 0);
 		mainDraw();
 
@@ -300,13 +302,14 @@ class Renderer extends h3d.scene.Renderer {
 		pbrProps.albedoTex = albedo;
 		pbrProps.normalTex = normal;
 		pbrProps.pbrTex = pbr;
+		pbrProps.emissiveTex = emissive;
 		pbrProps.otherTex = other;
 		pbrProps.cameraInverseViewProj = ctx.camera.getInverseViewProj();
 		pbrProps.occlusionPower = props.occlusion * props.occlusion;
 
 		pbrDirect.cameraPosition.load(ctx.camera.pos);
 		pbrIndirect.cameraPosition.load(ctx.camera.pos);
-		pbrIndirect.emissivePower = 1;//props.emissive * props.emissive;
+		pbrIndirect.emissivePower = props.emissive.mult( props.emissive );
 		pbrIndirect.irrPower = env.power * env.power;
 		pbrIndirect.irrLut = env.lut;
 		pbrIndirect.irrDiffuse = env.diffuse;
@@ -490,7 +493,7 @@ class Renderer extends h3d.scene.Renderer {
 			colorGradingLUTSize : 1,
 			enableColorGrading: true,
 			envPower : 1.,
-			emissive : 1.,
+			emissive : new h3d.Vector(1., 1., 1.),
 			exposure : 0.,
 			sky : Irrad,
 			tone : Linear,

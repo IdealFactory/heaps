@@ -8,18 +8,18 @@ class PropsValues extends hxsl.Shader {
 			metalness : Float,
 			roughness : Float,
 			occlusion : Float,
-			emissive : Float,
+			emissive : Vec3,
 		};
 
 		@param var metalness : Float;
 		@param var roughness : Float;
 		@param var occlusion : Float;
-		@param var emissive : Float;
+		@param var emissive : Vec3;
 
 		var metalnessValue : Float;
 		var roughnessValue : Float;
 		var occlusionValue : Float;
-		var emissiveValue : Float;
+		var emissiveValue : Vec3;
 
 		function __init__() {
 			metalnessValue = metalness;
@@ -37,12 +37,18 @@ class PropsValues extends hxsl.Shader {
 
 	};
 
-	public function new(metalness=0.,roughness=1.,occlusion=1.,emissive=0.) {
+	public var ID = "";
+	public function new(metalness=0.,roughness=1.,occlusion=1.,emissive=null) {
+		ID = "0x" + StringTools.hex( Std.random(0xFFFFFF), 6);
+		trace("new PropsValues: ID="+ID+"\n"+haxe.CallStack.callStack());
 		super();
 		this.metalness = metalness;
 		this.roughness = roughness;
 		this.occlusion = occlusion;
-		this.emissive = emissive;
+		if (emissive == null) 
+			this.emissive.set(0., 0., 0.);
+		else
+			this.emissive.set( emissive.r, emissive.g, emissive.b );
 	}
 
 }

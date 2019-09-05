@@ -59,7 +59,7 @@ typedef PbrProps = {
 	var depthTest : PbrDepthTest;
 	var colorMask : Int;
 	@:optional var alphaKill : Bool;
-	@:optional var emissive : Float;
+	@:optional var emissive : h3d.Vector;
 	@:optional var parallax : Float;
 	
 	var enableStencil : Bool;
@@ -173,7 +173,7 @@ class PbrMaterial extends Material {
 		if( !Reflect.hasField(props, "colorMask") ) Reflect.setField(props, "colorMask", 1 << 0 | 1 << 1 | 1 << 2 | 1 << 3);
 		if( !Reflect.hasField(props, "enableStencil") ) Reflect.setField(props, "enableStencil", false);
 		// Remove unused fields
-		if( props.emissive == 0 )
+		if( props.emissive == null )
 			Reflect.deleteField(props,"emissive");
 		if( !props.enableStencil ) {
 			Reflect.deleteField(props, "stencilWriteMask");
@@ -196,8 +196,11 @@ class PbrMaterial extends Material {
 			mainPass.setPassName("default");
 		case BeforeTonemapping:
 			mainPass.setPassName("beforeTonemapping");
-			if( props.emissive > 0 ) 
-				mainPass.addShader(new h3d.shader.Emissive(props.emissive));
+			if( props.emissive != null ) {
+				var eShader = new h3d.shader.Emissive();
+				eShader.emissive.set( props.emissive.r, props.emissive.g, props.emissive.b );
+				mainPass.addShader( eShader );
+			}
 		case AfterTonemapping:
 			mainPass.setPassName("afterTonemapping");
 		case Distortion:
@@ -272,15 +275,15 @@ class PbrMaterial extends Material {
 		}
 
 		// Get values from specular texture
-		var emit = props.emissive == null ? 0 : props.emissive;
+		var emit = props.emissive == null ? new h3d.Vector() : props.emissive;
 		var tex = mainPass.getShader(h3d.shader.pbr.PropsTexture);
 		var def = mainPass.getShader(h3d.shader.pbr.PropsValues);
 		if( tex == null && def == null ) {
 			def = new h3d.shader.pbr.PropsValues();
 			mainPass.addShader(def);
 		}
-		if( tex != null ) tex.emissive = emit;
-		if( def != null ) def.emissive = emit;
+		if( tex != null ) tex.emissive.set( emit.r, emit.g, emit.b );
+		if( def != null ) def.emissive.set( emit.r, emit.g, emit.b );
 
 		// Parallax
 		var ps = mainPass.getShader(h3d.shader.Parallax);
@@ -367,13 +370,13 @@ class PbrMaterial extends Material {
 		if( specularTexture == t )
 			return t;
 		var props : PbrProps = props;
-		var emit = props == null || props.emissive == null ? 0 : props.emissive;
+		var emit = props == null || props.emissive == null ? new h3d.Vector() : props.emissive;
 		var spec = mainPass.getShader(h3d.shader.pbr.PropsTexture);
 		var def = mainPass.getShader(h3d.shader.pbr.PropsValues);
 		if( t != null ) {
 			if( spec == null ) {
-				spec = new h3d.shader.pbr.PropsTexture();
-				spec.emissive = emit;
+				spec = new h3d.shader.pbr.PropsTexture( );
+				spec.emissive.set( emit.r, emit.g, emit.b );
 				mainPass.addShader(spec);
 			}
 			spec.texture = t;
@@ -384,7 +387,7 @@ class PbrMaterial extends Material {
 			// default values (if no texture)
 			if( def == null ) {
 				def = new h3d.shader.pbr.PropsValues();
-				def.emissive = emit;
+				def.emissive.set( emit.r, emit.g, emit.b );
 				mainPass.addShader(def);
 			}
 		}

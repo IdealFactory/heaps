@@ -4,17 +4,11 @@ class Emissive extends hxsl.Shader {
 
 	static var SRC = {
 		var pixelColor : Vec4;
-		@param var emissive : Float;
+		@param var emissive : Vec3;
 
 		function fragment() {
-			pixelColor.rgb += pixelColor.rgb * emissive;
+			pixelColor.rgb += pixelColor.rgb * emissive.rgb;
 		}
 
 	};
-
-	public function new( emissive : Float = 0 ) {
-		super();
-		this.emissive = emissive;
-	}
-
 }

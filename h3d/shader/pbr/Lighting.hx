@@ -18,7 +18,7 @@ class Indirect extends PropsDefinition {
 		@const var drawIndirectSpecular : Bool;
 		@param var skyMap : SamplerCube;
 		@param var cameraInvViewProj : Mat4;
-		@param var emissivePower : Float;
+		@param var emissivePower : Vec3;
 		var calculatedUV : Vec2;
 
 		function fragment() {
@@ -53,7 +53,8 @@ class Indirect extends PropsDefinition {
 				}
 
 				var indirect = (diffuse * (1 - metalness) * (1 - F) + specular) * irrPower;
-				pixelColor.rgb += indirect * occlusion + albedo * emissive * emissivePower;
+				pixelColor.rgb = mix( pixelColor.rgb, emissive, emissive * emissivePower);
+				pixelColor.rgb += indirect * occlusion;
 			}
 		}
 	};

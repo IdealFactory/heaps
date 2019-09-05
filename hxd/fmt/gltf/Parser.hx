@@ -40,10 +40,12 @@ class Parser {
 				} else {
 					bin.push( loadBuffer(buf.uri) );
 				}
+				#if debug_gltf
 				var bI = bin.length - 1;
 				var out = "";
-				for (i in 0...255) out += StringTools.hex(bin[bI].get(i), 2)+" ";
+				for (i in 0...64) out += StringTools.hex(bin[bI].get(i), 2)+" ";
 				trace("Buffer URI:"+(StringTools.startsWith(buf.uri, "data:") ? buf.uri.substr(0, 100)+"..." : buf.uri)+" len="+bin[bI].length+"\nData="+out);
+				#end
 			}
 		}
 
