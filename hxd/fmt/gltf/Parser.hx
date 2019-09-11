@@ -6,7 +6,7 @@ import hxd.fmt.gltf.Data;
 
 class Parser {
 	
-	public static function parse( data : Bytes, loadBuffer:String->Bytes ) : GltfContainer {
+	public static function parse( data : Bytes, loadBuffer ) : GltfContainer {
 		var gltf : Gltf = null;
 		var bin:Array<Bytes> = new Array();
 		if ( bin == null ) new Array();
@@ -37,15 +37,16 @@ class Parser {
 			for ( buf in gltf.buffers ) {
 				if ( StringTools.startsWith(buf.uri, "data:") ) {
 					bin.push( haxe.crypto.Base64.decode( buf.uri.substr( buf.uri.indexOf(",")+1)) );
+					#if debug_gltf
+					trace("Buffer URI:"+buf.uri.substr(0, 100)+"...");
+					debugBuffer( bin[bin.length-1] );
+					#end
 				} else {
-					bin.push( loadBuffer(buf.uri) );
+					#if debug_gltf
+					trace("Buffer URI:"+buf.uri);
+					#end
+					loadBuffer(buf.uri, bytesLoaded, bin, bin.length);
 				}
-				#if debug_gltf
-				var bI = bin.length - 1;
-				var out = "";
-				for (i in 0...64) out += StringTools.hex(bin[bI].get(i), 2)+" ";
-				trace("Buffer URI:"+(StringTools.startsWith(buf.uri, "data:") ? buf.uri.substr(0, 100)+"..." : buf.uri)+" len="+bin[bI].length+"\nData="+out);
-				#end
 			}
 		}
 
@@ -53,4 +54,16 @@ class Parser {
 
 	}
 
+	static function bytesLoaded( bytes:Bytes, bin:Array<Bytes>, idx:Int ) {
+		bin[idx] = bytes;
+		#if debug_gltf debugBuffer( bytes ); #end
+	}
+
+	#if debug_gltf
+	static function debugBuffer( bytes:Bytes ) {
+		var out = "";
+		for (i in 0...64) out += StringTools.hex(bytes.get(i), 2)+" ";
+		trace(" - data len="+bytes.length+"\nData="+out);
+	}
+	#end
 }

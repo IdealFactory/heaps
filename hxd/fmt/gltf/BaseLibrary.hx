@@ -8,7 +8,15 @@ import h3d.scene.Object;
 import hxd.Pixels;
 import hxd.fmt.gltf.Data;
 
-class BaseLibrary {
+#if openfl
+typedef LoadInfo = {
+	var type:String;
+	var totalBytes:Int;
+	var bytesLoaded:Int;
+}
+#end
+
+class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	
 	public var fileName:String;
 	public var root:Gltf;
@@ -20,22 +28,21 @@ class BaseLibrary {
     public var textures:Array<h3d.mat.Texture>;
 	public var primitives:Map<Mesh, Array<GltfModel>>;
 	public var meshes:Array<h3d.scene.Object>;
-
 	public var currentScene:h3d.scene.Scene;
-    var s3d : h3d.scene.Scene;
+    
+	var s3d : h3d.scene.Scene;
+	var baseURL:String = "";
 
-	public function new( fileName:String, root:Gltf, buffers:Array<Bytes>, s3d ) {
+	#if openfl
+	var dependencyInfo:Map<openfl.net.URLLoader,LoadInfo>;
+	var totalBytesToLoad = 0;
+	#end
+
+	public function new( s3d ) {
+		#if openfl super(); #end
 		this.s3d = s3d;
 
-		load( fileName, root, buffers );
-	}
-
-	function load( fileName:String, root:Gltf, buffers:Array<Bytes> ) {	
 		reset();
-
-		this.fileName = fileName;
-		this.root = root;
-		this.buffers = buffers;
 	}
 
     public function dispose() {
@@ -43,6 +50,7 @@ class BaseLibrary {
 
 		root = null;
 		fileName = "";
+		baseURL = "";
         buffers = null;
     }
 
@@ -56,25 +64,118 @@ class BaseLibrary {
 		meshes = [];
     }
 
-	function processURI( uri ) : hxd.fs.FileEntry {
-		if ( StringTools.startsWith(uri, "data:") ) {
-			var mimeType = uri.split(";")[0].substr(5);
-			var data = uri.substr( uri.indexOf(",")+1 );
-			#if debug_gltf
-			trace("Process URI: Data URI:"+mimeType+"\ndat="+data.substr(0, 100)+"...");
+    function loadBuffer( uri:String, bytesLoaded:Bytes->Array<Bytes>->Int->Void, bin:Array<Bytes>, idx:Int ) {
+		var bytes:haxe.io.Bytes;
+		#if debug_gltf
+		trace("loadBuffer:uri="+uri+" idx="+idx);
+		#end
+		#if openfl
+		if (baseURL!="" || uri.indexOf("http://")>-1 || uri.indexOf("https://")>-1) {
+			if (baseURL!="" && uri.indexOf("http://")==-1) uri = baseURL + uri;
+			requestURL( uri, function(e) {
+				bytes = #if !flash cast( e.target, openfl.net.URLLoader).data #else Bytes.ofData( cast (e.target, openfl.net.URLLoader).data) #end;
+				trace("Calling bytesLoaded for:uri="+uri+" idx="+idx);
+        		bytesLoaded( bytes, bin, idx );
+			} );
+		} else {
+			bytes = hxd.Res.load( uri ).entry.getBytes();
+			bytesLoaded( bytes, bin, idx );
+		}
+		#else
+        bytes = hxd.Res.load( uri ).entry.getBytes();
+		bytesLoaded( bytes, bin, idx );
+		#end
+    }
+
+	function loadImage( imageNode, imgIdx, imageLoaded ) {
+		var entry;
+		if (imageNode.uri != null) {
+			var uri = imageNode.uri;
+			if ( StringTools.startsWith(uri, "data:") ) {
+				// Data URI for image bytes
+				var mimeType = uri.split(";")[0].substr(5);
+				var data = uri.substr( uri.indexOf(",")+1 );
+				#if debug_gltf
+				trace("LoadImage: Data URI:"+mimeType+"\ndat="+data.substr(0, 100)+"...");
+				#end
+				images[ imgIdx ] = new hxd.res.Image( new DataURIEntry( "no-name-image-"+images.length, uri, haxe.crypto.Base64.decode( data ) ) );
+				imageLoaded();
+			#if openfl
+			} else if (baseURL != "" || StringTools.startsWith(uri, "http://") || StringTools.startsWith(uri, "https://")) {
+				// Remote URL request for image bytes (OpenFL only)
+				if (baseURL != "" && !StringTools.startsWith(uri, "http")) uri = baseURL + uri;
+				#if debug_gltf
+				trace("LoadImage: Remote URI:"+uri);
+				#end
+				requestURL( uri, function(e) {
+					var bytes = #if !flash cast( e.target, openfl.net.URLLoader).data #else Bytes.ofData( cast (e.target, openfl.net.URLLoader).data) #end;
+					trace(" - loaded image for:uri="+uri+" idx="+imgIdx+" name="+uri.substr(uri.lastIndexOf("/")+1));
+					images[ imgIdx ] = new hxd.res.Image( new DataURIEntry( uri.substr(uri.lastIndexOf("/")+1), uri, bytes ) );
+					imageLoaded();
+				} );
 			#end
-			return new DataURIEntry( "no-name-image-"+images.length, uri, haxe.crypto.Base64.decode( data ) );
+			} else {
+				// Local Heaps Resource image
+				#if debug_gltf
+				trace("LoadImage: Loading URI:"+uri);
+				#end
+				images[ imgIdx ] = cast hxd.Res.load( uri ).toImage();
+				imageLoaded();
+			}
 		} else {
 			#if debug_gltf
-			trace("Process URI: Loading URI:"+uri);
+			trace("LoadImage: from buffer view:"+imageNode.bufferView);
 			#end
-			return hxd.Res.load( uri ).entry;
+			// Binary buffer for image
+			var buf = GltfTools.getBufferBytes( this, imageNode.bufferView );
+			entry = new DataURIEntry( "no-name-image-"+images.length, "no-uri", buf ); 
+			images[ imgIdx ] = new hxd.res.Image( entry );
+			imageLoaded();
 		}
 	}
 
-    function loadBuffer( uri:String ) : haxe.io.Bytes {
-        return hxd.Res.load( uri ).entry.getBytes();
+ 	#if openfl
+    function requestURL( url:String, onComplete:openfl.events.Event->Void ) {
+        trace("requestURL:filename="+url);
+
+        var request = new openfl.net.URLRequest( url );
+        var loader = new openfl.net.URLLoader();
+        loader.dataFormat = openfl.net.URLLoaderDataFormat.BINARY;
+		var ext = url.substr( url.lastIndexOf(".")+1 );
+		dependencyInfo[ loader ] = { type:ext, totalBytes: -1, bytesLoaded: 0};
+
+        loader.addEventListener( openfl.events.Event.COMPLETE, onComplete );
+        loader.addEventListener( openfl.events.Event.OPEN, function(e) trace("requestURL.OPEN:"+e) );
+        loader.addEventListener( openfl.events.ProgressEvent.PROGRESS, onProgress );
+        loader.addEventListener( openfl.events.SecurityErrorEvent.SECURITY_ERROR, function(e) trace("requestURL.SECURITY_ERROR:"+e) );
+        loader.addEventListener( openfl.events.HTTPStatusEvent.HTTP_STATUS, function(e) trace("requestURL.HTTP_STATUS:"+e) );
+        loader.addEventListener( openfl.events.IOErrorEvent.IO_ERROR, function(e) trace("requestURL.IOErrorEvent:"+e) );
+        loader.load( request );
     }
+
+	function onProgress( pe:openfl.events.ProgressEvent ) {
+		
+		pe.stopPropagation();
+		var info = dependencyInfo[pe.target];
+		if ( info.totalBytes==-1 ) {
+			info.totalBytes = Std.int(pe.bytesTotal);
+			totalBytesToLoad = 0; 
+			for (i in dependencyInfo) {
+				totalBytesToLoad += i.totalBytes;
+			}
+		}
+
+		info.bytesLoaded = Std.int(pe.bytesLoaded);
+
+		var progressSoFar = 0;
+		var currentTotal = 0;
+		for (i in dependencyInfo) {
+			progressSoFar = i.bytesLoaded;
+			currentTotal = i.totalBytes;
+		}
+		dispatchEvent(new openfl.events.ProgressEvent(openfl.events.ProgressEvent.PROGRESS, false, false, progressSoFar, currentTotal));
+	}
+	#end
 
 	function createCamera( cameraNode ) {
 		
@@ -96,17 +197,6 @@ class BaseLibrary {
 		}
 		return camera;
 	} 
-
-	function loadImage( imageNode ) {
-		var entry;
-		if (imageNode.uri != null) {
-			entry = processURI( imageNode.uri );
-		} else {
-			var buf = GltfTools.getBufferBytes( this, imageNode.bufferView );
-			entry = new DataURIEntry( "no-name-image-"+images.length, "no-uri", buf ); 
-		}
-		return new hxd.res.Image( entry );
-	}
 
 	function createMaterial( materialNode ) {
 		if (materialNode == null) return h3d.mat.Material.create(h3d.mat.Texture.fromColor(0xFF808080));
@@ -194,10 +284,6 @@ class BaseLibrary {
 
 		return material;
 	} 
-
-	function getMaterial( matId ) {
-		return materials[ matId ];
-	}
 
 	function applySampler( index : Int, mat : h3d.mat.Texture ) {
 		var sampler = root.samplers[index];

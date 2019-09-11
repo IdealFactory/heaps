@@ -1,58 +1,88 @@
 package hxd.fmt.gltf;
 
+import haxe.io.Bytes;
 import hxd.fmt.gltf.Data;
 
 class Library extends BaseLibrary {
 
-    public function new( fileName:String, s3d:h3d.scene.Scene ) {
-        
-        buffers = [];
-        
-        this.s3d = s3d;
+    var gltfFileProcessed:Void->Void;
+
+    public function load( ?fileName:String = "gltffile", ?bytes:Bytes, gltfFileProcessed ) {	
+
+        this.gltfFileProcessed = gltfFileProcessed;
 
         #if debug_gltf
         trace("GLTF Loading scene:"+fileName);
         #end
-        
-        var gltfFile = hxd.Res.load( fileName );
-        var gltfBytes = gltfFile.entry.getBytes();
 
-        var gltfContainer = hxd.fmt.gltf.Parser.parse( gltfBytes, loadBuffer );
+		reset();
 
-        super( fileName, gltfContainer.header, gltfContainer.buffers, s3d );
-
+		this.fileName = fileName;
+       
+        var gltfBytes:Bytes;
+        if (bytes != null) {
+            parseglTF( bytes );
+        } 
+        #if openfl
+        else if (fileName.indexOf("http://")>-1 || fileName.indexOf("https://")>-1) {
+            totalBytesToLoad = 0;
+            baseURL = fileName.substr(0, fileName.lastIndexOf("/")+1);
+            dependencyInfo = new Map<openfl.net.URLLoader,BaseLibrary.LoadInfo>();
+            requestURL( fileName, onComplete );
+        } 
+        #end
+        else {
+            var gltfFile = hxd.Res.load( fileName );
+            gltfBytes = gltfFile.entry.getBytes();
+            parseglTF( gltfBytes );
+        }
     }
 
-    public function loadGlTF( fileName:String ) {
-        dispose();
-
-        buffers = [];
-        
-        var gltfFile = hxd.Res.load( fileName );
-        var gltfBytes = gltfFile.entry.getBytes();
-
-        var gltfContainer = hxd.fmt.gltf.Parser.parse( gltfBytes, loadBuffer );
-
-        load( fileName, gltfContainer.header, gltfContainer.buffers );
+    #if openfl
+    function onComplete(event:openfl.events.Event) {
+        trace("onComplete:"+event);
+        var gltfBytes = #if !flash cast( event.target, openfl.net.URLLoader).data #else Bytes.ofData( cast (event.target, openfl.net.URLLoader).data) #end;
+        parseglTF( gltfBytes );
     }
+    #end
+    
+    public function parseglTF( glTFBytes ) {
+        var gltfContainer = hxd.fmt.gltf.Parser.parse( glTFBytes, loadBuffer );
 
-	public function buildScenes() {
+        this.root =  gltfContainer.header;
+		this.buffers = gltfContainer.buffers;
+
         reset();
+
+        preLoadImages( processglTF );
+    }
+
+	function preLoadImages( imageLoadingCompleted ) {
+
+        // Setup images
+        var loadedCount = 0;
+        var idx = 0;
+        if (root.images != null) {
+            for (image in root.images)
+                #if debug_gltf
+                trace("Loading image:"+image);
+                #end
+                loadImage( image, idx++, function() {
+                    loadedCount++; 
+                    if (loadedCount == root.images.length) imageLoadingCompleted();
+                } );
+            }
+        else
+            imageLoadingCompleted();
+    }
+
+	function processglTF() {
 
         // Setup cameras
         if (root.cameras != null)
             for (camera in root.cameras) {
                 var c = createCamera( camera );
                 cameras.push( c );
-            }
-
-        // Setup images
-        if (root.images != null)
-            for (image in root.images) {
-                #if debug_gltf
-                trace("Loading image:"+image);
-                #end
-                images.push( loadImage( image ) );
             }
 
         // Setup materials
@@ -85,6 +115,12 @@ class Library extends BaseLibrary {
 				traverseNodes(root.nodes[ node ], sceneContainer );
 			}
 		}
+
+        #if openfl
+        dispatchEvent(new openfl.events.Event(openfl.events.Event.COMPLETE));
+        #end
+
+        gltfFileProcessed();
     }
 
 	function traverseNodes( node : Node, parent:h3d.scene.Object ) {
