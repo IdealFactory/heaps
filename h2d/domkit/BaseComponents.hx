@@ -166,6 +166,8 @@ class CustomParser extends CssValue.ValueParser {
 
 	public function parseTextShadow( value : CssValue ) {
 		return switch( value ) {
+		case VIdent("none"):
+			return null;
 		case VGroup(vl):
 			return { dx : parseFloat(vl[0]), dy : parseFloat(vl[1]), color : vl.length >= 3 ? parseColor(vl[2]) : 0, alpha : vl.length >= 4 ? parseFloat(vl[3]) : 1 };
 		default:
@@ -204,7 +206,34 @@ class CustomParser extends CssValue.ValueParser {
 
 	public function parseFilter(value) : #if macro Bool #else h2d.filter.Filter #end {
 		return switch( value ) {
+		case VIdent("none"): #if macro true #else null #end;
 		case VIdent("grayed"): #if macro true #else h2d.filter.ColorMatrix.grayed() #end;
+		case VCall("saturate",[v]):
+			var v = parseFloat(v);
+			#if macro
+				true;
+			#else
+				var f = new h2d.filter.ColorMatrix();
+				f.matrix.colorSaturate(v);
+				f;
+			#end
+		case VCall("outline",[s, c]):
+			var s = parseFloat(s);
+			var c = parseInt(c);
+			#if macro
+				true;
+			#else
+				new h2d.filter.Outline(s, c);
+			#end
+		case VCall("brightness",[v]):
+			var v = parseFloat(v);
+			#if macro
+				true;
+			#else
+				var f = new h2d.filter.ColorMatrix();
+				f.matrix.colorLightness(v);
+				f;
+			#end
 		default: invalidProp();
 		}
 	}

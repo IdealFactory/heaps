@@ -209,6 +209,7 @@ class Flow extends Object {
 	var realMaxHeight : Float = -1;
 	var realMinWidth : Int = -1;
 	var realMinHeight : Int = -1;
+	var isConstraint : Bool;
 
 	public function new(?parent) {
 		super(parent);
@@ -390,6 +391,7 @@ class Flow extends Object {
 	override function constraintSize( width, height ) {
 		constraintWidth = width;
 		constraintHeight = height;
+		isConstraint = true;
 		updateConstraint();
 	}
 
@@ -486,6 +488,10 @@ class Flow extends Object {
 	}
 
 	override function sync(ctx:RenderContext) {
+		if( !isConstraint && (fillWidth || fillHeight) ) {
+			var scene = ctx.scene;
+			if( scene.width != constraintWidth || scene.height != constraintHeight ) needReflow = true;
+		}
 		if( needReflow ) reflow();
 		super.sync(ctx);
 	}
@@ -627,6 +633,14 @@ class Flow extends Object {
 	public function reflow() {
 
 		onBeforeReflow();
+
+		if( !isConstraint && (fillWidth || fillHeight) ) {
+			var scene = getScene();
+			if( scene.width != constraintWidth || scene.height != constraintHeight ) {
+				constraintSize(fillWidth ? scene.width : -1, fillHeight ? scene.height : -1);
+				isConstraint = false;
+			}
+		}
 
 		var isConstraintWidth = realMaxWidth >= 0;
 		var isConstraintHeight = realMaxHeight >= 0;
