@@ -42,7 +42,9 @@ class System {
 	public static function setLoop( f : Void -> Void ) : Void {
 		if( !loopInit ) {
 			loopInit = true;
+			#if !openfl
 			browserLoop();
+			#end
 		}
 		loopFunc = f;
 	}
