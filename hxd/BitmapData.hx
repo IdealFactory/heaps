@@ -578,7 +578,7 @@ class BitmapData {
 		#if ( flash || nme)
 		bmp.setPixel32(x, y, c);
 		#elseif (lime && !macro)
-		if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.buffer.data[x + y * data.width] = c;
+		if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.setPixel32(x, y, c);
 		#elseif js
 		var i : js.html.ImageData = lockImage;
 		if( i != null ) {
