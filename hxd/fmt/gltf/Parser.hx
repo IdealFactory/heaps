@@ -6,7 +6,9 @@ import hxd.fmt.gltf.Data;
 
 class Parser {
 	
-	public static function parse( data : Bytes, loadBuffer ) : GltfContainer {
+	static var bufferDependencies:Map<Gltf, Int> = new Map<Gltf, Int>();
+	
+	public static function parse( data : Bytes, loadBuffer, loadingComplete ) {
 		var gltf : Gltf = null;
 		var bin:Array<Bytes> = new Array();
 		if ( bin == null ) new Array();
@@ -21,8 +23,11 @@ class Parser {
 				var type = data.getInt32(pos+4);
 				pos += 8;
 				switch ( type ) {
-					case 0x4E4F534A: gltf = Json.parse(data.getString(pos, length, UTF8));
-					case 0x004E4942: bin.push(data.sub(pos, length));
+					case 0x4E4F534A:
+						gltf = Json.parse(data.getString(pos, length, UTF8));
+						bufferDependencies[gltf] = 0;
+					case 0x004E4942: 
+						bin.push(data.sub(pos, length));
 					default: // extension
 				}
 				var align = 4 - (length % 4);
@@ -31,6 +36,7 @@ class Parser {
 			}
 		} else {
 			gltf = Json.parse(data.toString());
+			bufferDependencies[gltf] = 0;
 		}
 		
 		if ( bin.length == 0 && gltf != null && gltf.buffers != null ) {
@@ -45,18 +51,21 @@ class Parser {
 					#if debug_gltf
 					trace("Buffer URI:"+buf.uri);
 					#end
-					loadBuffer(buf.uri, bytesLoaded, bin, bin.length);
+					bufferDependencies[gltf]++;
+					loadBuffer(buf.uri, function( bytes:Bytes, bin:Array<Bytes>, idx:Int ) {
+						bin[idx] = bytes;
+						#if debug_gltf debugBuffer( bytes ); #end
+						
+						bufferDependencies[gltf]--;
+						if (bufferDependencies[gltf]==0)
+							loadingComplete( { header:gltf, buffers:bin } );
+
+					}, bin, bin.length);
 				}
 			}
 		}
-
-		return { header: gltf, buffers: bin };
-
-	}
-
-	static function bytesLoaded( bytes:Bytes, bin:Array<Bytes>, idx:Int ) {
-		bin[idx] = bytes;
-		#if debug_gltf debugBuffer( bytes ); #end
+		if (bufferDependencies!=null && bufferDependencies[gltf]==0)
+			loadingComplete( { header:gltf, buffers:bin } );
 	}
 
 	#if debug_gltf

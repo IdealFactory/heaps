@@ -74,7 +74,6 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			if (baseURL!="" && uri.indexOf("http://")==-1) uri = baseURL + uri;
 			requestURL( uri, function(e) {
 				bytes = #if !flash cast( e.target, openfl.net.URLLoader).data #else Bytes.ofData( cast (e.target, openfl.net.URLLoader).data) #end;
-				trace("Calling bytesLoaded for:uri="+uri+" idx="+idx);
         		bytesLoaded( bytes, bin, idx );
 			} );
 		} else {
@@ -109,7 +108,6 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				#end
 				requestURL( uri, function(e) {
 					var bytes = #if !flash cast( e.target, openfl.net.URLLoader).data #else Bytes.ofData( cast (e.target, openfl.net.URLLoader).data) #end;
-					trace(" - loaded image for:uri="+uri+" idx="+imgIdx+" name="+uri.substr(uri.lastIndexOf("/")+1));
 					images[ imgIdx ] = new hxd.res.Image( new DataURIEntry( uri.substr(uri.lastIndexOf("/")+1), uri, bytes ) );
 					imageLoaded();
 				} );
@@ -123,11 +121,11 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				imageLoaded();
 			}
 		} else {
+			// Binary buffer for image
+			var buf = GltfTools.getBufferBytes( this, imageNode.bufferView );
 			#if debug_gltf
 			trace("LoadImage: from buffer view:"+imageNode.bufferView);
 			#end
-			// Binary buffer for image
-			var buf = GltfTools.getBufferBytes( this, imageNode.bufferView );
 			entry = new DataURIEntry( "no-name-image-"+images.length, "no-uri", buf ); 
 			images[ imgIdx ] = new hxd.res.Image( entry );
 			imageLoaded();
@@ -136,8 +134,6 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 
  	#if openfl
     function requestURL( url:String, onComplete:openfl.events.Event->Void ) {
-        trace("requestURL:filename="+url);
-
         var request = new openfl.net.URLRequest( url );
         var loader = new openfl.net.URLLoader();
         loader.dataFormat = openfl.net.URLLoaderDataFormat.BINARY;
@@ -238,10 +234,10 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 					material.mainPass.addShader( pbrTexture );
 				}
 				pbrTexture.texture = getTexture(pbrmr.metallicRoughnessTexture.index);
-				
-				pbrValues.metalness = Reflect.hasField(pbrmr, "metallicFactor") ? pbrmr.metallicFactor : 1;
-				pbrValues.roughness = Reflect.hasField(pbrmr, "roughnessFactor") ? pbrmr.roughnessFactor : 0;
 			}
+			pbrValues.metalness = Reflect.hasField(pbrmr, "metallicFactor") ? pbrmr.metallicFactor : 1;
+			pbrValues.roughness = Reflect.hasField(pbrmr, "roughnessFactor") ? pbrmr.roughnessFactor : 0;
+			
 		}
 
 		if (material != null) {
@@ -367,14 +363,14 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		// "TEXCOORD_1" =>
 	];
 
-	public function loadMesh( index : Int, transform : h3d.Matrix, parent:h3d.scene.Object ) : h3d.scene.Object {
+	public function loadMesh( index : Int, transform : h3d.Matrix, parent:h3d.scene.Object, nodeName:String = null ) : h3d.scene.Object {
 		var meshNode = root.meshes[ index ];
 		if (meshNode == null) {trace("meshNode returned NULL for idx:"+index); return null; }
 
 		// Create collection of primitives for this mesh
 		if (!primitives.exists(meshNode)) primitives[meshNode] = [];
 
-		var meshName = (meshNode.name != null) ? meshNode.name : StringTools.hex(Std.random(0xFFFFFFFF), 8);
+		var meshName = (meshNode.name != null) ? meshNode.name : (nodeName != null ? nodeName : "Mesh_"+StringTools.hex(Std.random(0x7FFFFFFF), 8));
 		
 		var mesh = new h3d.scene.Object( parent );
 		mesh.name = meshName;

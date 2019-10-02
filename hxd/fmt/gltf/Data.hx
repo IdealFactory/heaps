@@ -471,7 +471,7 @@ class GltfTools {
 			d += " blitting:"+size;
 		} else {
 			var stripLength = componentSize * componentCount;
-			d += " stripLength:"+stripLength;
+			d += " stripLength:"+stripLength+" size="+(stripLength * acc.count);
 			var ctr = 0;
 			bytes = Bytes.alloc( stripLength * acc.count );
 			while (ctr < acc.count) {

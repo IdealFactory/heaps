@@ -20,12 +20,21 @@ class PropsTexture extends hxsl.Shader {
 			var v = texture.get(calculatedUV);
 			var vE = emissiveMap.get(calculatedUV);
 			var vO = occlusionMap.get(calculatedUV);
-			output.metalness = isGLTF ? v.b : v.r;
-			output.roughness = v.g;
-			if (hasOcclusionMap)
-				output.occlusion = vO.r;
-			else
-				output.occlusion = isGLTF ? v.r : v.b;
+			if (isGLTF) {
+				output.metalness *= v.b;
+				output.roughness *= v.g;
+				if (hasOcclusionMap)
+					output.occlusion *= vO.r;
+				else
+					output.occlusion *= v.r;
+			} else {
+				output.metalness = v.r;
+				output.roughness = v.g;
+				if (hasOcclusionMap)
+					output.occlusion = vO.r;
+				else
+					output.occlusion = v.b;
+			}
 			if (hasEmissiveMap)
 				output.emissive = emissive * vE.rgb;
 			else

@@ -47,9 +47,11 @@ class Library extends BaseLibrary {
     #end
     
     public function parseglTF( glTFBytes ) {
-        var gltfContainer = hxd.fmt.gltf.Parser.parse( glTFBytes, loadBuffer );
+        hxd.fmt.gltf.Parser.parse( glTFBytes, loadBuffer, parseComplete);
+    }
 
-        this.root =  gltfContainer.header;
+    function parseComplete( gltfContainer:GltfContainer ) {
+        this.root = gltfContainer.header;
 		this.buffers = gltfContainer.buffers;
 
         reset();
@@ -64,9 +66,6 @@ class Library extends BaseLibrary {
         var idx = 0;
         if (root.images != null) {
             for (image in root.images)
-                #if debug_gltf
-                trace("Loading image:"+image);
-                #end
                 loadImage( image, idx++, function() {
                     loadedCount++; 
                     if (loadedCount == root.images.length) imageLoadingCompleted();
@@ -143,7 +142,7 @@ class Library extends BaseLibrary {
 
         // Add meshes
         if (node.mesh != null) {
-            parent = loadMesh( node.mesh, transform, parent );
+            parent = loadMesh( node.mesh, transform, parent, node.name );
         }
 
         if (node.children != null) {
