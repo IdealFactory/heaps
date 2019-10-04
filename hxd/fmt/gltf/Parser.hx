@@ -38,7 +38,7 @@ class Parser {
 			gltf = Json.parse(data.toString());
 			bufferDependencies[gltf] = 0;
 		}
-		
+		var loadingCompleted = false;
 		if ( bin.length == 0 && gltf != null && gltf.buffers != null ) {
 			for ( buf in gltf.buffers ) {
 				if ( StringTools.startsWith(buf.uri, "data:") ) {
@@ -57,14 +57,16 @@ class Parser {
 						#if debug_gltf debugBuffer( bytes ); #end
 						
 						bufferDependencies[gltf]--;
-						if (bufferDependencies[gltf]==0)
+						if (bufferDependencies[gltf]==0) {
 							loadingComplete( { header:gltf, buffers:bin } );
+							loadingCompleted = true;
+						}
 
 					}, bin, bin.length);
 				}
 			}
 		}
-		if (bufferDependencies!=null && bufferDependencies[gltf]==0)
+		if (!loadingCompleted && bufferDependencies!=null && bufferDependencies[gltf]==0)
 			loadingComplete( { header:gltf, buffers:bin } );
 	}
 
