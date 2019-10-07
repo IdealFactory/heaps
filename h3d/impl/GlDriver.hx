@@ -1135,9 +1135,18 @@ class GlDriver extends Driver {
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
 	#if (hxcpp || hl || lime)
+		#if js
+		@:privateAccess if (bmp.data.buffer.__srcContext == null) {
+			@:privateAccess lime._internal.graphics.ImageCanvasUtil.convertToCanvas(bmp.data);
+		}
+		@:privateAccess var img = bmp.data.buffer.__srcContext;
+		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
+		gl.texImage2DWEBGL(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img.getImageData(0, 0, bmp.width, bmp.height));
+		#else
 		var pixels = bmp.getPixels();
 		uploadTexturePixels(t, pixels, mipLevel, side);
 		pixels.dispose();
+		#end
 	#else
 		if( t.format != RGBA || t.flags.has(Cube) ) {
 			var pixels = bmp.getPixels();
