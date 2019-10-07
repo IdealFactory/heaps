@@ -26,7 +26,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
     public var images:Array<hxd.res.Image>;
     public var materials:Array<h3d.mat.Material>;
     public var textures:Array<h3d.mat.Texture>;
-	public var primitives:Map<Mesh, Array<GltfModel>>;
+	public var primitives:Map<h3d.scene.Object, Array<h3d.scene.Mesh>>;
 	public var meshes:Array<h3d.scene.Object>;
 	public var currentScene:h3d.scene.Scene;
     
@@ -60,7 +60,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
         images = [];
         materials = [];
 		textures = [];
-        primitives = new Map<Mesh, Array<GltfModel>>();
+        primitives = new Map<h3d.scene.Object, Array<h3d.scene.Mesh>>();
 		meshes = [];
     }
 
@@ -367,8 +367,6 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		var meshNode = root.meshes[ index ];
 		if (meshNode == null) {trace("meshNode returned NULL for idx:"+index); return null; }
 
-		// Create collection of primitives for this mesh
-		if (!primitives.exists(meshNode)) primitives[meshNode] = [];
 
 		var meshName = (meshNode.name != null) ? meshNode.name : (nodeName != null ? nodeName : "Mesh_"+StringTools.hex(Std.random(0x7FFFFFFF), 8));
 		
@@ -380,6 +378,9 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		trace("Create Mesh(Container):"+mesh.name+" parent:"+(parent.name == null ? Type.getClassName(Type.getClass(parent)) : parent.name)+" transform:"+transform);
 		#end
 
+		// Create collection of primitives for this mesh
+		if (!primitives.exists(mesh)) primitives[mesh] = [];
+
 		var primCounter = 0;
 		for ( prim in meshNode.primitives ) {
 			if ( prim.mode == null ) prim.mode = Triangles;
@@ -387,13 +388,17 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			// TODO: Modes other than triangles?
 			if ( prim.mode != Triangles ) throw "Only triangles mode allowed in mesh primitive!";
 
-			var meshPrim = new GltfModel( new Geometry(this, prim) );	
-			primitives[meshNode].push( meshPrim );
+			var primName = meshName+"_"+primCounter++;
+
+			var meshPrim = new GltfModel( new Geometry(this, prim), this );
+			meshPrim.name = primName;	
 			var mat = materials[ prim.material ];
 
 			var primMesh = new h3d.scene.Mesh( meshPrim, mat, mesh );
-			primMesh.name = meshName+"_"+primCounter++;
+			primMesh.name = primName;
 
+			primitives[mesh].push( primMesh );
+			
 			#if debug_gltf
 			trace(" - mesh primitive:"+primMesh.name);
 			#end

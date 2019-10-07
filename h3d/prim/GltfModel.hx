@@ -9,13 +9,17 @@ class GltfModel extends MeshPrimitive {
 	public var geom(default, null):Geometry;
 	public var skin : h3d.anim.Skin;
 	public var multiMaterial:Bool;
+	public var name:String;
 
 	var bounds : h3d.col.Bounds;
 	var tcount : Int = -1;
 	var curMaterial : Int = -1;
+	var collider : h3d.col.Collider;
+	var lib : hxd.fmt.gltf.BaseLibrary;
 
-	public function new( g ) {
+	public function new( g, lib ) {
 		this.geom = g;
+		this.lib = lib;
 	}
 
 	override public function triCount() : Int {
@@ -314,6 +318,35 @@ class GltfModel extends MeshPrimitive {
 		indexes = idx;
 		curMaterial = -1;
 	}
+
+	function initCollider( poly : h3d.col.PolygonBuffer ) {
+		#if neko
+		var verts = haxe.ds.Vector.fromArrayCopy(geom.getVertices().getNative());
+		var inds = haxe.ds.Vector.fromArrayCopy(geom.getIndices().getNative());
+		#else
+		var verts = haxe.ds.Vector.fromData(geom.getVertices().getNative());
+		var inds = haxe.ds.Vector.fromData(geom.getIndices().getNative());
+		#end
+
+		poly.setData(verts, inds);
+		if( collider == null ) {
+			var sphere = getBounds().toSphere();
+			collider = new h3d.col.Collider.OptimizedCollider(sphere, poly);
+		}
+	}
+
+	override function getCollider() {
+		if( collider != null )
+			return collider;
+		var poly = new h3d.col.PolygonBuffer();
+		poly.source = {
+			entry : null,
+			geometryName : name,
+		};
+		initCollider(poly);
+		return collider;
+	}
+
 }
 
 class TriFace {
