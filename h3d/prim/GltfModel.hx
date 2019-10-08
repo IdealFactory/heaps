@@ -324,8 +324,8 @@ class GltfModel extends MeshPrimitive {
 		var verts = haxe.ds.Vector.fromArrayCopy(geom.getVertices().getNative());
 		var inds = haxe.ds.Vector.fromArrayCopy(geom.getIndices().getNative());
 		#else
-		var verts = haxe.ds.Vector.fromData(geom.getVertices().getNative());
-		var inds = haxe.ds.Vector.fromData(geom.getIndices().getNative());
+		var verts = haxe.ds.Vector.fromData(cast geom.getVertices().getNative());
+		var inds = haxe.ds.Vector.fromData(cast geom.getIndices().getNative());
 		#end
 
 		poly.setData(verts, inds);
