@@ -35,7 +35,7 @@ class BitmapData {
 	var bmp : flash.display.BitmapData;
 #elseif (lime && !macro)
 	var data : lime.graphics.Image;
-	var tmpRect : lime.math.Rectangle;
+	var tmpRect : lime.math.Rectangle = new lime.math.Rectangle();
 #elseif js
 	var ctx : js.html.CanvasRenderingContext2D;
 	var lockImage : js.html.ImageData;
@@ -555,7 +555,7 @@ class BitmapData {
 		#if ( flash || nme )
 		return bmp.getPixel32(x, y);
 		#elseif (lime && !macro)
-		return if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.buffer.data[x + y * data.width] else 0;
+		return if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.getPixel32(x, y) else 0;
 		#elseif js
 		var i = lockImage;
 		var a;
@@ -668,15 +668,7 @@ class BitmapData {
 		bmp.setPixels(bmp.rect, bytes);
 		#elseif (lime && !macro)
 		// TODO format
-		pixels.convert(BGRA);
-		var src = pixels.bytes;
-		var i = 0;
-		for( y in 0...height ){
-			for( x in 0...width ){
-				data.setPixel32( x, y, src.getInt32(i<<2) );
-				i++;
-			}
-		}
+		data.setPixels(data.rect, pixels.bytes);
 		#elseif js
 		var img = ctx.createImageData(pixels.width, pixels.height);
 		pixels.convert(RGBA);
