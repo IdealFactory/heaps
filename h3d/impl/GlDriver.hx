@@ -1785,8 +1785,8 @@ class GlDriver extends Driver {
 		#else
 		var buffer = @:privateAccess pixels.bytes.b;
 		#end
-		#if (js || (hl && !lime))
-		#if lime
+		#if (js || hl || lime)
+		#if (lime && js)
 		gl.readPixelsWEBGL(x, y, pixels.width, pixels.height, getChannels(curTarget.t), curTarget.t.pixelFmt, buffer);
 		#else
 		gl.readPixels(x, y, pixels.width, pixels.height, getChannels(curTarget.t), curTarget.t.pixelFmt, buffer);
