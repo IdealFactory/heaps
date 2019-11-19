@@ -373,6 +373,10 @@ typedef GltfContainer = {
 	var buffers:Array<haxe.io.Bytes>;
 }
 
+typedef BytePointer = {
+	var pos:Int;
+}
+
 class GltfTools {
 
 	public static function getIndexBuffer( attribute, l, accId ) : IndexBuffer {
@@ -420,6 +424,82 @@ class GltfTools {
 		#end
 		
 		return buffer;
+	}
+
+	public static function getAnimationScalarFloatBufferByAccessor( l, accId ):Array<Float> {
+		var acc = l.root.accessors[ accId ];
+		var ct:ComponentType = acc.componentType;
+		var count:Int = acc.count;
+		var t:AccessorType = acc.type;
+		if (t!=Scalar) throw "getAnimationScalarFloatBufferByAccessor called for '" + t + "' accessor. Not Scalar buffer type.";
+
+		var bytes = getBufferBytesByAccessor( l, accId );
+		var buffer = new Array<Float>();
+		var bytePos:BytePointer = { pos: 0 };
+
+		var ctr = 0;
+		while ( ctr++ < count ) {
+			buffer.push( getFloat( ct, bytes, bytePos ) );
+		}
+		return buffer;
+	}
+
+	public static function getAnimationFloatArrayBufferByAccessor( l, accId ):Array<Array<Float>> {
+
+		var acc = l.root.accessors[ accId ];
+		var ct:ComponentType = acc.componentType;
+		var count:Int = acc.count;
+		var t:AccessorType = acc.type;
+		if (t!=Vec3 && t!=Vec4) throw "getAnimationScalarFloatBufferByAccessor called for '" + t + "' accessor. Not Scalar buffer type.";
+
+		var bytes = getBufferBytesByAccessor( l, accId );
+		var buffer = new Array<Array<Float>>();
+		var bytePtr:BytePointer = { pos: 0 };
+
+		var ctr = 0;
+		var a:Array<Float>;
+		while ( ctr++ < count ) {
+			switch (t) {
+				case Vec3: buffer.push( [ bytes.getFloat( bytePtr.pos ), bytes.getFloat( bytePtr.pos+4 ), bytes.getFloat( bytePtr.pos+8 ) ] ); bytePtr.pos+=12;
+				case Vec4: buffer.push( [ getFloat( ct, bytes, bytePtr ), getFloat( ct, bytes, bytePtr ), getFloat( ct, bytes, bytePtr ), getFloat( ct, bytes, bytePtr ) ] );
+				default:
+					throw "Incorrect accessor type for getAnimationFloatArrayBufferByAccessor call (should be Vec3 or Vec4";
+			}
+		}
+		return buffer;
+	}
+
+	// var CTByte = 5120;
+	// var CTUnsignedByte = 5121;
+	// var CTShort = 5122;
+	// var CTUnsignedShort = 5123;
+	// var CTInt;
+	// var CTUnsignedInt = 5125;
+	// var CTFloat = 5126;
+
+	static function getFloat(type, bytes, bytePtr) {
+		var f:Float;
+		switch (type) {
+			case CTByte:
+				f = Math.max( bytes.get( bytePtr.pos ) / 127.0, -1);
+				bytePtr.pos++;
+			case CTUnsignedByte:
+				f = bytes.get( bytePtr.pos ) / 255.0;
+				bytePtr.pos++;
+			case CTShort:
+				f = Math.max( ((bytes.get( bytePtr.pos ) << 8) | bytes.get( bytePtr.pos+1 )) / 32767.0, -1);
+				bytePtr.pos += 2;
+			case CTUnsignedShort : 
+				f = bytes.getUInt16( bytePtr.pos ) / 65535.0;
+				bytePtr.pos += 2;
+			case CTFloat :
+				f = bytes.getFloat( bytePtr.pos );
+				bytePtr.pos += 4;
+			default:
+				f = bytes.get( bytePtr.pos );
+				bytePtr.pos++;
+		}
+		return f;
 	}
 
 	public static function getBufferBytesByAccessor( l, accId ):Bytes {

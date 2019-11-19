@@ -40,9 +40,11 @@ class Parser {
 		}
 		var loadingCompleted = false;
 		if ( bin.length == 0 && gltf != null && gltf.buffers != null ) {
+			var bufIdx = 0;
 			for ( buf in gltf.buffers ) {
 				if ( StringTools.startsWith(buf.uri, "data:") ) {
 					bin.push( haxe.crypto.Base64.decode( buf.uri.substr( buf.uri.indexOf(",")+1)) );
+					bufIdx++;
 					#if debug_gltf
 					trace("Buffer URI:"+buf.uri.substr(0, 100)+"...");
 					debugBuffer( bin[bin.length-1] );
@@ -62,7 +64,8 @@ class Parser {
 							loadingCompleted = true;
 						}
 
-					}, bin, bin.length);
+					}, bin, bufIdx);
+					bufIdx++;
 				}
 			}
 		}

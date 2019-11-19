@@ -92,10 +92,6 @@ class Library extends BaseLibrary {
         // if (root.skins != null)
         //     for (skin in root.skins) skins.push( loadSkin( skin ) );
 
-        // // Setup animations
-        // if (root.animations != null)
-        //     for (animation in root.animations) animations.push( loadAnimation( image ) );
-
         // Default scene
         var defaultSceneId = (root.scene == null) ? 0 : root.scene;
         
@@ -111,18 +107,25 @@ class Library extends BaseLibrary {
 		    sceneContainer.rotate( Math.PI/2, 0, 0 );
             scenes.push( sceneContainer );
 			for ( node in scene.nodes ) {
-				traverseNodes(root.nodes[ node ], sceneContainer );
+				traverseNodes(node, sceneContainer );
 			}
 		}
+
+        // Setup animations
+        if (root.animations != null)
+            for (animation in root.animations) createAnimations( animation );
 
         #if openfl
         dispatchEvent(new openfl.events.Event(openfl.events.Event.COMPLETE));
         #end
 
         gltfFileProcessed();
-    }
+   }
 
-	function traverseNodes( node : Node, parent:h3d.scene.Object ) {
+	function traverseNodes( nodeId : Int, parent:h3d.scene.Object ) {
+
+        var node = root.nodes[ nodeId ];
+
         // Get matrix transform
         var transform = new h3d.Matrix();
         transform.identity();
@@ -141,15 +144,20 @@ class Library extends BaseLibrary {
         }
 
         // Add meshes
+        var mesh:h3d.scene.Object = null;
         if (node.mesh != null) {
-            parent = loadMesh( node.mesh, transform, parent, node.name );
-        }
+            mesh = loadMesh( node.mesh, transform, parent, node.name );
+            nodeObjects[ nodeId ] = mesh;
+        } 
 
         if (node.children != null) {
-            var mesh = new h3d.scene.Object( parent );
-		    mesh.setTransform( transform );
+            if (mesh==null) {
+                mesh = new h3d.scene.Object( parent );
+                mesh.setTransform( transform );
+                nodeObjects[ nodeId ] = mesh;
+            }
             for ( child in node.children ) {
-                traverseNodes(root.nodes[ child ], mesh);
+                traverseNodes(child, mesh);
             }
         }
     }

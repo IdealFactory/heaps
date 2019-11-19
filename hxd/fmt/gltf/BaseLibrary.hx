@@ -1,7 +1,7 @@
 package hxd.fmt.gltf;
 
 import haxe.io.Bytes;
-import h3d.anim.Animation;
+//import h3d.anim.Animation;
 import h3d.prim.GltfModel;
 import h3d.scene.Mesh;
 import h3d.scene.Object;
@@ -28,7 +28,9 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
     public var textures:Array<h3d.mat.Texture>;
 	public var primitives:Map<h3d.scene.Object, Array<h3d.scene.Mesh>>;
 	public var meshes:Array<h3d.scene.Object>;
+	public var animations:Array<h3d.anim.Animation>;
 	public var currentScene:h3d.scene.Scene;
+	public var nodeObjects:Array<h3d.scene.Object>;
     
 	var s3d : h3d.scene.Scene;
 	var baseURL:String = "";
@@ -62,6 +64,9 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		textures = [];
         primitives = new Map<h3d.scene.Object, Array<h3d.scene.Mesh>>();
 		meshes = [];
+		animations = [];
+		nodeObjects = [];
+
     }
 
     function loadBuffer( uri:String, bytesLoaded:Bytes->Array<Bytes>->Int->Void, bin:Array<Bytes>, idx:Int ) {
@@ -280,6 +285,98 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 
 		return material;
 	} 
+
+	function createAnimations( animationNode:Animation ) {
+		
+		if (animationNode.channels == null || animationNode.samplers == null) return null;
+		
+		for (channel in animationNode.channels) {
+			var o = nodeObjects[ channel.target.node ];
+			var path = channel.target.path;
+			var sampler =  animationNode.samplers[ channel.sampler ];
+			#if debug_gltf
+			trace("Animation.channel: target:"+channel.target.node+" o:"+(o!=null ? o.name : "null")+" path:"+path);
+			trace("Animation.sampler: input:"+sampler.input+" output:"+sampler.output+" inter:"+sampler.interpolation);
+			#end
+			
+			var keyFrames = GltfTools.getAnimationScalarFloatBufferByAccessor( this, sampler.input );
+			
+			var translationData = path==AnimationPath.Translation ? GltfTools.getAnimationFloatArrayBufferByAccessor( this, sampler.output ) : null;
+			var rotationData = path==AnimationPath.Rotation ? GltfTools.getAnimationFloatArrayBufferByAccessor( this, sampler.output ) : null;
+			var scaleData = path==AnimationPath.Scale ? GltfTools.getAnimationFloatArrayBufferByAccessor( this, sampler.output ) : null;
+			var weightsData = path==AnimationPath.Weights ?  GltfTools.getAnimationScalarFloatBufferByAccessor( this, sampler.output ) : null;
+
+			#if debug_gltf
+			var times = "";
+			for (k in keyFrames) times += k+", ";
+			trace("Keyframes:"+times);
+			if (translationData!=null) {
+				var times = "Translation:";
+				for (k in translationData) times += k+", ";
+				trace(times);
+			}
+			if (rotationData!=null) {
+				var times = "Rotation:";
+				for (k in rotationData) times += k+", ";
+				trace(times);
+			}
+			if (scaleData!=null) {
+				var times = "Scale:";
+				for (k in scaleData) times += k+", ";
+				trace(times);
+			}
+			if (weightsData!=null) {
+				var times = "Weights:";
+				for (k in weightsData) times += k+", ";
+				trace(times);
+			}
+			#end
+
+
+			var frameCount = keyFrames.length-1;
+			var anim = new h3d.anim.LinearAnimation("anim1", frameCount, frameCount); // Dunno what the sampling value relates to at the moment
+			var frames = new haxe.ds.Vector<h3d.anim.LinearAnimation.LinearFrame>(frameCount);
+			for( i in 0...frameCount ) {
+				var f = new h3d.anim.LinearAnimation.LinearFrame();
+				if( translationData!=null ) {
+					f.tx = translationData[i][0];
+					f.ty = translationData[i][1];
+					f.tz = translationData[i][2];
+				} else {
+					f.tx = 0;
+					f.ty = 0;
+					f.tz = 0;
+				}
+				if( rotationData!=null ) {
+					f.qx = rotationData[i][0];
+					f.qy = rotationData[i][1];
+					f.qz = rotationData[i][2];
+					f.qw = rotationData[i][3];
+				} else {
+					f.qx = 0;
+					f.qy = 0;
+					f.qz = 0;
+					f.qw = 1;
+				}
+				if( scaleData!=null ) {
+					f.sx = scaleData[i][0];
+					f.sy = scaleData[i][1];
+					f.sz = scaleData[i][2];
+				} else {
+					f.sx = 1;
+					f.sy = 1;
+					f.sz = 1;
+				}
+				frames[i] = f;
+			}
+			anim.addCurve(o.name, frames, false, true, false);
+
+			animations.push( anim );
+		}
+			
+
+		return null;//animation;
+	}
 
 	function applySampler( index : Int, mat : h3d.mat.Texture ) {
 		var sampler = root.samplers[index];
