@@ -31,6 +31,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	public var animations:Array<h3d.anim.Animation>;
 	public var currentScene:h3d.scene.Scene;
 	public var nodeObjects:Array<h3d.scene.Object>;
+	public var animator:TimelineAnimator = new TimelineAnimator();
     
 	var s3d : h3d.scene.Scene;
 	var baseURL:String = "";
@@ -290,6 +291,8 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		
 		if (animationNode.channels == null || animationNode.samplers == null) return null;
 		
+		var anims = new Map<Int, h3d.anim.TimelineLinearAnimation>();
+
 		for (channel in animationNode.channels) {
 			var o = nodeObjects[ channel.target.node ];
 			var path = channel.target.path;
@@ -333,11 +336,14 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			#end
 
 
-			var frameCount = keyFrames.length-1;
-			var anim = new h3d.anim.LinearAnimation("anim1", frameCount, frameCount); // Dunno what the sampling value relates to at the moment
-			var frames = new haxe.ds.Vector<h3d.anim.LinearAnimation.LinearFrame>(frameCount);
+			var frameCount = keyFrames.length;
+			var anim = anims.exists(channel.target.node) ? anims[channel.target.node] : new h3d.anim.TimelineLinearAnimation("anim1", frameCount, keyFrames[keyFrames.length - 1]);
+			@:privateAccess if (keyFrames[keyFrames.length - 1] > anim.totalDuration) anim.totalDuration = keyFrames[keyFrames.length - 1];
+			@:privateAccess trace("Anim["+channel.target.node+"].totalDuration="+anim.totalDuration);
+			var frames = new haxe.ds.Vector<h3d.anim.TimelineLinearAnimation.TimelineLinearFrame>(frameCount);
 			for( i in 0...frameCount ) {
-				var f = new h3d.anim.LinearAnimation.LinearFrame();
+				var f = new h3d.anim.TimelineLinearAnimation.TimelineLinearFrame();
+				f.keyTime = keyFrames[i];
 				if( translationData!=null ) {
 					f.tx = translationData[i][0];
 					f.ty = translationData[i][1];
@@ -372,6 +378,8 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			anim.addCurve(o.name, frames, false, true, false);
 
 			animations.push( anim );
+
+			animator.addAnimtion( o, anim );
 		}
 			
 
