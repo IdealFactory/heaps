@@ -6,6 +6,9 @@ import hxd.fmt.gltf.Data;
 class Library extends BaseLibrary {
 
     var gltfFileProcessed:Void->Void;
+    var containerCtr = 0;
+    var jointCtr = 0;
+    var allJointNodes:Array<Int>;
 
     public function load( ?fileName:String = "gltffile", ?bytes:Bytes, gltfFileProcessed ) {	
 
@@ -77,6 +80,16 @@ class Library extends BaseLibrary {
 
 	function processglTF() {
 
+        // Get all joints for all skins to set object names correctly
+        allJointNodes = [];
+        if (root.skins!=null)
+            for (s in root.skins) {
+                if (s.joints!=null)
+                    for (j in s.joints) {
+                        if (allJointNodes.indexOf( j )==-1) allJointNodes.push( j );
+                    }
+            }
+
         // Setup cameras
         if (root.cameras != null)
             for (camera in root.cameras) {
@@ -104,12 +117,16 @@ class Library extends BaseLibrary {
             var s = s3d;
             currentScene = s;
             var sceneContainer = new h3d.scene.Object( s3d);
+            sceneContainer.name = "gltf-root";
 		    sceneContainer.rotate( Math.PI/2, 0, 0 );
             scenes.push( sceneContainer );
 			for ( node in scene.nodes ) {
 				traverseNodes(node, sceneContainer );
 			}
 		}
+
+        // // Create skin meshes
+        buildSkinMeshes();
 
         // Setup animations
         if (root.animations != null)
@@ -120,22 +137,14 @@ class Library extends BaseLibrary {
         #end
 
         gltfFileProcessed();
-   }
+    }
 
-	function traverseNodes( nodeId : Int, parent:h3d.scene.Object ) {
+    function traverseNodes( nodeId : Int, parent:h3d.scene.Object ) {
 
         var node = root.nodes[ nodeId ];
 
         // Get matrix transform
-        var transform = new h3d.Matrix();
-        transform.identity();
-        if (node.matrix != null) transform.loadValues( node.matrix );
-        if (node.translation != null) transform.translate( node.translation[0], node.translation[1], node.translation[2] );
-        if (node.rotation != null) {
-            var q = new h3d.Quat( node.rotation[0], node.rotation[1], node.rotation[2], node.rotation[3] );
-            transform.multiply( transform, q.toMatrix() );
-        }
-        if (node.scale != null) transform.scale( node.scale[0], node.scale[1], node.scale[2] );
+        var transform = getDefaultTransform( nodeId );
 
         if (node.camera != null) {
             var c = cameras[ node.camera ];
@@ -146,19 +155,57 @@ class Library extends BaseLibrary {
         // Add meshes
         var mesh:h3d.scene.Object = null;
         if (node.mesh != null) {
-            mesh = loadMesh( node.mesh, transform, parent, node.name );
+            if (node.skin != null) {
+                mesh = createSkinMesh( node.mesh, transform, parent, node.name, node.skin );
+                skinMeshes.push( { nodeId:node.mesh, skinId:node.skin, skinMesh:cast mesh } );
+            } else
+                mesh = createMesh( node.mesh, transform, parent, node.name );
+            trace("MeshTransform:"+mesh.name+" m:"+mtos(transform));
             nodeObjects[ nodeId ] = mesh;
         } 
 
         if (node.children != null) {
             if (mesh==null) {
-                mesh = new h3d.scene.Object( parent );
+                mesh = new h3d.scene.Mesh(debugPrim, parent);
+                cast(mesh, h3d.scene.Mesh).material.color.setColor( 0xff009000 );
+                // mesh = new h3d.scene.Object( parent );
+                mesh.name = getName( nodeId );
                 mesh.setTransform( transform );
+                trace("MeshTransform:"+mesh.name+" m:"+mtos(transform));
                 nodeObjects[ nodeId ] = mesh;
             }
             for ( child in node.children ) {
                 traverseNodes(child, mesh);
             }
         }
+
+        if (node.mesh==null && node.children==null) {
+            var o = new h3d.scene.Mesh(debugPrim, parent);
+            o.material.color.setColor( 0xffff0000 );
+            // var o = new h3d.scene.Object( parent );
+            o.name = getName( nodeId );
+            o.setTransform( transform );
+            trace("MeshTransform:"+o.name+" m:"+mtos(transform));
+            nodeObjects[ nodeId ] = o;
+        }
     }
+
+    function getName( id:Int ) {
+        var n = root.nodes[ id ];
+        if (n.name!=null) return n.name;
+
+        if (allJointNodes.indexOf( id )>-1) return "Joint_"+jointCtr++;
+
+        return "Container_"+containerCtr++;
+    }
+
+    function mtos(m:h3d.Matrix) {
+		if (m==null) return "--NULL--";
+		return r(m._11)+","+r(m._12)+","+r(m._13)+","+r(m._14)+","+r(m._21)+","+r(m._22)+","+r(m._23)+","+r(m._24)+","+r(m._31)+","+r(m._32)+","+r(m._33)+","+r(m._34)+","+r(m._41)+","+r(m._42)+","+r(m._43)+","+r(m._44);
+	}
+	function r(v:Float) {
+		return Std.int((v * 10000) + 0.5) / 10000; 
+	}
+
 }
+

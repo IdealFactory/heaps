@@ -417,6 +417,8 @@ class Object implements hxd.impl.Serializable {
 			c.parent = o;
 			o.children.push(c);
 		}
+
+		trace("Object.clone:follow: o:"+o.name+"("+Type.getClassName(Type.getClass(o))+") p="+o.parent.name+"("+Type.getClassName(Type.getClass(o.parent))+") o.follow="+o.follow+" o.fpo:"+o.followPositionOnly);
 		return o;
 	}
 

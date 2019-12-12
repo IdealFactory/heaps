@@ -15,10 +15,15 @@ class SkinTangent extends SkinBase {
 		var transformedTangent : Vec4;
 
 		function vertex() {
+			// transformedPosition =
+			// 	(relativePosition * bonesMatrixes[input.indexes.x]) * input.weights.x +
+			// 	(relativePosition * bonesMatrixes[input.indexes.y]) * input.weights.y +
+			// 	(relativePosition * bonesMatrixes[input.indexes.z]) * input.weights.z;
+			var rp = vec4( relativePosition, 1.0 );
 			transformedPosition =
-				(relativePosition * bonesMatrixes[input.indexes.x]) * input.weights.x +
-				(relativePosition * bonesMatrixes[input.indexes.y]) * input.weights.y +
-				(relativePosition * bonesMatrixes[input.indexes.z]) * input.weights.z;
+				((rp * bonesMatrixes[input.indexes.x]) * input.weights.x +
+				(rp * bonesMatrixes[input.indexes.y]) * input.weights.y +
+				(rp * bonesMatrixes[input.indexes.z]) * input.weights.z).xyz;
 			transformedNormal = normalize(
 				(input.normal * mat3(bonesMatrixes[input.indexes.x])) * input.weights.x +
 				(input.normal * mat3(bonesMatrixes[input.indexes.y])) * input.weights.y +

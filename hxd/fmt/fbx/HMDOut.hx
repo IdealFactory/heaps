@@ -163,6 +163,7 @@ class HMDOut extends BaseLibrary {
 			g.vertexFormat.push(new GeometryFormat("color", DVec3));
 
 		if( skin != null ) {
+			trace("SKIN.BPV = "+skin.bonesPerVertex);
 			if( bonesPerVertex <= 0 || bonesPerVertex > 4 ) throw "assert";
 			g.vertexFormat.push(new GeometryFormat("weights", [DFloat, DVec2, DVec3, DVec4][bonesPerVertex-1]));
 			g.vertexFormat.push(new GeometryFormat("indexes", floatSkinIndexes ? [DFloat, DVec2, DVec3, DVec4][bonesPerVertex-1] : DBytes4));
@@ -254,6 +255,7 @@ class HMDOut extends BaseLibrary {
 					for( i in 0...skin.bonesPerVertex ) {
 						tmpBuf[p++] = skin.vertexWeights[k + i];
 						idx = (skin.vertexJoints[k + i] << (8*i)) | idx;
+						trace("Influence:p="+pos+" n="+n+" i="+i+": w="+skin.vertexWeights[k + i]+" idx="+idx+" vIdx="+vidx+" arrIdx="+(k+i));
 					}
 					if( floatSkinIndexes ) {
 						for( i in 0...skin.bonesPerVertex )
@@ -392,10 +394,13 @@ class HMDOut extends BaseLibrary {
 			j.index = o.model.getId();
 			j.name = o.model.getName();
 			o.joint = j;
+			var par = "";
 			if( o.parent != null ) {
 				j.parent = o.parent.joint;
 				if( o.parent.isJoint ) o.parent.joint.subs.push(j);
+				par+=" p.j="+j.parent+( o.parent.isJoint ? ""+o.parent.joint.subs.length : "" );
 			}
+			trace("HMDOut.Joint:idx="+j.index+" name="+j.name+par);
 		}
 
 		// mark skin references
@@ -479,6 +484,7 @@ class HMDOut extends BaseLibrary {
 			model.name = o.model == null ? null : o.model.getName();
 			model.parent = o.parent == null || o.parent.isJoint ? -1 : o.parent.index;
 			model.follow = o.parent != null && o.parent.isJoint ? o.parent.model.getName() : null;
+			trace("Following: m:"+model+"("+Type.getClassName(Type.getClass(model))+") p="+model.parent+"("+Type.getClassName(Type.getClass(model.parent))+") o.p.m="+(o.parent != null && o.parent.model!=null ? o.parent.model.getName()+"("+Type.getClassName(Type.getClass(o.parent.model.getName()))+")" : "null"));
 			var m = ref.model == null ? new hxd.fmt.fbx.BaseLibrary.DefaultMatrixes() : getDefaultMatrixes(ref.model);
 			var p = new Position();
 			p.x = m.trans == null ? 0 : -m.trans.x;

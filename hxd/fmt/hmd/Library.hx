@@ -298,6 +298,7 @@ class Library {
 				j.bindIndex = joint.bind;
 				j.transPos = joint.transpos.toMatrix(true);
 				s.boundJoints[j.bindIndex] = j;
+				trace("JointBind:"+j.name+"("+j.index+") bInd="+j.bindIndex);
 			}
 			if( joint.parent >= 0 ) {
 				var p = s.allJoints[joint.parent];
@@ -314,6 +315,16 @@ class Library {
 				s.splitJoints.push( { material : ss.materialIndex, joints : [for( j in ss.joints ) s.allJoints[j]] } );
 		}
 		cachedSkin.set(skin.name, s);
+		// trace("makeSkin:");
+		// var out = " - Joints("+s.vertexJoints.length+"):";
+		// for (i in 0...s.vertexJoints.length) out+=s.vertexJoints[i]+" ";
+		// trace(out);
+		// out = " - Weights("+s.vertexWeights.length+"):";
+		// for (i in 0...s.vertexWeights.length) out+=s.vertexWeights[i]+" ";
+		// trace(out);
+		var out = " - Bound("+s.boundJoints.length+"):";
+		for (i in 0...s.boundJoints.length) out+=s.boundJoints[i].name+"("+s.boundJoints[i].index+") ";
+		trace(out);
 		return s;
 	}
 

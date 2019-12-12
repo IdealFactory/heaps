@@ -38,6 +38,7 @@ class BaseMesh extends hxsl.Shader {
 		};
 
 		var relativePosition : Vec3;
+		var relativeNormal : Vec3;
 		var transformedPosition : Vec3;
 		var pixelTransformedPosition : Vec3;
 		var transformedNormal : Vec3;
@@ -59,7 +60,8 @@ class BaseMesh extends hxsl.Shader {
 			relativePosition = input.position;
 			transformedPosition = relativePosition * global.modelView.mat3x4();
 			projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
-			transformedNormal = (input.normal * global.modelView.mat3()).normalize();
+			relativeNormal = input.normal;
+			transformedNormal = (relativeNormal * global.modelView.mat3()).normalize();
 			camera.dir = (camera.position - transformedPosition).normalize();
 			pixelColor = color;
 			specPower = specularPower;

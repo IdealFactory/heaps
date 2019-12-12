@@ -5,6 +5,7 @@ import haxe.io.Bytes;
 import h3d.prim.GltfModel;
 import h3d.scene.Mesh;
 import h3d.scene.Object;
+import h3d.Matrix;
 import hxd.Pixels;
 import hxd.fmt.gltf.Data;
 
@@ -15,6 +16,12 @@ typedef LoadInfo = {
 	var bytesLoaded:Int;
 }
 #end
+
+typedef SkinMeshLink = {
+	var nodeId:Int;
+	var skinId:Int;
+	var skinMesh:h3d.scene.Skin;
+}
 
 class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	
@@ -29,12 +36,20 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	public var primitives:Map<h3d.scene.Object, Array<h3d.scene.Mesh>>;
 	public var meshes:Array<h3d.scene.Object>;
 	public var animations:Array<h3d.anim.Animation>;
+	public var meshJoints:Map<h3d.scene.Object, Array<Int>>;
+	public var jointMesh:Array<h3d.scene.Skin>;
 	public var currentScene:h3d.scene.Scene;
 	public var nodeObjects:Array<h3d.scene.Object>;
 	public var animator:TimelineAnimator = new TimelineAnimator();
-    
+
+	var anims = new Map<Int, h3d.anim.TimelineLinearAnimation>();
+	var animId = 0;
 	var s3d : h3d.scene.Scene;
 	var baseURL:String = "";
+	var skinMeshes:Array<SkinMeshLink>;
+
+	var debugPrim:h3d.prim.Sphere;
+	var defaultMaterial:h3d.mat.Material;
 
 	#if openfl
 	var dependencyInfo:Map<openfl.net.URLLoader,LoadInfo>;
@@ -44,6 +59,18 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	public function new( s3d ) {
 		#if openfl super(); #end
 		this.s3d = s3d;
+
+        // DEBUGGING PRIMITIVE TO HIGHLIGHT JOINT LOCATIONS
+        if (debugPrim == null) {
+            debugPrim = new h3d.prim.Sphere();
+            debugPrim.scale( 0.05 );
+            debugPrim.addUVs();
+            debugPrim.addNormals();
+        }
+
+		// Create default material for objects that do not have one
+		if (defaultMaterial == null)
+			defaultMaterial = h3d.mat.Material.create(h3d.mat.Texture.fromColor(0xFF888888));
 
 		reset();
 	}
@@ -66,8 +93,12 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
         primitives = new Map<h3d.scene.Object, Array<h3d.scene.Mesh>>();
 		meshes = [];
 		animations = [];
+		meshJoints = [];
+		jointMesh = [];
 		nodeObjects = [];
 
+		anims = [];
+		skinMeshes = [];
     }
 
     function loadBuffer( uri:String, bytesLoaded:Bytes->Array<Bytes>->Int->Void, bin:Array<Bytes>, idx:Int ) {
@@ -291,14 +322,28 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		
 		if (animationNode.channels == null || animationNode.samplers == null) return null;
 		
-		var anims = new Map<Int, h3d.anim.TimelineLinearAnimation>();
-
 		for (channel in animationNode.channels) {
-			var o = nodeObjects[ channel.target.node ];
+			var o:Object = null;
+			var jointTarget:Object = null;
+			var targetNodeId = channel.target.node;
+			var isJoint = false;
+			for (m in meshJoints.keys()) {
+				if (meshJoints[m].indexOf(targetNodeId)>-1 ) {
+					jointTarget = nodeObjects[ targetNodeId ];
+					targetNodeId = nodeObjects.indexOf( m );
+					o = m.getObjectByName(m.name+"_0");
+					isJoint = true;
+				}
+			}
+			if (!isJoint) 
+				o = nodeObjects[ targetNodeId ];
+
+			var prims = primitives[ o ];
 			var path = channel.target.path;
 			var sampler =  animationNode.samplers[ channel.sampler ];
 			#if debug_gltf
-			trace("Animation.channel: target:"+channel.target.node+" o:"+(o!=null ? o.name : "null")+" path:"+path);
+			trace("Creating anim for channel ---------------------------------------");
+			trace("Animation.channel: target:"+targetNodeId+" o:"+(o!=null ? o.name : "null")+" path:"+path);
 			trace("Animation.sampler: input:"+sampler.input+" output:"+sampler.output+" inter:"+sampler.interpolation);
 			#end
 			
@@ -337,27 +382,67 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 
 
 			var frameCount = keyFrames.length;
-			var anim = anims.exists(channel.target.node) ? anims[channel.target.node] : new h3d.anim.TimelineLinearAnimation("anim1", frameCount, keyFrames[keyFrames.length - 1]);
+			var anim:h3d.anim.TimelineLinearAnimation;
+			if (anims.exists(targetNodeId)) 
+				anim = anims[targetNodeId] 
+			else {
+				anim = anims[targetNodeId] = new h3d.anim.TimelineLinearAnimation(o.name, frameCount, keyFrames[keyFrames.length - 1], cast sampler.interpolation);
+				// if (isJoint) 
+				// 	anim.addCurve( o.name, new haxe.ds.Vector<h3d.anim.TimelineLinearAnimation.TimelineLinearFrame>(0), false, false, false, false);
+			}
+
+			trace("Anim: node="+targetNodeId+" o.name="+o.name);
+			
 			@:privateAccess if (keyFrames[keyFrames.length - 1] > anim.totalDuration) anim.totalDuration = keyFrames[keyFrames.length - 1];
-			@:privateAccess trace("Anim["+channel.target.node+"].totalDuration="+anim.totalDuration);
+			@:privateAccess trace("Anim["+targetNodeId+"].totalDuration="+anim.totalDuration);
+
 			var frames = new haxe.ds.Vector<h3d.anim.TimelineLinearAnimation.TimelineLinearFrame>(frameCount);
+			var wIdx = 0;
 			for( i in 0...frameCount ) {
 				var f = new h3d.anim.TimelineLinearAnimation.TimelineLinearFrame();
 				f.keyTime = keyFrames[i];
+				var cI = i*3;
 				if( translationData!=null ) {
-					f.tx = translationData[i][0];
-					f.ty = translationData[i][1];
-					f.tz = translationData[i][2];
+					if (sampler.interpolation==CubicSpline) {
+						f.t0x = translationData[cI][0];
+						f.t0y = translationData[cI][1];
+						f.t0z = translationData[cI++][2];
+						f.tx = translationData[cI][0];
+						f.ty = translationData[cI][1];
+						f.tz = translationData[cI++][2];
+						f.t1x = translationData[cI][0];
+						f.t1y = translationData[cI][1];
+						f.t1z = translationData[cI][2];
+					} else {
+						f.tx = translationData[i][0];
+						f.ty = translationData[i][1];
+						f.tz = translationData[i][2];
+					}
 				} else {
 					f.tx = 0;
 					f.ty = 0;
 					f.tz = 0;
 				}
 				if( rotationData!=null ) {
-					f.qx = rotationData[i][0];
-					f.qy = rotationData[i][1];
-					f.qz = rotationData[i][2];
-					f.qw = rotationData[i][3];
+					if (sampler.interpolation==CubicSpline) {
+						f.t0x = rotationData[cI][0];
+						f.t0y = rotationData[cI][1];
+						f.t0z = rotationData[cI][2];
+						f.t0w = rotationData[cI++][3];
+						f.qx = rotationData[cI][0];
+						f.qy = rotationData[cI][1];
+						f.qz = rotationData[cI][2];
+						f.qw = rotationData[cI++][3];
+						f.t1x = rotationData[cI][0];
+						f.t1y = rotationData[cI][1];
+						f.t1z = rotationData[cI][2];
+						f.t1w = rotationData[cI][3];
+					} else {
+						f.qx = rotationData[i][0];
+						f.qy = rotationData[i][1];
+						f.qz = rotationData[i][2];
+						f.qw = rotationData[i][3];
+					}
 				} else {
 					f.qx = 0;
 					f.qy = 0;
@@ -365,21 +450,54 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 					f.qw = 1;
 				}
 				if( scaleData!=null ) {
-					f.sx = scaleData[i][0];
-					f.sy = scaleData[i][1];
-					f.sz = scaleData[i][2];
+					if (sampler.interpolation==CubicSpline) {
+						f.t0x = scaleData[cI][0];
+						f.t0y = scaleData[cI][1];
+						f.t0z = scaleData[cI++][2];
+						f.sx = scaleData[cI][0];
+						f.sy = scaleData[cI][1];
+						f.sz = scaleData[cI++][2];
+						f.t1x = scaleData[cI][0];
+						f.t1y = scaleData[cI][1];
+						f.t1z = scaleData[cI][2];
+					} else {
+						f.sx = scaleData[i][0];
+						f.sy = scaleData[i][1];
+						f.sz = scaleData[i][2];
+					}
 				} else {
 					f.sx = 1;
 					f.sy = 1;
 					f.sz = 1;
 				}
+			
+				if (prims!=null) 
+					for (p in prims) {
+						var animTargets = cast(p.primitive, h3d.prim.GltfModel).geom.root.targets;
+						var numTargets = animTargets==null ? 0 : animTargets.length;
+						for (t in 0...numTargets) {
+							if ( weightsData!=null )
+								f.w[t] = ( weightsData!=null ) ? weightsData[wIdx++] : 0;
+						}
+					}
 				frames[i] = f;
 			}
-			anim.addCurve(o.name, frames, false, true, false);
 
-			animations.push( anim );
+			// ******************************
 
-			animator.addAnimtion( o, anim );
+			// Need to some how add all the curves to the animation.
+			// And add the SkinMesh to the as an animation object with a targetObject as the scene.Skin.
+			// The Joints all need to reference the scene.Skin as the targetSkin
+
+
+			// Merge frames to existing curves if possible
+			anim.mergeOrAddCurve(isJoint ? jointTarget.name : o.name, frames, translationData!=null, rotationData!=null, scaleData!=null, weightsData!=null);
+
+			if (animations.indexOf( anim )==-1) {
+				animations.push( anim );
+
+				animator.addAnimation( o, anim );
+			}
 		}
 			
 
@@ -468,7 +586,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		// "TEXCOORD_1" =>
 	];
 
-	public function loadMesh( index : Int, transform : h3d.Matrix, parent:h3d.scene.Object, nodeName:String = null ) : h3d.scene.Object {
+	public function createMesh( index : Int, transform : h3d.Matrix, parent:h3d.scene.Object, nodeName:String = null ) : h3d.scene.Object {
 		var meshNode = root.meshes[ index ];
 		if (meshNode == null) {trace("meshNode returned NULL for idx:"+index); return null; }
 
@@ -497,7 +615,16 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 
 			var meshPrim = new GltfModel( new Geometry(this, prim), this );
 			meshPrim.name = primName;	
-			var mat = materials[ prim.material ];
+			var mat = materials[ prim.material ] != null ? materials[ prim.material ] : defaultMaterial;
+			if (prim.targets!=null) {
+				trace("Adding morph target shaders");
+				var idx = 0;
+				for (t in prim.targets) {
+					var targetShader = idx==0 ? new h3d.shader.GlTFMorphTarget() : new h3d.shader.GlTFMorphTarget2();
+					mat.mainPass.addShader(targetShader);
+					idx++;
+				}
+			}
 
 			var primMesh = new h3d.scene.Mesh( meshPrim, mat, mesh );
 			primMesh.name = primName;
@@ -559,6 +686,580 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		}
 		return mesh;
 	}
+
+	public function createSkinMesh( index : Int, transform : h3d.Matrix, parent:h3d.scene.Object, nodeName:String = null, skinIndex : Int ) : h3d.scene.Object {
+		var meshNode = root.meshes[ index ];
+		var skinNode = root.skins[ skinIndex ];
+		if (meshNode == null) { trace("meshNode returned NULL for idx:"+index); return null; }
+		if (skinNode == null) { trace("skinNode returned NULL for idx:"+skinIndex); return null; }
+		
+		var meshName = (meshNode.name != null) ? meshNode.name : (nodeName != null ? nodeName : "Skin_"+StringTools.hex(Std.random(0x7FFFFFFF), 8));
+		
+		var mesh = new h3d.scene.Object( parent );
+		mesh.name = meshName;
+		mesh.setTransform( transform );
+		meshes.push( mesh );
+		#if debug_gltf
+		trace("Create SkinMesh(Container):"+mesh.name+" parent:"+(parent.name == null ? Type.getClassName(Type.getClass(parent)) : parent.name)+" transform:"+transform);
+		#end
+
+		// // Create collection of joints and primitives for this mesh
+		// if (!meshJoints.exists( mesh )) meshJoints[mesh] = [];
+		// if (!primitives.exists( mesh )) primitives[mesh] = [];
+
+		// var jointLookup = new Map<Object, h3d.anim.Skin.Joint>();
+		// var primCounter = 0;
+		// for ( prim in meshNode.primitives ) {
+		// 	if ( prim.mode == null ) prim.mode = Triangles;
+
+		// 	// TODO: Modes other than triangles?
+		// 	if ( prim.mode != Triangles ) throw "Only triangles mode allowed in mesh primitive!";
+
+		// 	var primName = meshName+"_"+primCounter++;
+
+		// 	var meshPrim = new GltfModel( new Geometry(this, prim), this );
+		// 	meshPrim.name = primName;	
+		// 	var mat = materials[ prim.material ] != null ? materials[ prim.material ] : defaultMaterial;
+		// 	//mat.blendMode = AlphaMultiply;
+		
+		// 	var skinName = (skinNode.name != null) ? skinNode.name : "Skin_"+StringTools.hex(Std.random(0x7FFFFFFF), 8);
+		// 	var inverseBindMatrices:Array<Matrix> = GltfTools.getMatrixArrayBufferByAccessor( this, skinNode.inverseBindMatrices );
+		// 	var skeletonRoot = skinNode.skeleton!= null ? nodeObjects[ skinNode.skeleton ] : nodeObjects[ skinNode.joints[0] ];
+		// 	var joints:Array<h3d.anim.Skin.Joint> = [];
+
+		// 	var bonesPerVertex = 4;//inverseBindMatrices.length;
+		// 	var skinData = new h3d.anim.Skin(null, meshPrim.vertexCount(), bonesPerVertex);
+		// 	var verts = meshPrim.geom.getVertices();
+		// 	var jointData = meshPrim.geom.getJoints().getBytes();
+		// 	var weights = meshPrim.geom.getWeights();
+		// 	var vertCount = meshPrim.vertexCount();
+
+		// 	trace("VertexCount:"+vertCount);
+		// 	trace("JointCount:"+jointData.length);
+		// 	trace("WeightCount:"+weights.length);
+
+		// 	var allJointIds = skinNode.joints.copy();
+		// 	function collectJoints(jId:Int) {
+		// 		// collect subs first (allow easy removal of terminal unskinned joints)
+		// 		if (allJointIds.indexOf(jId)==-1) 
+		// 			allJointIds.push(jId);
+
+		// 		var jN = root.nodes[ jId ];
+		// 		if (jN.children!=null) {
+		// 			for (jCId in jN.children) 
+		// 				collectJoints( jCId );
+		// 		}
+		// 	}
+		// 	for (jCId in allJointIds)
+		// 		collectJoints(jCId);
+
+		// 	var jCtr = 0;
+		// 	for (jId in allJointIds) {
+		// 		meshJoints[mesh].push( jId );
+
+		// 		var jNode = nodeObjects[ jId ];
+		// 		var j = new h3d.anim.Skin.Joint();
+		// 		// getDefaultMatrixes( mesh ); // store for later usage in animation
+		// 		j.index = jCtr;
+		// 		j.name = jNode!=null ? jNode.name : "Joint_"+jCtr;
+		// 		j.defMat = jNode!=null ? getDefaultTransform( jId ) : Matrix.I();
+		// 		j.transPos = inverseBindMatrices[ jCtr ];
+		// 		// j.transPos = new Matrix();
+		// 		// j.transPos.multiply( j.defMat, inverseBindMatrices[ jCtr ] );
+		// 		//rightHandToLeft(j.transPos);
+
+		// 		// trace("Joint-"+jId+":");
+		// 		// for (i in 0...vertCount) {
+		// 			// var w = weights[i + (jCtr*vertCount)];
+		// 			// if( w < 0.01 )
+		// 			// 	continue;
+		// 			// trace(" - v="+i+" idx="+(i + (jCtr*vertCount)));
+		// 			// skinData.addInfluence(i, j, w);
+		// 		// }
+
+		// 		trace("New Skin.Joint: jId="+jId+" jNode:"+(jNode!=null ? jNode.name : "null")+" joint:"+j.name+" idx="+(joints.length));
+		// 		trace("Default"+j.defMat);
+		// 		var q = new h3d.Quat();
+		// 		q.initRotateMatrix( j.defMat );
+		// 		trace("p="+j.defMat.getPosition()+" q:"+q+" s="+j.defMat.getScale()+" r="+j.defMat.getEulerAngles());
+		// 		trace("TransPos"+j.transPos);
+		// 		jointLookup[jNode] = j;
+		// 		joints.push( j );
+		// 		jCtr++;
+		// 	}
+
+		// 	var idx = 0;
+		// 	var w:Float = 0;
+		// 	for (i in 0...vertCount) {
+		// 		for (bpv in 0...bonesPerVertex) {
+		// 			w = weights[ idx ];
+		// 			if( w > 0.01)
+		// 				skinData.addInfluence(i, joints[jointData.get(idx)], w);
+		// 			idx++;
+		// 		}
+		// 	}
+
+		// 	// for (bpv in 0...bonesPerVertex) {
+		// 	// for (i in 0...jointData.length) {
+		// 	// 	var vert = i % vertCount;
+		// 	// 	var w = weights[ i ];
+		// 	// 	if( w < 0.01 )
+		// 	// 		continue;
+		// 	// 	skinData.addInfluence(vert, joints[jointData.get(i)], w);
+		// 	// }
+		// 	// }
+
+		// 	jCtr = 0;
+		// 	for (jId in allJointIds) {
+		// 		var jNode = nodeObjects[ jId ]; // - Joint container objects
+		// 		trace("jNode: jId="+jId+" idx="+jCtr+" name="+jNode.name+" children="+jNode.numChildren);
+		// 		var j = joints[jCtr];
+
+		// 		// Add child joints
+		// 		j.subs = [];
+		// 		for (c in 0...jNode.numChildren) {
+		// 			var o = jNode.getChildAt(c);
+		// 			j.subs.push( jointLookup[o] );
+		// 		}
+		// 		// Set the parents of those children to the current joint
+		// 		for (jC in 0...j.subs.length) {
+		// 			var childJoint = j.subs[jC];
+		// 			childJoint.parent = j;
+		// 			var chJNId = allJointIds[childJoint.index];
+		// 			// nodeObjects[ chJNId ].follow = jNode;
+		// 			// trace("Following: "+nodeObjects[ chJNId ].name+"("+chJNId+") follows "+jNode.name+"("+jId+")");
+		// 			// childJoint.defMat.multiply( childJoint.defMat, im );
+		// 			// childJoint.transPos.multiply( childJoint.transPos, im );
+		// 		}
+		// 		jCtr++;
+		// 	}
+
+		// 	var rootJoints = [ joints[0] ];
+
+		// 	// joints.reverse();
+		// 	// for( i in 0...joints.length )
+		// 	// 	joints[i].index = i;
+		// 	skinData.setJoints( joints, rootJoints );
+		// 	skinData.initWeights();
+		// 	meshPrim.setSkin(skinData);
+
+
+		// 	trace("Tree: root="+skeletonRoot+"("+skinNode.skeleton+")");
+		// 	var r = jointLookup[skeletonRoot];
+		// 	function traceJoint( j:h3d.anim.Skin.Joint, i:Int=0 ) {
+		// 		var ind = "";
+		// 		for (iTab in 0...i) ind+="- ";
+		// 		trace(ind+"Joint:"+j.name+"("+j.index+") numChildren="+j.subs.length+" parent="+(j.parent == null ? "null" : ""+j.parent.index));
+		// 		trace(j.defMat);
+		// 		for (jc in 0...j.subs.length) {
+		// 			traceJoint(j.subs[jc], i++);
+		// 		}
+		// 	}
+		// 	traceJoint( r );
+
+		// 	trace("InversBindMatrices:");
+		// 	for (m in inverseBindMatrices) trace(" - :"+m);
+		// 	trace("SkeletonRoot:"+skeletonRoot.name);
+		// 	trace("Joints:");
+		// 	var out = " - :";
+		// 	for (i in joints) out+=i+", ";
+		// 	trace(out);
+
+		// 	var primSkin = new h3d.scene.Skin( skinData, [mat], mesh );
+		// 	primSkin.showJoints = true;
+		// 	primSkin.name = primName;
+
+		// 	// primSkin.follow = nodeObjects[ skinNode.joints[0] ];
+
+		// 	for ( jId in allJointIds ) 
+		// 		jointMesh[jId] = primSkin;
+
+		// 	primitives[mesh].push( primSkin );
+			
+		// 	#if debug_gltf
+		// 	trace(" - skin primitive:"+primSkin.name);
+		// 	#end
+		// }
+		
+		return mesh;
+	}
+
+	public function buildSkinMeshes( ) {
+
+		for (skinMeshLink in skinMeshes) {
+
+			var meshNode = root.meshes[ skinMeshLink.nodeId ];
+			var skinNode = root.skins[ skinMeshLink.skinId ];
+			var mesh = skinMeshLink.skinMesh;
+
+			// Create collection of joints and primitives for this mesh
+			if (!meshJoints.exists( mesh )) meshJoints[mesh] = [];
+			if (!primitives.exists( mesh )) primitives[mesh] = [];
+
+			#if debug_gltf
+			trace("Builduig SkinMesh-Primitives:"+mesh.name+" id="+skinMeshLink.nodeId+" skinid="+skinMeshLink.skinId);
+			#end
+
+			var jointLookup = new Map<Int, h3d.anim.Skin.Joint>();
+			var primCounter = 0;
+			for ( prim in meshNode.primitives ) {
+				if ( prim.mode == null ) prim.mode = Triangles;
+
+				// TODO: Modes other than triangles?
+				if ( prim.mode != Triangles ) throw "Only triangles mode allowed in mesh primitive!";
+
+				var primName = mesh.name+"_"+primCounter++;
+
+				var meshPrim = new GltfModel( new Geometry(this, prim), this );
+				meshPrim.name = primName;	
+				var mat = materials[ prim.material ] != null ? materials[ prim.material ] : defaultMaterial;
+				//mat.blendMode = AlphaMultiply;
+			
+				var skinName = (skinNode.name != null) ? skinNode.name : "Skin_"+StringTools.hex(Std.random(0x7FFFFFFF), 8);
+				var inverseBindMatrices:Array<Matrix> = GltfTools.getMatrixArrayBufferByAccessor( this, skinNode.inverseBindMatrices );
+				if (skinNode.skeleton == null) skinNode.skeleton = skinNode.joints[0];
+				var skeletonRoot = skinNode.skeleton!= null ? nodeObjects[ skinNode.skeleton ] : nodeObjects[ skinNode.joints[0] ];
+				var joints:Array<h3d.anim.Skin.Joint> = [];
+
+				var bonesPerVertex = 4;//inverseBindMatrices.length;
+				var skinData = new h3d.anim.Skin(null, meshPrim.vertexCount(), bonesPerVertex);
+				var verts = meshPrim.geom.getVertices();
+				var jointData = meshPrim.geom.getJoints().getBytes();
+				var weights = meshPrim.geom.getWeights();
+				var vertCount = meshPrim.vertexCount();
+
+				trace("VertexCount:"+vertCount);
+				trace("JointCount:"+jointData.length);
+				trace("WeightCount:"+weights.length);
+
+				var allJointIds = skinNode.joints.copy();
+				function collectJoints(jId:Int) {
+					// collect subs first (allow easy removal of terminal unskinned joints)
+					if (allJointIds.indexOf(jId)==-1) 
+						allJointIds.push(jId);
+
+					var jN = root.nodes[ jId ];
+					if (jN.children!=null) {
+						for (jCId in jN.children) 
+							collectJoints( jCId );
+					}
+				}
+				for (jCId in allJointIds)
+					collectJoints(jCId);
+
+				var jCtr = 0;
+				for (jId in allJointIds) {
+					meshJoints[mesh].push( jId );
+
+					var jNode = nodeObjects[ jId ];
+					var j = new h3d.anim.Skin.Joint();
+					// getDefaultMatrixes( mesh ); // store for later usage in animation
+					j.index = jCtr;
+					j.name = jNode!=null ? jNode.name : "Joint_"+jCtr;
+					// var jObj = mesh.getScene().getObjectByName(j.name);
+					// var jM = new Matrix();
+					//  jObj.scaleY, jObj.scaleZ );
+					// j.defMat = jM;jM.initTranslation( jObj.x, jObj.y, jObj.z );
+					// var qM = jObj.getRotationQuat().toMatrix();
+					// jM.multiply( jM, qM);
+					// jM.scale( jObj.scaleX,
+
+					var m = new Matrix();
+					// var jObj = mesh.getScene().getObjectByName(j.name);
+					// m.load( mesh.getInvPos() );
+					// m.multiply(m, getDefaultTransform( jId ));
+					// m.multiply(m, inverseBindMatrices[ jCtr ]);
+					j.defMat = jNode!=null ? getDefaultTransform( jId ) : Matrix.I();
+					j.transPos = inverseBindMatrices[ jCtr ];
+					// trace("buildSkinMeshes: jId="+jId+" jCtr="+jCtr);
+					
+					
+					// j.transPos = new Matrix();
+					// j.transPos.multiply( j.defMat, inverseBindMatrices[ jCtr ] );
+					//rightHandToLeft(j.transPos);
+
+					// trace("Joint-"+jId+":");
+					// for (i in 0...vertCount) {
+						// var w = weights[i + (jCtr*vertCount)];
+						// if( w < 0.01 )
+						// 	continue;
+						// trace(" - v="+i+" idx="+(i + (jCtr*vertCount)));
+						// skinData.addInfluence(i, j, w);
+					// }
+
+					trace(" B-"+jCtr+": id:"+j.name+"("+jId+")");
+					// trace("Def:"+OpenFLMain.mtos(getDefaultTransform( jId )));
+					trace("Def:"+OpenFLMain.mtos(j.defMat));
+					trace("Inv:"+OpenFLMain.mtos(j.transPos));
+					jointLookup[jId] = j;
+					joints.push( j );
+					jCtr++;
+				}
+
+				// for (i in 0...joints.length) {
+				// 	var jw = joints[i];
+				// 	for (v in 0...vertCount) {
+				// 		var w = weights[ i ];
+				// 		if( w < 0.01 )
+				// 			continue;
+				// 		skinData.addInfluence(inde, jw, w);
+				// 	}
+				// }
+
+/// from fbx
+// if( weights.length > 0 ) {
+// 	var weights = weights[0].getFloats();
+// 	var vertex = subDef.get("Indexes").getInts();
+// 	for( i in 0...vertex.length ) {
+// 		var w = weights[i];
+// 		if( w < 0.01 )
+// 			continue;
+// 		skin.addInfluence(vertex[i], j, w);
+// 	}
+// }
+
+				var idx = 0;
+				var w:Float = 0;
+				var sortedJoints = skinNode.joints.copy();
+				sortedJoints.sort(function(x, y) {
+					return x==y ? 0 : (x<y ? -1 : 1);
+				});
+				
+				for (i in 0...vertCount) {
+					for (bpv in 0...bonesPerVertex) {
+						w = weights[ idx ];
+						if( w > 0.01) {
+							var jointIndex = jointData.get(idx);
+							skinData.addInfluence(i, joints[jointIndex], w);
+							// var jI = sortedJoints[jointIndex];
+							// skinData.addInfluence(i, jointLookup[jI], w);
+						}
+						idx++;
+					}
+				}
+
+				// // for (bpv in 0...bonesPerVertex) {
+				// for (i in 0...jointData.length) {
+				// 	var vert = i % vertCount;
+				// 	var w = weights[ i ];
+				// 	if( w < 0.01 )
+				// 		continue;
+				// 	skinData.addInfluence(vert, joints[jointData.get(i)], w);
+				// }
+				// // }
+
+
+				function buildTree( jId ) {
+					var jNode = root.nodes[ jId ]; // - Joint container objects
+					var j = jointLookup[ jId ];
+
+					// Add child joints
+					j.subs = [];
+
+					if (jNode.children==null) return;
+
+					trace("jNode-Name:"+jNode.name+" jId="+jId+" j.name="+j.name+"("+j.index+") children="+jNode.children);
+
+					for (c in jNode.children) {
+						var jC = jointLookup[c];
+						j.subs.push( jC );
+						jC.parent = j;
+
+						buildTree( c );
+					}
+				} 
+
+				buildTree( allJointIds[0] );
+
+				function traceJoint( j:h3d.anim.Skin.Joint, i:Int=0 ) {
+					var ind = "";
+					for (iTab in 0...i) ind+="- ";
+					trace(ind+"Joint:"+j.name+"("+j.index+") numChildren="+j.subs.length+" par="+(j.parent!=null ? j.parent.name+"("+j.parent.index+")" : "--null--"));
+					for (jc in 0...j.subs.length) {
+						traceJoint(j.subs[jc], i+1);
+					}
+				}
+				trace("Tree-1: root="+skeletonRoot+"("+skinNode.skeleton+")");
+				var r = jointLookup[skinNode.skeleton];
+				traceJoint( r, 1 );
+
+				// jCtr = 0;
+				// for (jId in allJointIds) {
+				// 	var jNode = root.nodes[ jId ]; // - Joint container objects
+				// 	var j = joints[jCtr];
+
+				// 	// Add child joints
+				// 	j.subs = [];
+
+				// 	if (jNode.children==null) continue;
+
+				// 	trace("jNode: jId="+jId+" idx="+jCtr+" name="+jNode.name+" children="+jNode.children);
+
+				// 	for (c in jNode.children) {
+				// 		var jC = jointLookup[c];
+				// 		j.subs.push( jC );
+				// 		jC.parent = j;
+				// 	}
+				// 	// // Set the parents of those children to the current joint
+				// 	// for (jC in 0...j.subs.length) {
+				// 	// 	var childJoint = j.subs[jC];
+				// 	// 	childJoint.parent = j;
+				// 	// 	// var chJNId = allJointIds[childJoint.index];
+				// 	// 	// nodeObjects[ chJNId ].follow = jNode;
+				// 	// 	// trace("Following: "+nodeObjects[ chJNId ].name+"("+chJNId+") follows "+jNode.name+"("+jId+")");
+				// 	// 	// childJoint.defMat.multiply( j.transPos, childJoint.defMat );
+				// 	// 	// childJoint.transPos.multiply( j.transPos, childJoint.transPos );
+				// 	// }
+				// 	jCtr++;
+				// }
+
+				var rootJoints = [ jointLookup[skinNode.skeleton] ];
+
+				// joints.reverse();
+				// for( i in 0...joints.length )
+				// 	joints[i].index = i;
+				skinData.setJoints( joints, rootJoints );
+				skinData.initWeights();
+				meshPrim.setSkin(skinData);
+
+				trace("Tree-1: root="+skeletonRoot+"("+skinNode.skeleton+")");
+				r = jointLookup[skinNode.skeleton];
+				traceJoint( r, 1 );
+
+
+				trace("InversBindMatrices:");
+				for (m in inverseBindMatrices) trace(" - :"+m);
+				trace("SkeletonRoot:"+skeletonRoot.name);
+				trace("Joints:");
+				var out = " - :";
+				for (i in joints) out+=i+", ";
+				trace(out);
+
+				var primSkin = new h3d.scene.Skin( skinData, [mat], mesh );
+				// mesh.addChildAt(primSkin, 0 );
+				primSkin.showJoints = false;
+				primSkin.name = primName;
+
+				// primSkin.follow = nodeObjects[ skinNode.joints[0] ];
+
+				for ( jId in allJointIds ) 
+					jointMesh[jId] = primSkin;
+
+				primitives[mesh].push( primSkin );
+				
+				#if debug_gltf
+				trace(" - skin primitive created:"+primSkin.name);
+				#end
+
+			}
+		}
+	}
+
+	public function getDefaultTransform( nodeId:Int ) {
+		var node = root.nodes[ nodeId ];
+
+		var m = Matrix.I();
+        if (node.matrix != null) m.loadValues( node.matrix );
+        if (node.scale != null) m.scale( node.scale[0], node.scale[1], node.scale[2] );
+        if (node.rotation != null) {
+            var q = new h3d.Quat( node.rotation[0], node.rotation[1], node.rotation[2], node.rotation[3] );
+            m.multiply( m, q.toMatrix() );
+        }
+        if (node.translation != null) m.translate( node.translation[0], node.translation[1], node.translation[2] );
+		
+		return m;
+	}
+
+	public function createSkinData( skinMesh:Skin, meshPrim, skinNode ) {
+
+		#if debug_gltf
+		trace("Create SkinData("+skinMesh.name+"):");
+		#end
+
+
+	}
+
+	public static inline function rightHandToLeft( m : h3d.Matrix ) {
+		// if [x,y,z] is our original point and M the matrix
+		// in right hand we have [x,y,z] * M = [x',y',z']
+		// we need to ensure that left hand matrix convey the x axis flip,
+		// in order to have [-x,y,z] * M = [-x',y',z']
+		m._12 = -m._12;
+		m._13 = -m._13;
+		m._21 = -m._21;
+		m._31 = -m._31;
+		m._41 = -m._41;
+	}
+
+	// function createSkin( hskins : Map<Int,h3d.anim.Skin>, hgeom : Map<Int,{function vertexCount():Int;function setSkin(s:h3d.anim.Skin):Void;}>, rootJoints : Array<h3d.anim.Skin.Joint>, bonesPerVertex ) {
+	// 	var allJoints = [];
+	// 	function collectJoints(j:h3d.anim.Skin.Joint) {
+	// 		// collect subs first (allow easy removal of terminal unskinned joints)
+	// 		for( j in j.subs )
+	// 			collectJoints(cast j);
+	// 		allJoints.push(j);
+	// 	}
+	// 	for( j in rootJoints )
+	// 		collectJoints(j);
+	// 	var skin = null;
+	// 	var geomTrans = null;
+	// 	var iterJoints = allJoints.copy();
+	// 	for( j in iterJoints ) {
+	// 		var jModel = ids.get(j.index);
+	// 		var subDef = getParent(jModel, "Deformer", true);
+	// 		var defMat = defaultModelMatrixes.get(jModel.getName());
+	// 		j.defMat = defMat.toMatrix(leftHand);
+
+	// 		if( subDef == null ) {
+	// 			// if we have skinned subs, we need to keep in joint hierarchy
+	// 			if( j.subs.length > 0 || keepJoint(j) )
+	// 				continue;
+	// 			// otherwise we're an ending bone, we can safely be removed
+	// 			if( j.parent == null )
+	// 				rootJoints.remove(j);
+	// 			else
+	// 				j.parent.subs.remove(j);
+	// 			allJoints.remove(j);
+	// 			// ignore key frames for this joint
+	// 			defMat.wasRemoved = -1;
+	// 			continue;
+	// 		}
+	// 		// create skin
+	// 		if( skin == null ) {
+	// 			var def = getParent(subDef, "Deformer");
+	// 			skin = hskins.get(def.getId());
+	// 			// shared skin between same instances
+	// 			if( skin != null )
+	// 				return skin;
+	// 			var geom = hgeom.get(getParent(def, "Geometry").getId());
+	// 			skin = new h3d.anim.Skin(null, geom.vertexCount(), bonesPerVertex);
+	// 			geom.setSkin(skin);
+	// 			hskins.set(def.getId(), skin);
+	// 		}
+	// 		j.transPos = defMat.transPos;
+
+	// 		var weights = subDef.getAll("Weights");
+	// 		if( weights.length > 0 ) {
+	// 			var weights = weights[0].getFloats();
+	// 			var vertex = subDef.get("Indexes").getInts();
+	// 			for( i in 0...vertex.length ) {
+	// 				var w = weights[i];
+	// 				if( w < 0.01 )
+	// 					continue;
+	// 				skin.addInfluence(vertex[i], j, w);
+	// 			}
+	// 		}
+	// 	}
+	// 	if( skin == null )
+	// 		throw "No joint is skinned ("+[for( j in iterJoints ) j.name].join(",")+")";
+	// 	allJoints.reverse();
+	// 	for( i in 0...allJoints.length )
+	// 		allJoints[i].index = i;
+	// 	skin.setJoints(allJoints, rootJoints);
+	// 	skin.initWeights();
+	// 	return skin;
+	// }
+
 
 	//TODO: Implement glTF animations
 	// function getAnimation( name : String ) {

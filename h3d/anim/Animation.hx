@@ -141,11 +141,16 @@ class Animation implements hxd.impl.Serializable {
 	@:access(h3d.scene.Skin.skinData)
 	public function bind( base : h3d.scene.Object ) {
 		var currentSkin : h3d.scene.Skin = null;
+		trace("Animation:Base="+base.name);
 		for( a in objects.copy() ) {
+			trace(" - a="+a.objectName);
 			if( currentSkin != null ) {
 				// quick lookup for joints (prevent creating a temp object)
 				var j = currentSkin.skinData.namedJoints.get(a.objectName);
 				if( j != null ) {
+					var pJ = (j.parent!=null) ? cast hxd.impl.Api.downcast(j.parent, h3d.anim.Skin.Joint): null;
+					trace("   - hasSkinJoint: idx="+j.index+"("+j.name+") parent="+(pJ!=null ? pJ.index+"("+pJ.name+") parent.bind="+pJ.bindIndex : (j.parent!=null ? Type.getClassName(Type.getClass(j.parent)) : "null")));
+					trace("DEF:"+j.defMat+"TRANS:"+j.transPos);
 					a.targetSkin = currentSkin;
 					a.targetJoint = j.index;
 					continue;
@@ -156,12 +161,18 @@ class Animation implements hxd.impl.Serializable {
 				objects.remove(a);
 				continue;
 			}
+			trace(" - a type ="+Type.getClassName(Type.getClass( obj )));
 			var joint = hxd.impl.Api.downcast(obj, h3d.scene.Skin.Joint);
 			if( joint != null ) {
+				var pJ = (joint.parent!=null) ? cast hxd.impl.Api.downcast(joint.parent, h3d.scene.Skin.Joint): null;
+				trace("   - isJoint: idx="+joint.index+"("+joint.name+") parent="+(pJ!=null ? pJ.index+"("+pJ.name+") parent.bind="+pJ.bindIndex : (joint.parent!=null ? Type.getClassName(Type.getClass(joint.parent)) : "null")));
+				var j = joint.skin.skinData.allJoints[joint.index];
+				trace("J:"+j.name+"("+j.index+") DEF:"+j.defMat+"TRANS:"+j.transPos);
 				currentSkin = cast joint.parent;
 				a.targetSkin = currentSkin;
 				a.targetJoint = joint.index;
 			} else {
+				trace("   - NOT-Joint:");
 				a.targetObject = obj;
 			}
 		}

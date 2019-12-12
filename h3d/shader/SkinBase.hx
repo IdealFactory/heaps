@@ -9,8 +9,8 @@ class SkinBase extends hxsl.Shader {
 		var transformedNormal : Vec3;
 
 		@const var MaxBones : Int;
-		@ignore @param var bonesMatrixes : Array<Mat3x4,MaxBones>;
-		
+		// @ignore @param var bonesMatrixes : Array<Mat3x4,MaxBones>;
+		@ignore @param var bonesMatrixes : Array<Mat4,MaxBones>;
 	};
 
 	public function new() {

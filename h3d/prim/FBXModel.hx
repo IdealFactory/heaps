@@ -276,6 +276,11 @@ class FBXModel extends MeshPrimitive {
 			skinBuf.uploadBytes(sbuf.getBytes(), 0, nverts);
 			addBuffer("weights", skinBuf, 0);
 			addBuffer("indexes", skinBuf, skin.bonesPerVertex);
+			trace("FBXSkin buffer: nverts="+nverts+" bonesPerVert="+skin.bonesPerVertex);
+			var sb = sbuf.getBytes();
+			var out ="";
+			for (b in 0...sb.length) out+=" "+sb[b];
+			trace(out);
 		}
 		if( cbuf != null ) addBuffer("color", h3d.Buffer.ofFloats(cbuf, 3));
 

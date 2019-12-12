@@ -70,6 +70,7 @@ class Library extends BaseLibrary {
 				j.index = o.model.getId();
 				j.name = o.model.getName();
 				o.joint = j;
+				trace("Library.Joint:idx="+j.index+" name="+j.name);
 				continue;
 			} else {
 				var hasJoint = false;
@@ -110,8 +111,10 @@ class Library extends BaseLibrary {
 
 
 			// /!\ currently, childs of joints will work but will not cloned
-			if( o.parent.isJoint )
+			if( o.parent.isJoint ) {
 				o.obj.follow = scene.getObjectByName(o.parent.joint.name);
+				trace("Following: o:"+o.name+" o.obj:"+o.obj.name+" p="+o.parent.name+" o.p.j="+o.parent.joint.name);
+			}
 
 			var skin = hxd.impl.Api.downcast(o.obj, h3d.scene.Skin);
 			if( skin == null ) continue;
@@ -120,6 +123,7 @@ class Library extends BaseLibrary {
 				if( j.isJoint )
 					rootJoints.push(j.joint);
 			var skinData = createSkin(hskins, hgeom, rootJoints, bonesPerVertex);
+			trace("SkinData="+skinData);
 			// remove the corresponding Geometry-Model and copy its material
 			for( o2 in objects ) {
 				if( o2.obj == null || o2 == o || !o2.obj.isMesh() ) continue;

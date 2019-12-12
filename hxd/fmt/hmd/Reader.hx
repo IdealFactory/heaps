@@ -109,6 +109,7 @@ class Reader {
 			if( j.bind >= 0 )
 				j.transpos = readPosition(hasScale);
 			s.joints.push(j);
+			trace("Joint: idx="+(s.joints.length-1)+" "+j.name+" bind="+j.bind+" par="+j.parent+" pid="+pid);
 		}
 		var count = i.readByte();
 		if( count > 0 ) {
@@ -182,6 +183,8 @@ class Reader {
 			for( k in 0...i.readByte() )
 				m.materials.push(i.readInt32());
 			m.skin = readSkin();
+			trace("Reader:follow: m:"+m.name+"("+Type.getClassName(Type.getClass(m))+") p="+m.parent+"("+Type.getClassName(Type.getClass(m.parent))+") m.follow="+m.follow);
+		
 		}
 
 		d.animations = [];

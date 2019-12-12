@@ -378,6 +378,90 @@ class GlDriver extends Driver {
 		}
 	}
 
+	function fmt( shader : hxsl.RuntimeShader.RuntimeShaderData ) {
+		var str = hxsl.Printer.shaderToString(shader.data);
+		str = ~/((fragment)|(vertex))Globals\[([0-9]+)\](.[xyz]+)?/g.map(str, function(r) {
+			var name = null;
+			var cid = Std.parseInt(r.matched(4)) << 2;
+			var swiz = r.matched(5);
+			if( swiz != null ) {
+				var d = swiz.charCodeAt(1) - 'x'.code;
+				cid += d;
+				swiz = "." + [for( i in 1...swiz.length ) String.fromCharCode(swiz.charCodeAt(i) - d)].join("");
+			}
+			var g = shader.globals;
+			while( g != null ) {
+				if( g.path == "__consts__" && cid >= g.pos && cid < g.pos + (switch(g.type) { case TArray(TFloat, SConst(n)): n; default: 0; } ) && swiz == ".x" ) {
+					swiz = null;
+					name = "" + shader.consts[cid - g.pos];
+					break;
+				}
+				if( g.pos == cid ) {
+					name = g.path;
+					break;
+				}
+				g = g.next;
+			}
+			if( name == null )
+				return r.matched(0);
+			if( swiz != null ) name += swiz;
+			return name;
+		});
+		str = ~/((fragment)|(vertex))Params\[([0-9]+)\](.[xyz]+)?/g.map(str, function(r) {
+			var name = null;
+			var cid = Std.parseInt(r.matched(4)) << 2;
+			var swiz = r.matched(5);
+			if( swiz != null ) {
+				var d = swiz.charCodeAt(1) - 'x'.code;
+				cid += d;
+				swiz = "." + [for( i in 1...swiz.length ) String.fromCharCode(swiz.charCodeAt(i) - d)].join("");
+			}
+			var p = shader.params;
+			while( p != null ) {
+				if( p.pos == cid ) {
+					name = p.name;
+					break;
+				}
+				p = p.next;
+			}
+			if( name == null )
+				return r.matched(0);
+			if( swiz != null ) name += swiz;
+			return name;
+		});
+		str = ~/((fragment)|(vertex))Textures\[([0-9]+)\]/g.map(str, function(r) {
+			var name = null;
+			var cid = Std.parseInt(r.matched(4));
+			var t = shader.textures;
+			while( t != null ) {
+				if( t.pos == cid && t.type == TSampler2D )
+					return t.name;
+				t = t.next;
+			}
+			return r.matched(0);
+		});
+		str = ~/((fragment)|(vertex))TexturesCube\[([0-9]+)\]/g.map(str, function(r) {
+			var name = null;
+			var cid = Std.parseInt(r.matched(4));
+			var t = shader.textures;
+			while( t != null ) {
+				if( t.pos == cid && t.type == TSamplerCube )
+					return t.name;
+				t = t.next;
+			}
+			return r.matched(0);
+		});
+		return str;
+	}
+
+	// function substitute( from, too, s ) {
+	// 	for( v in s.vars ) {
+	// 		trace("Vars:"+v.name);
+	// 	}
+	// 	for( f in s.funs ) {
+	// 		trace("Funcs:"+f.name);
+	// 	}
+	// }
 	override function selectShader( shader : hxsl.RuntimeShader ) {
 		var p = programs.get(shader.id);
 		if( p == null ) {
@@ -385,6 +469,13 @@ class GlDriver extends Driver {
 			var glout = new ShaderCompiler();
 			glout.glES = glES;
 			glout.version = shaderVersion;
+
+			// var renamed = substitue("target", "wibble", shader.vertex);
+
+			// trace("SHADERS====================");
+			// var str = fmt(shader.vertex) + "\n" + fmt(shader.fragment);
+			// trace('HXSL=');
+			// trace("\t" + str.split("\n").join("\n\t"));
 			p.vertex = compileShader(glout,shader.vertex);
 			p.fragment = compileShader(glout,shader.fragment);
 

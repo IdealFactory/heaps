@@ -906,8 +906,10 @@ class BaseLibrary {
 			var M = 1.0;
 			var def = switch( cname ) {
 			case "T":
+				trace("Found T curve " + model.getName()+"."+cname);	
 				if( c.def.trans == null ) P0 else c.def.trans;
 			case "R":
+				trace("Found R curve " + model.getName()+"."+cname);	
 				M = F;
 				if( c.def.rotate == null && c.def.preRot == null ) P0 else
 				if( c.def.rotate == null ) c.def.preRot else
@@ -920,6 +922,7 @@ class BaseLibrary {
 					q.toEuler().toPoint();
 				}
 			case "S":
+				trace("Found S curve " + model.getName()+"."+cname);	
 				if( c.def.scale == null ) P1 else c.def.scale;
 			default:
 				trace("Unknown curve " + model.getName()+"."+cname);
@@ -1298,6 +1301,8 @@ class BaseLibrary {
 			if( weights.length > 0 ) {
 				var weights = weights[0].getFloats();
 				var vertex = subDef.get("Indexes").getInts();
+				trace("Weights("+weights.length+"):"+weights);
+				trace("Vertexes("+vertex.length+"):"+vertex);
 				for( i in 0...vertex.length ) {
 					var w = weights[i];
 					if( w < 0.01 )

@@ -77,7 +77,7 @@ class Skin extends MultiMaterial {
 	var skinShader : h3d.shader.SkinBase;
 	var jointsGraphics : Graphics;
 
-	public var showJoints : Bool;
+	public var showJoints : Bool = false;
 
 	public function new(s, ?mat, ?parent) {
 		super(null, mat, parent);
@@ -161,7 +161,7 @@ class Skin extends MultiMaterial {
 					hasNormalMap = true;
 					break;
 				}
-			skinShader = hasNormalMap ? new h3d.shader.SkinTangent() : new h3d.shader.Skin();
+			skinShader = hasNormalMap ? new h3d.shader.SkinTangent() : skinData.bonesPerVertex==4 ? new h3d.shader.Skin4() : new h3d.shader.Skin();
 			var maxBones = 0;
 			if( skinData.splitJoints != null ) {
 				for( s in skinData.splitJoints )
@@ -186,6 +186,7 @@ class Skin extends MultiMaterial {
 		paletteChanged = true;
 		for( j in skinData.allJoints )
 			currentAbsPose.push(h3d.Matrix.I());
+		trace("BoundJoints:"+skinData.boundJoints.length);
 		for( i in 0...skinData.boundJoints.length )
 			currentPalette.push(h3d.Matrix.I());
 		if( skinData.splitJoints != null ) {
@@ -206,18 +207,72 @@ class Skin extends MultiMaterial {
 	function syncJoints() {
 		if( !jointsUpdated ) return;
 		for( j in skinData.allJoints ) {
+			var sm = this.getAbsPos().clone();
 			var id = j.index;
 			var m = currentAbsPose[id];
 			var r = currentRelPose[id];
 			var bid = j.bindIndex;
 			if( r == null ) r = j.defMat else if( j.retargetAnim ) { r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
-			if( j.parent == null )
-				m.multiply3x4inline(r, absPos);
-			else
-				m.multiply3x4inline(r, currentAbsPose[j.parent.index]);
-			if( bid >= 0 )
-				currentPalette[bid].multiply3x4inline(j.transPos, m);
+			// if( j.parent == null )
+			// 	m.multiply3x4inline(r, absPos);
+			// else
+			// 	m.multiply3x4inline(r, currentAbsPose[j.parent.index]);
+			// if( bid >= 0 )
+			// 	currentPalette[bid].multiply3x4inline(j.transPos, m);
+
+			// r = r.clone();
+			var t:h3d.Matrix = null;
+			var res = new h3d.Matrix();
+			if( j.parent == null ) {
+				m.multiply(r, absPos);
+				// m.loadValues( [1, 0, 0, 0, 0, 0, -0.9999, 0, 0, 1, 0, 0, 0, -0.7249, -0.0319, 1] );
+				// m.rotate(1.57, 0, 0);
+			} else
+				m.multiply(r, currentAbsPose[j.parent.index]);
+			if( bid >= 0 ) {
+				//t = this.getScene().getObjectByName(j.name).getInvPos().clone();//j.parent == null ? absPos.clone() : currentAbsPose[j.parent.index].clone();
+				// t.rotate(0.02, 0, 0);
+				//t.invert();
+				currentPalette[bid].multiply(j.transPos, m);
+				
+				switch(bid) {
+					case 0: res.loadValues( [1, 0, 0, 0, 0, 0, -0.9999, 0, 0, 1, 0, 0, 0, -0.7249, -0.0319, 1] );
+					case 1: res.loadValues( [1, 0, 0, 0, 0, 0, -0.9999, 0, 0, 1, 0, 0, 0, -0.7249, -0.0319, 1] );
+					case 2: res.loadValues( [1, 0, 0, 0, 0, 0, -0.9999, 0, 0, 1, 0, 0, 0, -0.7249, -0.0319, 1] );
+					case 3: res.loadValues( [1, 0, 0, 0, 0, 0.2484, -0.9685, 0, 0, 0.9686, 0.2484, 0, 0, -0.6894, -0.3118, 1] );
+					case 4: res.loadValues( [1, 0, 0, 0, 0, 0.3205, -0.9471, 0, 0, 0.9472, 0.3205, 0, 0, -0.6638, -0.3978] );
+					case 5: res.loadValues( [0.7416, -0.6672, 0.0692, 0, 0.0211, -0.0798, -0.9965, 0, 0.6706, 0.7405, -0.045, 0, -0.6976, -0.3866, 0.0103, 1] );
+					case 6: res.loadValues( [0.7334, 0.6727, 0.0981, 0, 0.0921, 0.0447, -0.9946, 0, -0.6735, 0.7386, -0.0291, 0, 0.699, -0.3853, 0.008, 1] );
+					case 7: res.loadValues( [0.7416, -0.6672, 0.0692, 0, 0.0211, -0.0798, -0.9965, 0, 0.6706, 0.7405, -0.045, 0, -0.6976, -0.3866, 0.0103, 1] );
+					case 8: res.loadValues( [0.7334, 0.6727, 0.0981, 0, 0.0921, 0.0447, -0.9946, 0, -0.6735, 0.7386, -0.0291, 0, 0.699, -0.3853, 0.008, 1] );
+					case 9: res.loadValues( [0.7416, -0.6672, 0.0692, 0, 0.0211, -0.0798, -0.9965, 0, 0.6706, 0.7405, -0.045, 0, -0.6976, -0.3866, 0.0103, 1] );
+					case 10: res.loadValues( [0.7334, 0.6727, 0.0981, 0, 0.0921, 0.0447, -0.9946, 0, -0.6735, 0.7 -0.0291, 0, 0.699, -0.3853, 0.008, 1] );
+					case 11: res.loadValues( [1, 0, 0, 0, 0, 0, -0.9999, 0, 0, 1, 0, 0, 0, -0.7249, -0.0319, 1] );
+					case 12: res.loadValues( [1, 0, 0, 0, 0, 0, -0.9999, 0, 0, 1, 0, 0, 0, -0.7249, -0.0319, 1] );
+					case 13: res.loadValues( [1, 0, 0, 0, 0, 0, -0.9999, 0, 0, 1, 0, 0, 0, -0.7249, -0.0319, 1] );
+					case 14: res.loadValues( [1, 0, 0, 0, 0, 0, -0.9999, 0, 0, 1, 0, 0, 0, -0.7249, -0.0319, 1] );
+					case 15: res.loadValues( [1, 0, 0, 0, 0, 0, -0.9999, 0, 0, 1, 0, 0, 0, -0.7249, -0.0319, 1] );
+					case 16: res.loadValues( [1, 0, 0, 0, 0, 0, -0.9999, 0, 0, 1, 0, 0, 0, -0.7249, -0.0319, 1] );
+					case 17: res.loadValues( [1, 0, 0, 0, 0, 0, -0.9999, 0, 0, 1, 0, 0, 0, -0.7249, -0.0319, 1] );
+					case 18: res.loadValues( [1, 0, 0, 0, 0, 0, -0.9999, 0, 0, 1, 0, 0, 0, -0.7249, -0.0319, 1] );
+					case 19: res.loadValues( [1, 0, 0, 0, 0, 0, -0.9999, 0, 0, 1, 0, 0, 0, -0.7249, -0.0319, 1] );
+				}
+				//res.rotate(1.57, 0, 0);
+
+				// if (j.name=="Joint_4") {
+				// 	res.loadValues([ -0.9999,0,0,0,0,0.9979,0.064,0,0,0.064,-0.9978,0,0,0.0665,0,1 ]);
+				// 	currentPalette[bid].load(res);
+				// }
+
+			}
+			// trace("syncJoints: id="+j.name+"("+j.index+") bid="+bid+" p="+(j.parent!=null ? ""+j.parent.index+"\n - pAb:"+OpenFLMain.mtos(currentAbsPose[j.parent.index]) : "-")+"\n - abs:"+OpenFLMain.mtos(currentAbsPose[id])+"\n - tra:"+OpenFLMain.mtos(j.transPos)+"\n - rel:"+OpenFLMain.mtos(currentRelPose[id])+"\n - m  :"+OpenFLMain.mtos(m)+"\n - BID:"+OpenFLMain.mtos(currentPalette[bid])+"\n - res:"+OpenFLMain.mtos(res));
+			trace("syncJoints: id="+j.name+"("+j.index+") bid="+bid+" p="+(j.parent!=null ? ""+j.parent.index+"\n - pAb:"+currentAbsPose[j.parent.index] : "-")+"\n - abs:"+currentAbsPose[id]+"\n - tra:"+j.transPos+"\n - rel:"+currentRelPose[id]+"\n - m  :"+m+"\n - BID:"+currentPalette[bid]+"\n - res:"+res);
 		}
+		// currentPalette[10]._11 *= 3;
+		// currentPalette[1]._22 *= 15;
+		// currentPalette[1]._22 *= 25;
+		// currentPalette[1]._41 = 23.5;
+		//trace("SyncJoints:"+currentPalette);
 		skinShader.bonesMatrixes = currentPalette;
 		if( jointsAbsPosInv != null ) jointsAbsPosInv._44 = 0; // mark as invalid
 		jointsUpdated = false;
@@ -237,7 +292,7 @@ class Skin extends MultiMaterial {
 			if( jointsGraphics == null ) {
 				jointsGraphics = new Graphics(this);
 				jointsGraphics.material.mainPass.depth(false, Always);
-				jointsGraphics.material.mainPass.setPassName("add");
+				jointsGraphics.material.mainPass.setPassName( Std.is(jointsGraphics.material, h3d.mat.PbrMaterial) ? "overlay" : "additive");
 			}
 			var topParent : Object = this;
 			while( topParent.parent != null )
@@ -249,7 +304,16 @@ class Skin extends MultiMaterial {
 			for( j in skinData.allJoints ) {
 				var m = currentAbsPose[j.index];
 				var mp = j.parent == null ? absPos : currentAbsPose[j.parent.index];
-				g.lineStyle(1, j.parent == null ? 0xFF0000FF : 0xFFFFFF00);
+				trace("Line("+(j.parent == null ? "null" : ""+j.parent.index)+"):"+mp._41+"/"+mp._42+"/"+mp._43+" -> "+m._41+"/"+m._42+"/"+m._43);
+				g.lineStyle(3, j.parent == null ? 0xFF0000FF : 0xFFFFFF00, 1.);
+				g.moveTo(mp._41, mp._42, mp._43);
+				g.lineTo(m._41, m._42, m._43);
+				m = j.parent == null ? absPos : currentAbsPose[j.parent.index];
+				mp = m.clone();
+				mp.multiply(mp, currentRelPose[j.index] );
+				mp.multiply( mp, j.transPos );
+				trace("Line("+(j.parent == null ? "null" : ""+j.parent.index)+"):"+mp._41+"/"+mp._42+"/"+mp._43+" -> "+m._41+"/"+m._42+"/"+m._43);
+				g.lineStyle(3, j.parent == null ? 0xFF00FFFF : 0xFFFFFFFF, 1.);
 				g.moveTo(mp._41, mp._42, mp._43);
 				g.lineTo(m._41, m._42, m._43);
 			}

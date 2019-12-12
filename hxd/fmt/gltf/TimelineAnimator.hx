@@ -17,7 +17,7 @@ class TimelineAnimator {
         anims = [];
     }
 
-    public function addAnimtion( o, a ) {
+    public function addAnimation( o, a ) {
 
         if (!contains( o, a ))
             anims.push( {obj:o, anim:a} );

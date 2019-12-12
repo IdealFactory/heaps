@@ -72,9 +72,11 @@ class Skin {
 			vertexWeights = new haxe.ds.Vector(vertexCount * bonesPerVertex);
 			envelop = [];
 		}
+		trace("Skin(new):"+name+" vC="+vertexCount+" bpv="+bonesPerVertex);
 	}
 
 	public function setJoints( joints : Array<Joint>, roots : Array<Joint> ) {
+		trace("Skin.setJoints: joints:"+joints.length+" roots="+roots.length);
 		rootJoints = roots;
 		allJoints = joints;
 		namedJoints = new Map();
@@ -84,6 +86,7 @@ class Skin {
 	}
 
 	public inline function addInfluence( vid : Int, j : Joint, w : Float ) {
+		trace("Skin.addInfluence: vid:"+vid+" j="+j.name+"("+j.index+") w="+w);
 		var il = envelop[vid];
 		if( il == null )
 			il = envelop[vid] = [];
@@ -120,6 +123,7 @@ class Skin {
 					if( i.j.bindIndex == -1 ) {
 						i.j.bindIndex = boundJoints.length;
 						boundJoints.push(i.j);
+						trace("JointBind:"+i.j.name+"("+i.j.index+") bInd="+i.j.bindIndex);
 					}
 					vertexJoints[pos] = i.j.bindIndex;
 					vertexWeights[pos] = i.w * tw;
@@ -127,6 +131,23 @@ class Skin {
 				pos++;
 			}
 		}
+		var oldBJ = boundJoints.copy();
+		//Joint10-N12(12) Joint11-N13(13) Joint17-N19(21) Joint14-N16(17) Joint18-N20(22) Joint5-N7(6) RootJoint0-N2(0) Joint9-N11(11) Joint1-N3(1) Joint15-N17(18) Joint16-N18(19) Joint12-N14(14) Joint13-N15(15) Joint6-N8(7) Joint2-N4(2) Joint7-N9(8) Joint8-N10(9) Joint3-N5(3) Joint4-N6(4) 
+		// boundJoints = [ allJoints[2], allJoints[6], allJoints[3], allJoints[5], allJoints[4], allJoints[11], allJoints[0], allJoints[1], allJoints[12], allJoints[7], allJoints[9], allJoints[8], allJoints[10], allJoints[13], allJoints[14], allJoints[15], allJoints[17], allJoints[16], allJoints[18] ];
+		// boundJoints = [12, 13, 21, 17, 22, 6, 0, 11, 1, 18, 19, 14, 15, 7, 2, 8, 9, 3, 4];
+		trace("initWeights:");
+		var out = " - Joints:";
+		for (i in 0...vertexJoints.length) out+=vertexJoints[i]+" ";
+		trace(out);
+		out = " - Weights:";
+		for (i in 0...vertexWeights.length) out+=vertexWeights[i]+" ";
+		trace(out);
+		out = " - OLD-Bound:";
+		for (i in 0...oldBJ.length) out+=oldBJ[i].index+" ";
+		trace(out);
+		out = " - Bound:";
+		for (i in 0...boundJoints.length) out+=boundJoints[i].name+"("+boundJoints[i].index+") ";
+		trace(out);
 		envelop = null;
 	}
 
