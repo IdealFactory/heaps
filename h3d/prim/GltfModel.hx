@@ -92,7 +92,7 @@ class GltfModel extends MeshPrimitive {
 		var idx = geom.getIndices();
 		var uvs = geom.getUVs();
 		var uv2s = geom.getUV2s(); //TODO: Implement 2nd UV coords
-		var joints = geom.getJoints(); 
+		var joints:hxd.BytesBuffer = geom.getJoints(); 
 		var weights = geom.getWeights();
 		targets = geom.getTargetData();
 
@@ -278,9 +278,12 @@ class GltfModel extends MeshPrimitive {
 			}
 		}
 		if( skin != null && joints != null && weights != null ) {
-			var nverts = Std.int(joints.length / 4);
-			var jointBuf = new h3d.Buffer(nverts, 1);
 			var bytes = joints.getBytes();
+			var nverts = Std.int(bytes.length / 4);
+			var jointBuf = new h3d.Buffer(nverts, 1);
+			trace("Skin:"+skin);
+			trace("joints:"+bytes.length);
+			trace("weights:"+weights);
 			jointBuf.uploadBytes(bytes, 0, nverts);
 			addBuffer("indexes", jointBuf, 0);
 			addBuffer("weights", h3d.Buffer.ofFloats(weights, skin.bonesPerVertex));

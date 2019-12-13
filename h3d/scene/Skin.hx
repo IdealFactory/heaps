@@ -265,8 +265,22 @@ class Skin extends MultiMaterial {
 				// }
 
 			}
+			if (j.name=="RootJoint0-N2") {
+				trace("SyncJoints:id="+j.name+"("+j.index+") bid="+bid+" p="+(j.parent!=null ? ""+j.parent.index+"\n - pAb:"+OpenFLMain.mtos(currentAbsPose[j.parent.index]) : "-")+"\n - abs:"+OpenFLMain.mtos(currentAbsPose[id])+"\n - tra:"+OpenFLMain.mtos(j.transPos)+"\n - rel:"+OpenFLMain.mtos(currentRelPose[id])+"\n - m  :"+OpenFLMain.mtos(m)+"\n - BID:"+OpenFLMain.mtos(currentPalette[bid]));
+				m.loadValues( [ 
+					1.0345, 0.0005, 0.006, 0, 
+					0, 1.0316, -0.0783, 0, 
+					-0.0059, 0.0784, 1.0315, 0.686,
+					0, 0, 0, 1 ] );
+				// currentPalette[bid].loadValues( [
+				// 	1.035, 0.00000584, 0, -0.004, 
+				// 	-0.000005839, 1.035, -0.000001131, 1.052, 
+				// 	0, 0.000001105, 1.035, 0.684, 
+				// 	0, 0, 0, 0.5308] );
+				trace("New:\n - m  :"+OpenFLMain.mtos(m)+"\n - BID:"+OpenFLMain.mtos(currentPalette[bid]));
+			}
 			// trace("syncJoints: id="+j.name+"("+j.index+") bid="+bid+" p="+(j.parent!=null ? ""+j.parent.index+"\n - pAb:"+OpenFLMain.mtos(currentAbsPose[j.parent.index]) : "-")+"\n - abs:"+OpenFLMain.mtos(currentAbsPose[id])+"\n - tra:"+OpenFLMain.mtos(j.transPos)+"\n - rel:"+OpenFLMain.mtos(currentRelPose[id])+"\n - m  :"+OpenFLMain.mtos(m)+"\n - BID:"+OpenFLMain.mtos(currentPalette[bid])+"\n - res:"+OpenFLMain.mtos(res));
-			trace("syncJoints: id="+j.name+"("+j.index+") bid="+bid+" p="+(j.parent!=null ? ""+j.parent.index+"\n - pAb:"+currentAbsPose[j.parent.index] : "-")+"\n - abs:"+currentAbsPose[id]+"\n - tra:"+j.transPos+"\n - rel:"+currentRelPose[id]+"\n - m  :"+m+"\n - BID:"+currentPalette[bid]+"\n - res:"+res);
+			// trace("syncJoints: id="+j.name+"("+j.index+") bid="+bid+" p="+(j.parent!=null ? ""+j.parent.index+"\n - pAb:"+currentAbsPose[j.parent.index] : "-")+"\n - abs:"+currentAbsPose[id]+"\n - tra:"+j.transPos+"\n - rel:"+currentRelPose[id]+"\n - m  :"+m+"\n - BID:"+currentPalette[bid]+"\n - res:"+res);
 		}
 		// currentPalette[10]._11 *= 3;
 		// currentPalette[1]._22 *= 15;
@@ -304,16 +318,8 @@ class Skin extends MultiMaterial {
 			for( j in skinData.allJoints ) {
 				var m = currentAbsPose[j.index];
 				var mp = j.parent == null ? absPos : currentAbsPose[j.parent.index];
-				trace("Line("+(j.parent == null ? "null" : ""+j.parent.index)+"):"+mp._41+"/"+mp._42+"/"+mp._43+" -> "+m._41+"/"+m._42+"/"+m._43);
+				if (j.parent==null) trace("Line("+j.name+"("+j.index+") Par="+(j.parent == null ? "null" : ""+j.parent.index)+"):"+mp._41+"/"+mp._42+"/"+mp._43+" -> "+m._41+"/"+m._42+"/"+m._43);
 				g.lineStyle(3, j.parent == null ? 0xFF0000FF : 0xFFFFFF00, 1.);
-				g.moveTo(mp._41, mp._42, mp._43);
-				g.lineTo(m._41, m._42, m._43);
-				m = j.parent == null ? absPos : currentAbsPose[j.parent.index];
-				mp = m.clone();
-				mp.multiply(mp, currentRelPose[j.index] );
-				mp.multiply( mp, j.transPos );
-				trace("Line("+(j.parent == null ? "null" : ""+j.parent.index)+"):"+mp._41+"/"+mp._42+"/"+mp._43+" -> "+m._41+"/"+m._42+"/"+m._43);
-				g.lineStyle(3, j.parent == null ? 0xFF00FFFF : 0xFFFFFFFF, 1.);
 				g.moveTo(mp._41, mp._42, mp._43);
 				g.lineTo(m._41, m._42, m._43);
 			}

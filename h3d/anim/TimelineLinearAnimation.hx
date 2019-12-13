@@ -216,6 +216,13 @@ class TimelineLinearAnimation extends TimelineAnimation {
 			if( a.uvs != null || a.alphas != null ) continue;
 			a.matrix = new h3d.Matrix();
 			a.matrix.identity();
+			// store default position in our matrix unused parts
+			if( !a.hasPosition && a.targetSkin != null ) {
+				var m2 = a.targetSkin.getSkinData().allJoints[a.targetJoint].defMat;
+				a.matrix._14 = m2._41;
+				a.matrix._24 = m2._42;
+				a.matrix._34 = m2._43;
+			}
 		}
 		// makes sure that all single frame anims are at the end so we can break early when isSync=true
 		frames.sort(sortByFrameCountDesc);
@@ -266,18 +273,18 @@ class TimelineLinearAnimation extends TimelineAnimation {
 			}
 
 			// Uncomment to freeze anim at start
-			// k2 = 0;
-			// frame1 = 0;
-			// frame2 = 1;
+			k2 = 0;
+			frame1 = 0;
+			frame2 = 1;
 			// /////////////////
 
 			var k1 = 1 - k2;
 			syncFrame = frame;
 			if( decompose ) isSync = false;
 
-			#if debug_gltf
-			trace("Target"+(o.targetObject!=null ? "Object:"+o.targetObject.name : "Skin:"+o.targetSkin.name)+" fLen:"+o.frames.length+" f1="+frame1+" f2="+frame2+" t="+t+" k2="+k2+" k1="+k1+" syncFrame="+syncFrame+" keyTime1="+o.frames[frame1].keyTime+" keyTime2="+o.frames[frame2].keyTime);
-			#end
+			// #if debug_gltf
+			// trace("Target"+(o.targetObject!=null ? "Object:"+o.targetObject.name : "Skin:"+o.targetSkin.name)+" fLen:"+o.frames.length+" f1="+frame1+" f2="+frame2+" t="+t+" k2="+k2+" k1="+k1+" syncFrame="+syncFrame+" keyTime1="+o.frames[frame1].keyTime+" keyTime2="+o.frames[frame2].keyTime);
+			// #end
 
 			o.currentFrame = frame1;
 			
@@ -366,6 +373,10 @@ class TimelineLinearAnimation extends TimelineAnimation {
 					m._41 = f1.tx * k1 + f2.tx * k2;
 					m._42 = f1.ty * k1 + f2.ty * k2;
 					m._43 = f1.tz * k1 + f2.tz * k2;
+				} else {
+					m._41 = m._14;
+					m._42 = m._24;
+					m._43 = m._34;
 				}
 
 				if( o.hasRotation ) {
@@ -498,7 +509,7 @@ class TimelineLinearAnimation extends TimelineAnimation {
 
 				// o.targetSkin.currentRelPose[o.targetJoint] = m;
 				
-				trace("Joint:"+o.targetJoint+" "+OpenFLMain.mtos(m));
+				// trace("Joint:"+o.targetJoint+" "+OpenFLMain.mtos(m));
 				o.targetSkin.jointsUpdated = true;
 			} 
 
@@ -544,7 +555,7 @@ class TimelineLinearAnimation extends TimelineAnimation {
 				}
 				if (Std.is(s, h3d.shader.GlTFMorphTarget2)) {
 					cast(s, h3d.shader.GlTFMorphTarget2).weight = f1.w[1] * k1 + f2.w[1] * k2;
-					trace("GlTFMorphTarget2: weight= "+(f1.w[0] * k1 + f2.w[0] * k2));
+					trace("GlTFMorphTarget: weight= "+(f1.w[0] * k1 + f2.w[0] * k2));
 				}
 			}
 		}

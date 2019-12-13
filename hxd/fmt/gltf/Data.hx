@@ -414,19 +414,21 @@ class GltfTools {
 		var acc = l.root.accessors[ accId ];
  		var pos = 0;
 		var out = "";
+		var dat = 0;
 		while ( pos < bytes.length ) {
 			
 			switch (acc.componentType) {
-				case CTShort: 
-					if (pos < 64) out += ((bytes.get( pos++ ) << 8) | bytes.get( pos++ ))+" ";		
-					buffer.push( (bytes.get( pos++ ) << 8) | bytes.get( pos++ ));
+				case CTShort:
+					dat = ((bytes.get( pos++ ) << 8) | bytes.get( pos++ ));
+					out += dat+" ";		
+					buffer.push( dat );
 				case CTUnsignedShort : 
-					if (pos < 64) out += bytes.getUInt16( pos )+" ";
+					out += bytes.getUInt16( pos )+" ";
 					buffer.push( bytes.getUInt16( pos ));
 					pos += 2;
 				case CTFloat :
 				default:
-					if (pos < 32) out += bytes.get( pos )+" ";
+					out += bytes.get( pos )+" ";
 					buffer.push( bytes.get( pos++ ));
 
 			}

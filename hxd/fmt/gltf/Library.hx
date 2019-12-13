@@ -157,7 +157,8 @@ class Library extends BaseLibrary {
         if (node.mesh != null) {
             if (node.skin != null) {
                 mesh = createSkinMesh( node.mesh, transform, parent, node.name, node.skin );
-                skinMeshes.push( { nodeId:node.mesh, skinId:node.skin, skinMesh:cast mesh } );
+                trace("createSkinMesh:"+Type.getClassName(Type.getClass(mesh)));
+                skinMeshes.push( { nodeId:node.mesh, skinId:node.skin, skinMesh:mesh } );
             } else
                 mesh = createMesh( node.mesh, transform, parent, node.name );
             trace("MeshTransform:"+mesh.name+" m:"+mtos(transform));
@@ -166,9 +167,9 @@ class Library extends BaseLibrary {
 
         if (node.children != null) {
             if (mesh==null) {
-                mesh = new h3d.scene.Mesh(debugPrim, parent);
-                cast(mesh, h3d.scene.Mesh).material.color.setColor( 0xff009000 );
-                // mesh = new h3d.scene.Object( parent );
+                // mesh = new h3d.scene.Mesh(debugPrim, parent);
+                // cast(mesh, h3d.scene.Mesh).material.color.setColor( 0xff009000 );
+                mesh = new h3d.scene.Object( parent );
                 mesh.name = getName( nodeId );
                 mesh.setTransform( transform );
                 trace("MeshTransform:"+mesh.name+" m:"+mtos(transform));
@@ -180,9 +181,9 @@ class Library extends BaseLibrary {
         }
 
         if (node.mesh==null && node.children==null) {
-            var o = new h3d.scene.Mesh(debugPrim, parent);
-            o.material.color.setColor( 0xffff0000 );
-            // var o = new h3d.scene.Object( parent );
+            // var o = new h3d.scene.Mesh(debugPrim, parent);
+            // o.material.color.setColor( 0xffff0000 );
+            var o = new h3d.scene.Object( parent );
             o.name = getName( nodeId );
             o.setTransform( transform );
             trace("MeshTransform:"+o.name+" m:"+mtos(transform));
