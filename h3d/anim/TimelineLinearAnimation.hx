@@ -273,9 +273,9 @@ class TimelineLinearAnimation extends TimelineAnimation {
 			}
 
 			// Uncomment to freeze anim at start
-			k2 = 0;
-			frame1 = 0;
-			frame2 = 1;
+			// k2 = 0;
+			// frame1 = 0;
+			// frame2 = 1;
 			// /////////////////
 
 			var k1 = 1 - k2;

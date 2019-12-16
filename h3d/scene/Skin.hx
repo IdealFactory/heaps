@@ -225,7 +225,13 @@ class Skin extends MultiMaterial {
 			var res = new h3d.Matrix();
 			if( j.parent == null ) {
 				m.multiply(r, absPos);
-				// m.loadValues( [1, 0, 0, 0, 0, 0, -0.9999, 0, 0, 1, 0, 0, 0, -0.7249, -0.0319, 1] );
+				// m.loadValues( [1, 0, -0.0057, 0, 0.0004, 0.9971, 0.0758, 0, 0.0058, -0.0757, 0.9971, 0, -0.0039, 0.052, -0.6839, 1] );
+				// m.loadValues( [1, 0.0058, -0.0003, 0, 0, -0.0757, -0.997, 0, -0.0057, 0.9971, -0.0757, 0, 0, -0.0389, -0.0319, 1] );
+				// m.loadValues( [1, 0, 0, 0, 0, 0, 1, 0, 0, -0.9999, 0, 0, 0, -0.0319, 0.725, 1] );
+				// m.loadValues( [1, 0.0004, 0.0058, 0, 0, 0.9971, -0.0757, 0, -0.0057, 0.0758, 0.9971, 0, 0, 0, 0, 1] );
+				// m.loadValues( [1,0.0004,0.0058,0,0,0.9971,-0.0757,0,-0.0057,0.0758,0.9971,0,0,0,0.686,1] );
+				// m.loadValues( [1.0345, 0.0005, 0.006, 0, 0, 1.0316, -0.0783, 0, -0.0059, 0.0784, 1.0315, 0.686, 0, 0, 0.7097, 1] );
+				// m.invert();
 				// m.rotate(1.57, 0, 0);
 			} else
 				m.multiply(r, currentAbsPose[j.parent.index]);
@@ -266,17 +272,17 @@ class Skin extends MultiMaterial {
 
 			}
 			if (j.name=="RootJoint0-N2") {
-				trace("SyncJoints:id="+j.name+"("+j.index+") bid="+bid+" p="+(j.parent!=null ? ""+j.parent.index+"\n - pAb:"+OpenFLMain.mtos(currentAbsPose[j.parent.index]) : "-")+"\n - abs:"+OpenFLMain.mtos(currentAbsPose[id])+"\n - tra:"+OpenFLMain.mtos(j.transPos)+"\n - rel:"+OpenFLMain.mtos(currentRelPose[id])+"\n - m  :"+OpenFLMain.mtos(m)+"\n - BID:"+OpenFLMain.mtos(currentPalette[bid]));
-				m.loadValues( [ 
-					1.0345, 0.0005, 0.006, 0, 
-					0, 1.0316, -0.0783, 0, 
-					-0.0059, 0.0784, 1.0315, 0.686,
-					0, 0, 0, 1 ] );
-				// currentPalette[bid].loadValues( [
-				// 	1.035, 0.00000584, 0, -0.004, 
-				// 	-0.000005839, 1.035, -0.000001131, 1.052, 
-				// 	0, 0.000001105, 1.035, 0.684, 
-				// 	0, 0, 0, 0.5308] );
+				trace("SyncJoints:id="+j.name+"("+j.index+") bid="+bid+" p="+(j.parent!=null ? ""+j.parent.index+"\n - pAb:"+OpenFLMain.mtos(currentAbsPose[j.parent.index]) : "null")+"\n - abs:"+OpenFLMain.mtos(currentAbsPose[id])+"\n - tra:"+OpenFLMain.mtos(j.transPos)+"\n - rel:"+OpenFLMain.mtos(currentRelPose[id])+"\n - m  :"+OpenFLMain.mtos(m)+"\n - BID:"+OpenFLMain.mtos(currentPalette[bid]));
+				// m.loadValues( [ 
+				// 	5, 0, 0, 0, 
+				// 	0, 5, 0, 0, 
+				// 	0, 0, 5, 0,
+				// 	0, 0, 0, 1 ] );
+				// currentPalette[bid].loadValues( [ 
+				// 	-0.5, 0, 0, 0, 
+				// 	0, -0.5, 0, 0, 
+				// 	0, 0, -0.5, 0,
+				// 	0, 0, 0, 1 ] );
 				trace("New:\n - m  :"+OpenFLMain.mtos(m)+"\n - BID:"+OpenFLMain.mtos(currentPalette[bid]));
 			}
 			// trace("syncJoints: id="+j.name+"("+j.index+") bid="+bid+" p="+(j.parent!=null ? ""+j.parent.index+"\n - pAb:"+OpenFLMain.mtos(currentAbsPose[j.parent.index]) : "-")+"\n - abs:"+OpenFLMain.mtos(currentAbsPose[id])+"\n - tra:"+OpenFLMain.mtos(j.transPos)+"\n - rel:"+OpenFLMain.mtos(currentRelPose[id])+"\n - m  :"+OpenFLMain.mtos(m)+"\n - BID:"+OpenFLMain.mtos(currentPalette[bid])+"\n - res:"+OpenFLMain.mtos(res));

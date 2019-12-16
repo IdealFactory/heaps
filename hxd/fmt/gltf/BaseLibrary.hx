@@ -624,7 +624,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 					idx++;
 				}
 			}
-			mat.mainPass.wireframe = true;
+			// mat.mainPass.wireframe = true;
 
 			var primMesh = new h3d.scene.Mesh( meshPrim, mat, mesh );
 			primMesh.name = primName;
@@ -737,7 +737,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				meshPrim.name = primName;	
 				var mat = materials[ prim.material ] != null ? materials[ prim.material ] : defaultMaterial;
 				//mat.blendMode = AlphaMultiply;
-				mat.mainPass.wireframe = true;
+				// mat.mainPass.wireframe = true;
 			
 				var skinName = (skinNode.name != null) ? skinNode.name : "Skin_"+StringTools.hex(Std.random(0x7FFFFFFF), 8);
 				var inverseBindMatrices:Array<Matrix> = GltfTools.getMatrixArrayBufferByAccessor( this, skinNode.inverseBindMatrices );
@@ -795,7 +795,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 					j.defMat = jNode!=null ? getDefaultTransform( jId ) : Matrix.I();
 					j.transPos = inverseBindMatrices[ jCtr ];
 					// trace("buildSkinMeshes: jId="+jId+" jCtr="+jCtr);
-
+					
 					trace(" B-"+jCtr+": id:"+j.name+"("+jId+")");
 					// trace("Def:"+OpenFLMain.mtos(getDefaultTransform( jId )));
 					trace("Def:"+OpenFLMain.mtos(j.defMat));
@@ -809,10 +809,13 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				for (i in 0...vertCount) {
 					for (bpv in 0...bonesPerVertex) {
 						var w = weights[ idx ];
+						var joint:h3d.anim.Skin.Joint = null;
 						if( w > 0.01) {
-							var joint = joints[jointData.get(idx)];
+							joint = joints[jointData.get(idx)];
 							skinData.addInfluence(i, joint, w);
 						}
+						skinData.vertexJoints[idx] = joint == null ? 0 : joint.bindIndex;
+						skinData.vertexWeights[idx] = joint == null ? 0 : w;
 						idx++;
 					}
 				}
@@ -855,6 +858,20 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				for (j in joints) {
 					if (j.parent==null) {
 						rootJoints.push( j );
+						// j.defMat = getDefaultTransform( skinMeshLink.nodeId ).clone();//mesh.getAbsPos().clone();
+						j.defMat = getDefaultTransform( j.index ).clone();
+						// j.defMat = j.transPos.clone();
+						// j.defMat.multiply( Matrix.I(), j.defMat.clone();
+						// j.defMat.invert();
+						// j.defMat.multiply( j.defMat, j.transPos );
+						// j.transPos.invert();
+						// j.defMat.transpose();
+						// j.defMat.invert();
+						j.bindIndex = -1;
+						// j.defMat.loadValues( [1, 0.0058, -0.0003, 0, 0, -0.0757, -0.997, 0, -0.0057, 0.9971, -0.0757, 0, 0, -0.0389, -0.0319, 1] );
+						// j.defMat.invert();
+						// j.defMat.multiply( j.defMat, mesh.getInvPos() );
+						trace("DefMat:"+"\n - abs:"+OpenFLMain.mtos(mesh.getAbsPos())+"\n - inv:"+OpenFLMain.mtos(mesh.getInvPos())+"\n - defMat:"+OpenFLMain.mtos(j.defMat));
 					}
 				}
 
@@ -871,6 +888,9 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 
 				var primSkin = new h3d.scene.Skin( skinData, [mat], mesh );
 				primSkin.showJoints = true;
+				var trans = getDefaultTransform( skinMeshLink.nodeId );
+				trace("PrimTransform = "+OpenFLMain.mtos(trans));
+				// primSkin.setTransform( trans );
 				primSkin.name = primName;
 
 				// primSkin.follow = nodeObjects[ skinNode.joints[0] ];
