@@ -1136,12 +1136,12 @@ class GlDriver extends Driver {
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
 	#if (hxcpp || hl || lime)
 		#if js
-		@:privateAccess if (bmp.data.buffer == null ||bmp.data.buffer.__srcContext == null) {
+		@:privateAccess if (bmp.data.buffer == null) {
 			@:privateAccess lime._internal.graphics.ImageCanvasUtil.convertToCanvas(bmp.data);
 		}
-		@:privateAccess var img = bmp.data.buffer.__srcContext;
+		@:privateAccess var img = bmp.data.buffer.__srcCanvas;
 		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
-		gl.texImage2DWEBGL(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img.getImageData(0, 0, bmp.width, bmp.height));
+		gl.texImage2DWEBGL(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img);
 		#else
 		var pixels = bmp.getPixels();
 		uploadTexturePixels(t, pixels, mipLevel, side);
@@ -1785,6 +1785,7 @@ class GlDriver extends Driver {
 		#else
 		var buffer = @:privateAccess pixels.bytes.b;
 		#end
+		#if (js || hl || lime)
 		#if (lime && js)
 		gl.readPixelsWEBGL(x, y, pixels.width, pixels.height, getChannels(curTarget.t), curTarget.t.pixelFmt, buffer);
 		#elseif (lime && hl)
@@ -1795,6 +1796,7 @@ class GlDriver extends Driver {
 		var error = gl.getError();
 		if( error != 0 ) throw "Failed to capture pixels (error "+error+")";
 		@:privateAccess pixels.innerFormat = curTarget.format;
+		#end
 	}
 
 	#if (hl && !lime)
