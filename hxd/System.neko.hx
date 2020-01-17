@@ -81,8 +81,10 @@ class System {
 	}
 
 	static function runMainLoop() {
+		#if !openfl
 		@:privateAccess Window.inst.execLimeApp();
 		Sys.exit(0);
+		#end
 	}
 
 

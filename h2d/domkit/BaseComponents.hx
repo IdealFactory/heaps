@@ -248,7 +248,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var y : Float;
 	@:p var alpha : Float = 1;
 	@:p var rotation : Float;
-	@:p var visible : Bool;
+	@:p var visible : Bool = true;
 	@:p(scale) var scale : { x : Float, y : Float };
 	@:p var scaleX : Float;
 	@:p var scaleY : Float;
@@ -273,6 +273,10 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 
 	static function set_rotation(o:h2d.Object, v:Float) {
 		o.rotation = v * Math.PI / 180;
+	}
+
+	static function set_visible(o:h2d.Object, v:Bool) {
+		o.visible = v;
 	}
 
 	static function set_scale(o:h2d.Object,v) {
@@ -420,6 +424,8 @@ class MaskComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<h2d.Bitmap> {
 
 	@:p(tile) var src : h2d.Tile;
+	@:p(auto) var width : Null<Float>;
+	@:p(auto) var height : Null<Float>;
 
 	static function create( parent : h2d.Object ) {
 		return new h2d.Bitmap(h2d.Tile.fromColor(0xFF00FF,32,32,0.9),parent);
@@ -427,6 +433,14 @@ class BitmapComp extends DrawableComp implements domkit.Component.ComponentDecl<
 
 	static function set_src( o : h2d.Bitmap, t ) {
 		o.tile = t == null ? h2d.Tile.fromColor(0xFF00FF,32,32,0.9) : t;
+	}
+
+	static function set_width( o : h2d.Bitmap, v : Null<Float> ) {
+		o.width = v;
+	}
+
+	static function set_height( o : h2d.Bitmap, v : Null<Float> ) {
+		o.height = v;
 	}
 
 }

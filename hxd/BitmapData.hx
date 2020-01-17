@@ -1,7 +1,7 @@
 package hxd;
 
 typedef BitmapInnerData =
-#if (flash || nme)
+#if flash
 	flash.display.BitmapData;
 #elseif (lime && !macro)
 	lime.graphics.Image;
@@ -25,13 +25,13 @@ class BitmapInnerDataImpl {
 
 class BitmapData {
 
-	#if (flash || nme)
+	#if flash
 	static var tmpRect = new flash.geom.Rectangle();
 	static var tmpPoint = new flash.geom.Point();
 	static var tmpMatrix = new flash.geom.Matrix();
 	#end
 
-#if (flash||nme)
+#if flash
 	var bmp : flash.display.BitmapData;
 #elseif (lime && !macro)
 	var data : lime.graphics.Image;
@@ -51,7 +51,7 @@ class BitmapData {
 		if( width == -101 && height == -102 ) {
 			// no alloc
 		} else {
-			#if (flash||nme)
+			#if flash
 			bmp = new flash.display.BitmapData(width, height, true, 0);
 			#elseif (lime && !macro)
 			data = new lime.graphics.Image( null, 0, 0, width, height );
@@ -75,7 +75,7 @@ class BitmapData {
 	}
 
 	public function clear( color : Int ) {
-		#if (flash||nme)
+		#if flash
 		bmp.fillRect(bmp.rect, color);
 		#else
 		fill(0, 0, width, height, color);
@@ -87,7 +87,7 @@ class BitmapData {
 	}
 
 	public function fill( x : Int, y : Int, width : Int, height : Int, color : Int ) {
-		#if (flash || nme)
+		#if flash
 		var r = tmpRect;
 		r.x = x;
 		r.y = y;
@@ -126,7 +126,7 @@ class BitmapData {
 	}
 
 	public function draw( x : Int, y : Int, src : BitmapData, srcX : Int, srcY : Int, width : Int, height : Int, ?blendMode : h2d.BlendMode ) {
-		#if (flash || nme)
+		#if flash
 		if( blendMode == null ) blendMode = Alpha;
 		var r = tmpRect;
 		r.x = srcX;
@@ -182,7 +182,7 @@ class BitmapData {
 
 	public function drawScaled( x : Int, y : Int, width : Int, height : Int, src : BitmapData, srcX : Int, srcY : Int, srcWidth : Int, srcHeight : Int, ?blendMode : h2d.BlendMode, smooth = true ) {
 		if( blendMode == null ) blendMode = Alpha;
-		#if (flash || nme)
+		#if flash
 
 		var b = switch( blendMode ) {
 		case None:
@@ -473,7 +473,7 @@ class BitmapData {
 	}
 
 	public inline function dispose() {
-		#if (flash||nme)
+		#if flash
 		bmp.dispose();
 		#elseif lime
 		data = null;
@@ -490,7 +490,7 @@ class BitmapData {
 	}
 
 	public function sub( x, y, w, h ) : BitmapData {
-		#if (flash || nme)
+		#if flash
 		var b = new flash.display.BitmapData(w, h);
 		b.copyPixels(bmp, new flash.geom.Rectangle(x, y, w, h), new flash.geom.Point(0, 0));
 		return fromNative(b);
@@ -551,8 +551,8 @@ class BitmapData {
 	/**
 		Access the pixel color value at the given position. Note : this function can be very slow if done many times and the BitmapData has not been locked.
 	**/
-	public #if (flash || nme) inline #end function getPixel( x : Int, y : Int ) : Int {
-		#if ( flash || nme )
+	public #if flash inline #end function getPixel( x : Int, y : Int ) : Int {
+		#if flash
 		return bmp.getPixel32(x, y);
 		#elseif (lime && !macro)
 		return if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.getPixel32(x, y) else 0;
@@ -574,8 +574,8 @@ class BitmapData {
 	/**
 		Modify the pixel color value at the given position. Note : this function can be very slow if done many times and the BitmapData has not been locked.
 	**/
-	public #if (flash || nme) inline #end function setPixel( x : Int, y : Int, c : Int ) {
-		#if ( flash || nme)
+	public #if flash inline #end function setPixel( x : Int, y : Int, c : Int ) {
+		#if flash
 		bmp.setPixel32(x, y, c);
 		#elseif (lime && !macro)
 		if( x >= 0 && y >= 0 && x < data.width && y < data.height ) data.setPixel32(x, y, c);
@@ -605,7 +605,7 @@ class BitmapData {
 	}
 
 	inline function get_width() : Int {
-		#if (flash || nme)
+		#if flash
 		return bmp.width;
 		#elseif lime
 		return data.width;
@@ -617,7 +617,7 @@ class BitmapData {
 	}
 
 	inline function get_height() {
-		#if (flash || nme)
+		#if flash
 		return bmp.height;
 		#elseif lime
 		return data.height;
@@ -629,7 +629,7 @@ class BitmapData {
 	}
 
 	public function getPixels() : Pixels {
-		#if (flash || nme)
+		#if flash
 		var p = new Pixels(width, height, haxe.io.Bytes.ofData(bmp.getPixels(bmp.rect)), ARGB);
 		p.flags.set(AlphaPremultiplied);
 		return p;
@@ -674,9 +674,6 @@ class BitmapData {
 		pixels.convert(RGBA);
 		for( i in 0...pixels.width*pixels.height*4 ) img.data[i] = pixels.bytes.get(i);
 		ctx.putImageData(img, 0, 0);
-		#elseif (nme)
-		pixels.convert(BGRA);
-		bmp.setPixels(bmp.rect, flash.utils.ByteArray.fromBytes(pixels.bytes));
 		#else
 		pixels.convert(BGRA);
 		var src = pixels.bytes;
@@ -686,7 +683,7 @@ class BitmapData {
 	}
 
 	public inline function toNative() : BitmapInnerData {
-		#if (flash || nme || openf)
+		#if flash
 		return bmp;
 		#elseif lime
 		return data;
@@ -699,7 +696,7 @@ class BitmapData {
 
 	public static function fromNative( data : BitmapInnerData ) : BitmapData {
 		var b = new BitmapData( -101, -102 );
-		#if (flash || nme)
+		#if flash
 		b.bmp = data;
 		#elseif lime
 		b.data = data;

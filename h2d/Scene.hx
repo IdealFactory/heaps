@@ -241,7 +241,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 					offsetX = -((engine.width - width * zoom) / (2 * zoom));
 					viewportX = (engine.width - width * zoom) / zoom;
 				default:
-					offsetX = 0;
+					offsetX = -(((engine.width - width * zoom) / 2) % 1.)*.5;
 					viewportX = (engine.width - width * zoom) / (2 * zoom);
 			}
 
@@ -254,7 +254,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 					offsetY = -((engine.height - height * zoom) / (2 * zoom));
 					viewportY = (engine.height - height * zoom) / zoom;
 				default:
-					offsetY = 0;
+					offsetY = -(((engine.height - height * zoom) / 2) % 1.)*.5;
 					viewportY = (engine.height - height * zoom) / (2 * zoom);
 			}
 		}
@@ -334,8 +334,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 	@:dox(hide) @:noCompletion
 	public function isInteractiveVisible( i : hxd.SceneEvents.Interactive ) : Bool {
 		var s : Object = cast i;
-		while( s != null ) {
-			if( !s.visible ) return false;
+		while( s != this ) {
+			if( s == null || !s.visible ) return false;
 			s = s.parent;
 		}
 		return true;
@@ -648,6 +648,8 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 		if( !t.flags.has(Target) ) throw "Can only draw to texture created with Target flag";
 		var needClear = !t.flags.has(WasCleared);
 		ctx.engine = h3d.Engine.getCurrent();
+		var oldBG = ctx.engine.backgroundColor;
+		ctx.engine.backgroundColor = null; // prevent clear bg
 		ctx.engine.begin();
 		ctx.globalAlpha = alpha;
 		ctx.begin();
@@ -656,6 +658,7 @@ class Scene extends Layers implements h3d.IDrawable implements hxd.SceneEvents.I
 			ctx.engine.clear(0);
 		s.drawRec(ctx);
 		ctx.popTarget();
+		ctx.engine.backgroundColor = oldBG;
 	}
 
 	/**
