@@ -18,12 +18,6 @@ typedef VertexBuffer = { b : js.html.webgl.Buffer, stride : Int #if multidriver,
 typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int #if multidriver, driver : Driver #end };
 typedef DepthBuffer = { r : js.html.webgl.Renderbuffer #if multidriver, driver : Driver #end };
 typedef Query = {};
-#elseif nme
-typedef IndexBuffer = nme.gl.GLBuffer;
-typedef VertexBuffer = { b : nme.gl.GLBuffer, stride : Int };
-typedef Texture = { t : nme.gl.GLTexture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int };
-typedef DepthBuffer = { r : nme.gl.Renderbuffer };
-typedef Query = {};
 #elseif lime
 typedef IndexBuffer = { b: lime.graphics.opengl.GLBuffer, is32: Bool };
 typedef VertexBuffer = { b : lime.graphics.opengl.GLBuffer, stride : Int };

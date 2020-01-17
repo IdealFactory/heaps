@@ -4,7 +4,7 @@ import h3d.mat.Pass;
 import h3d.mat.Stencil;
 import h3d.mat.Data;
 
-#if (js||lime||hlsdl||usegl||neko)
+#if (js||lime||hlsdl||usegl)
 
 #if (js && !lime)
 import hxd.impl.TypedArray;
@@ -61,15 +61,6 @@ private typedef Framebuffer = lime.graphics.opengl.GLFramebuffer;
 private typedef Uint16Array = lime.utils.UInt16Array;
 private typedef Uint8Array = lime.utils.UInt8Array;
 private typedef Float32Array = lime.utils.Float32Array;
-#elseif nme
-import nme.gl.GL;
-private typedef Uniform = Dynamic;
-private typedef Program = nme.gl.GLProgram;
-private typedef GLShader = nme.gl.GLShader;
-private typedef Framebuffer = nme.gl.Framebuffer;
-private typedef Uint16Array = nme.utils.Int16Array;
-private typedef Uint8Array = nme.utils.UInt8Array;
-private typedef Float32Array = nme.utils.Float32Array;
 #elseif hlsdl
 import sdl.GL;
 private typedef Uniform = sdl.GL.Uniform;
@@ -79,9 +70,6 @@ private typedef Framebuffer = sdl.GL.Framebuffer;
 private typedef Texture = h3d.impl.Driver.Texture;
 private typedef Query = h3d.impl.Driver.Query;
 private typedef VertexArray = sdl.GL.VertexArray;
-#if cpp
-private typedef Float32Array = Array<cpp.Float32>;
-#end
 #elseif usegl
 import haxe.GLTypes;
 private typedef Uniform = haxe.GLTypes.Uniform;
@@ -140,7 +128,7 @@ private class CompiledProgram {
 #if openfl
 @:access(openfl.display.HeapsContainer)
 #end
-#if (cpp||hlsdl||usegl||neko||lime)
+#if (hlsdl||usegl||lime)
 @:build(h3d.impl.MacroHelper.replaceGL())
 #end
 class GlDriver extends Driver {
@@ -211,7 +199,7 @@ class GlDriver extends Driver {
 		canvas = @:privateAccess hxd.Window.getInstance().canvas;
 		var options = {alpha:false,stencil:true,antialias:antiAlias>0};
 		if(ALLOW_WEBGL2)
-		gl = cast canvas.getContext("webgl2",options);
+			gl = cast canvas.getContext("webgl2",options);
 		if( gl == null )
 			gl = cast canvas.getContextWebGL(options);
 		if( gl == null ) throw "Could not acquire GL context";
@@ -230,6 +218,11 @@ class GlDriver extends Driver {
 
 		#if (hlsdl && !lime)
 		hasMultiIndirect = gl.getConfigParameter(0) > 0;
+		maxCompressedTexturesSupport = 3;
+		#end
+
+		#if hlmesa
+		hasMultiIndirect = true;
 		maxCompressedTexturesSupport = 3;
 		#end
 
@@ -551,7 +544,7 @@ class GlDriver extends Driver {
 			if( s.buffers != null ) {
 				for( i in 0...s.buffers.length ) {
 					gl.bindBufferBase(GL2.UNIFORM_BUFFER, i, @:privateAccess buf.buffers[i].buffer.vbuf.b);
-				}			
+			}
 			}
 		case Textures:
 			var tcount = s.textures.length;
@@ -578,21 +571,22 @@ class GlDriver extends Driver {
 				if( pt.u == null ) continue;
 
 				var idx = s.vertex ? i : curShader.vertex.textures.length + i;
-				if( boundTextures[idx] == t.t ) continue;
-				boundTextures[idx] = t.t;
+				if( boundTextures[idx] != t.t ) {
+					boundTextures[idx] = t.t;
 
-				#if multidriver
-				if( t.t.driver != this )
-					throw "Invalid texture context";
-				#end
+					#if multidriver
+					if( t.t.driver != this )
+						throw "Invalid texture context";
+					#end
 
-				var mode = getBindType(t);
-				if( mode != pt.mode )
-					throw "Texture format mismatch: "+t+" should be "+pt.t;
-				gl.activeTexture(GL.TEXTURE0 + idx);
-				gl.uniform1i(pt.u, idx);
-				gl.bindTexture(mode, t.t.t);
-				lastActiveIndex = idx;
+					var mode = getBindType(t);
+					if( mode != pt.mode )
+						throw "Texture format mismatch: "+t+" should be "+pt.t;
+					gl.activeTexture(GL.TEXTURE0 + idx);
+					gl.uniform1i(pt.u, idx);
+					gl.bindTexture(mode, t.t.t);
+					lastActiveIndex = idx;
+				}
 
 				var mip = Type.enumIndex(t.mipMap);
 				var filter = Type.enumIndex(t.filter);
@@ -601,6 +595,7 @@ class GlDriver extends Driver {
 				if( bits != t.t.bits ) {
 					t.t.bits = bits;
 					var flags = TFILTERS[mip][filter];
+					var mode = pt.mode;
 					gl.texParameteri(mode, GL.TEXTURE_MAG_FILTER, flags[0]);
 					gl.texParameteri(mode, GL.TEXTURE_MIN_FILTER, flags[1]);
 					var w = TWRAP[wrap];
@@ -702,12 +697,7 @@ class GlDriver extends Driver {
 			var cop = Pass.getBlendOp(bits);
 			var aop = Pass.getBlendAlphaOp(bits);
 			if( cop == aop ) {
-				#if (nme)
-				if( OP[cop] != GL.FUNC_ADD )
-					throw "blendEquation() disable atm (crash)";
-				#else
 				gl.blendEquation(OP[cop]);
-				#end
 			}
 			else
 				gl.blendEquationSeparate(OP[cop], OP[aop]);
@@ -817,8 +807,6 @@ class GlDriver extends Driver {
 		}
 		canvas.width = width;
 		canvas.height = height;
-		#elseif cpp
-		// resize window
 		#end
 		bufferWidth = width;
 		bufferHeight = height;
@@ -978,9 +966,9 @@ class GlDriver extends Driver {
 			#end
 			checkError();
 		} else {
-            #if js
-            if( !t.format.match(S3TC(_)) )
-            #end
+			#if js
+			if( !t.format.match(S3TC(_)) )
+			#end
 			#if lime
 			#if js
 			gl.texImage2DWEBGL(bind, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
@@ -1134,12 +1122,10 @@ class GlDriver extends Driver {
 	}
 
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
-	#if (hxcpp || hl || lime)
+	#if (hl || lime)
 		#if js
-		@:privateAccess if (bmp.data.buffer == null) {
-			@:privateAccess lime._internal.graphics.ImageCanvasUtil.convertToCanvas(bmp.data);
-		}
-		@:privateAccess var img = bmp.data.buffer.__srcCanvas;
+		@:privateAccess if (bmp.data.dirty) lime._internal.graphics.ImageCanvasUtil.convertToCanvas( bmp.data );
+		@:privateAccess var img = bmp.data.buffer.src;
 		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
 		gl.texImage2DWEBGL(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img);
 		#else
@@ -1157,7 +1143,7 @@ class GlDriver extends Driver {
 			gl.bindTexture(GL.TEXTURE_2D, t.t.t);
 			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img.getImageData(0, 0, bmp.width, bmp.height));
 			restoreBind();
-	}
+		}
 	#end
 	}
 
@@ -1270,7 +1256,7 @@ class GlDriver extends Driver {
 		if( t.format.match(S3TC(_)) )
 			gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, buffer);
 		else
-		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, buffer);
+			gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, buffer);
 		#else
 		throw "Not implemented";
 		#end
@@ -1439,7 +1425,7 @@ class GlDriver extends Driver {
 			gl.drawElements(drawMode, ntriangles * 3, GL.UNSIGNED_INT, startIndex * 4);
 		else
 			gl.drawElements(drawMode, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
-    }
+	}
 
 	override function allocInstanceBuffer( b : InstanceBuffer, bytes : haxe.io.Bytes ) {
 		#if (hl && !lime)
@@ -1488,8 +1474,8 @@ class GlDriver extends Driver {
 		#end
 		var args : Array<Int> = commands.data;
 		if( args != null ) {
-		var p = 0;
-		for( i in 0...Std.int(args.length/3) )
+			var p = 0;
+			for( i in 0...Std.int(args.length/3) )
 				gl.drawElementsInstanced(drawMode, args[p++], ibuf.is32 ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT, args[p++], args[p++]);
 		} else
 			gl.drawElementsInstanced(drawMode, commands.indexCount, ibuf.is32 ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT, 0, commands.commandCount);
@@ -1508,11 +1494,7 @@ class GlDriver extends Driver {
 	}
 
 	override function isDisposed() {
-		#if (nme)// || openfl) //lime ??
-		return false;
-		#else
 		return gl.isContextLost();
-		#end
 	}
 
 	override function setRenderZone( x : Int, y : Int, width : Int, height : Int ) {
@@ -1788,8 +1770,9 @@ class GlDriver extends Driver {
 		#if (js || hl || lime)
 		#if (lime && js)
 		gl.readPixelsWEBGL(x, y, pixels.width, pixels.height, getChannels(curTarget.t), curTarget.t.pixelFmt, buffer);
-		#elseif (lime && hl)
-		gl.readPixels(x, y, pixels.width, pixels.height, getChannels(curTarget.t), curTarget.t.pixelFmt, new lime.utils.BytePointer(pixels.bytes));
+		#elseif lime
+		var bytePointer = lime.utils.BytePointer.fromBytes( @:privateAccess pixels.bytes );
+		gl.readPixels(x, y, pixels.width, pixels.height, getChannels(curTarget.t), curTarget.t.pixelFmt, bytePointer);
 		#else
 		gl.readPixels(x, y, pixels.width, pixels.height, getChannels(curTarget.t), curTarget.t.pixelFmt, buffer);
 		#end

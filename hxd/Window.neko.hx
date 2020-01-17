@@ -1,5 +1,12 @@
 package hxd;
 
+enum DisplayMode {
+	Windowed;
+	Borderless;
+	Fullscreen;
+	FullscreenResize;
+}
+
 class Window {
 
 	var resizeEvents : List<Void -> Void>;
@@ -12,6 +19,9 @@ class Window {
 	public var mouseLock(get, set) : Bool;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
+
+	public var title(get, set) : String;
+	public var displayMode(get, set) : DisplayMode;
 
 	#if lime
 	public static var CURRENT:lime.app.Application;
@@ -124,6 +134,19 @@ class Window {
 
 	function get_isFocused() : Bool return true;
 
+	function get_displayMode() : DisplayMode {
+		return Windowed;
+	}
+	function set_displayMode( m : DisplayMode ) : DisplayMode {
+		return m;
+	}
+
+	function get_title() : String {
+		return "";
+	}
+	function set_title( t : String ) : String {
+		return t;
+	}
 }
 
 class LimeApp extends lime.app.Application {

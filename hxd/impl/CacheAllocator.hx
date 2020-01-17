@@ -48,7 +48,7 @@ class CacheAllocator extends Allocator {
 	}
 
 	override function disposeBuffer(b:h3d.Buffer) {
-		var flags = b.flags.has(UniformBuffer) ? UniformDynamic : Dynamic;
+		var flags = b.flags.has(UniformBuffer) ? UniformDynamic : DynamicFlag;
 		var id = flags.toInt() | (b.buffer.stride << 3) | (b.vertices << 16);
 		var c = buffers.get(id);
 		if( c == null ) {
@@ -57,6 +57,10 @@ class CacheAllocator extends Allocator {
 		}
 		c.put(b);
 		checkGC();
+	}
+
+	override function onContextLost() {
+		buffers = new Map();
 	}
 
 	public function checkGC() {

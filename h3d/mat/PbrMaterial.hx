@@ -197,10 +197,14 @@ class PbrMaterial extends Material {
 			mainPass.setPassName("default");
 		case BeforeTonemapping:
 			mainPass.setPassName("beforeTonemapping");
-			if( props.emissive != null ) {
-				var eShader = new h3d.shader.Emissive();
-				eShader.emissive.set( props.emissive.r, props.emissive.g, props.emissive.b );
-				mainPass.addShader( eShader );
+			if( props.emissive != null) {
+				var e = mainPass.getShader(h3d.shader.Emissive);
+				if( e == null ) {
+					e = new h3d.shader.Emissive();
+                    e.emissive.set( props.emissive.r, props.emissive.g, props.emissive.b );
+					e.setPriority(-1);
+					mainPass.addShader(e);
+				}
 			}
 			var gc = mainPass.getShader(h3d.shader.pbr.GammaCorrect);
 			if( gc == null ) {

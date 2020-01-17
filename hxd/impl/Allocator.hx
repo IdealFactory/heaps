@@ -2,7 +2,7 @@ package hxd.impl;
 import h3d.impl.AllocPos;
 
 @:enum abstract BufferFlags(Int) {
-	public var Dynamic = 0;
+	public var DynamicFlag = 0;
 	public var UniformDynamic = 1;
 	public inline function toInt() : Int {
 		return this;
@@ -17,7 +17,7 @@ class Allocator {
 	// GPU
 
 	public function allocBuffer( vertices : Int, stride : Int, flags : BufferFlags, ?pos : AllocPos ) : h3d.Buffer {
-		return new h3d.Buffer(vertices, stride, switch( flags ) { case Dynamic: [Dynamic]; case UniformDynamic: [UniformBuffer,Dynamic]; }, pos);
+		return new h3d.Buffer(vertices, stride, switch( flags ) { case DynamicFlag: [Dynamic]; case UniformDynamic: [UniformBuffer,Dynamic]; }, pos);
 	}
 
 	public function disposeBuffer( b : h3d.Buffer ) {
@@ -30,6 +30,9 @@ class Allocator {
 
 	public function disposeIndexBuffer( i : h3d.Indexes ) {
 		i.dispose();
+	}
+
+	public function onContextLost() {
 	}
 
 	// CPU
