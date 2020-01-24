@@ -19,6 +19,9 @@ class Texture {
 			RGBA
 		#end;
 
+	public static var textureMaxAnisotropy = 0;
+	public static var maxTextureMaxAnisotropy = 0;
+
 	var t : h3d.impl.Driver.Texture;
 	var mem : h3d.impl.MemoryManager;
 	#if debug
@@ -36,6 +39,7 @@ class Texture {
 	var waitLoads : Array<Void -> Void>;
 	public var mipMap(default,set) : MipMap;
 	public var filter(default,set) : Filter;
+	public var anisotropy(default,set) : Int;
 	public var wrap(default, set) : Wrap;
 	public var layerCount(get, never) : Int;
 
@@ -93,6 +97,7 @@ class Texture {
 		this.height = h;
 		this.mipMap = this.flags.has(MipMapped) ? Nearest : None;
 		this.filter = Linear;
+		this.anisotropy = this.mipMap != None ? 1 : 0;
 		this.wrap = Clamp;
 		bits &= 0x7FFF;
 		#if debug
@@ -187,6 +192,11 @@ class Texture {
 	function set_filter(f:Filter) {
 		bits = (bits & ~(3 << 3)) | (Type.enumIndex(f) << 3);
 		return filter = f;
+	}
+
+	function set_anisotropy(a:Int) {
+		a = a > maxTextureMaxAnisotropy ? maxTextureMaxAnisotropy : a;
+		return anisotropy = a;
 	}
 
 	function set_wrap(w:Wrap) {

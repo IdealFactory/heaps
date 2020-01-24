@@ -264,6 +264,21 @@ class GlDriver extends Driver {
 		gl.pixelStorei(GL.UNPACK_ALIGNMENT, 1);
 		gl.finish(); // prevent glError() on first bufferData
 		#end
+
+		var extension:Dynamic = gl.getExtension("EXT_texture_filter_anisotropic");
+
+		#if (js && html5)
+		if (extension == null || extension.MAX_TEXTURE_MAX_ANISOTROPY_EXT == null) extension = gl.getExtension("MOZ_EXT_texture_filter_anisotropic");
+		if (extension == null || extension.MAX_TEXTURE_MAX_ANISOTROPY_EXT == null) extension = gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
+		#end
+
+		if (extension != null) {
+			h3d.mat.Texture.textureMaxAnisotropy = extension.TEXTURE_MAX_ANISOTROPY_EXT;
+			h3d.mat.Texture.maxTextureMaxAnisotropy = gl.getParameter(extension.MAX_TEXTURE_MAX_ANISOTROPY_EXT);
+		} else {
+			h3d.mat.Texture.textureMaxAnisotropy = 0;
+			h3d.mat.Texture.maxTextureMaxAnisotropy = 0;
+		}
 	}
 
 	override function setRenderFlag( r : RenderFlag, value : Int ) {
@@ -323,7 +338,6 @@ class GlDriver extends Driver {
 		}
 		gl.shaderSource(s, shader.code);
 		gl.compileShader(s);
-		var log = gl.getShaderInfoLog(s);
 		if ( gl.getShaderParameter(s, GL.COMPILE_STATUS) != cast 1 ) {
 			var log = gl.getShaderInfoLog(s);
 			var lid = Std.parseInt(log.substr(9));
@@ -544,7 +558,7 @@ class GlDriver extends Driver {
 			if( s.buffers != null ) {
 				for( i in 0...s.buffers.length ) {
 					gl.bindBufferBase(GL2.UNIFORM_BUFFER, i, @:privateAccess buf.buffers[i].buffer.vbuf.b);
-			}
+				}			
 			}
 		case Textures:
 			var tcount = s.textures.length;
@@ -592,16 +606,19 @@ class GlDriver extends Driver {
 				var filter = Type.enumIndex(t.filter);
 				var wrap = Type.enumIndex(t.wrap);
 				var bits = mip | (filter << 3) | (wrap << 6);
+				var mode = pt.mode;
 				if( bits != t.t.bits ) {
 					t.t.bits = bits;
 					var flags = TFILTERS[mip][filter];
-					var mode = pt.mode;
 					gl.texParameteri(mode, GL.TEXTURE_MAG_FILTER, flags[0]);
 					gl.texParameteri(mode, GL.TEXTURE_MIN_FILTER, flags[1]);
 					var w = TWRAP[wrap];
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_S, w);
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_T, w);
 				}
+                if (h3d.mat.Texture.maxTextureMaxAnisotropy>0 && t.anisotropy>0) {
+				 	gl.texParameterf(mode, h3d.mat.Texture.textureMaxAnisotropy, t.anisotropy);
+               }
 			}
 		}
 	}
@@ -966,9 +983,9 @@ class GlDriver extends Driver {
 			#end
 			checkError();
 		} else {
-			#if js
-			if( !t.format.match(S3TC(_)) )
-			#end
+            #if js
+            if( !t.format.match(S3TC(_)) )
+            #end
 			#if lime
 			#if js
 			gl.texImage2DWEBGL(bind, 0, tt.internalFmt, tt.width, tt.height, 0, getChannels(tt), tt.pixelFmt, null);
@@ -1143,7 +1160,7 @@ class GlDriver extends Driver {
 			gl.bindTexture(GL.TEXTURE_2D, t.t.t);
 			gl.texImage2D(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img.getImageData(0, 0, bmp.width, bmp.height));
 			restoreBind();
-		}
+	}
 	#end
 	}
 
@@ -1256,7 +1273,7 @@ class GlDriver extends Driver {
 		if( t.format.match(S3TC(_)) )
 			gl.compressedTexImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, buffer);
 		else
-			gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, buffer);
+		gl.texImage2D(face, mipLevel, t.t.internalFmt, pixels.width, pixels.height, 0, getChannels(t.t), t.t.pixelFmt, buffer);
 		#else
 		throw "Not implemented";
 		#end
@@ -1425,7 +1442,7 @@ class GlDriver extends Driver {
 			gl.drawElements(drawMode, ntriangles * 3, GL.UNSIGNED_INT, startIndex * 4);
 		else
 			gl.drawElements(drawMode, ntriangles * 3, GL.UNSIGNED_SHORT, startIndex * 2);
-	}
+    }
 
 	override function allocInstanceBuffer( b : InstanceBuffer, bytes : haxe.io.Bytes ) {
 		#if (hl && !lime)
@@ -1474,8 +1491,8 @@ class GlDriver extends Driver {
 		#end
 		var args : Array<Int> = commands.data;
 		if( args != null ) {
-			var p = 0;
-			for( i in 0...Std.int(args.length/3) )
+		var p = 0;
+		for( i in 0...Std.int(args.length/3) )
 				gl.drawElementsInstanced(drawMode, args[p++], ibuf.is32 ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT, args[p++], args[p++]);
 		} else
 			gl.drawElementsInstanced(drawMode, commands.indexCount, ibuf.is32 ? GL.UNSIGNED_INT : GL.UNSIGNED_SHORT, 0, commands.commandCount);

@@ -23,7 +23,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	public var buffers:Array<Bytes>;
     public var scenes:Array<h3d.scene.Object>;
     public var cameras:Array<h3d.Camera>;
-    public var images:Array<hxd.res.Image>;
+    public var images:Array<hxd.BitmapData>;
     public var materials:Array<h3d.mat.Material>;
     public var textures:Array<h3d.mat.Texture>;
 	public var primitives:Map<h3d.scene.Object, Array<h3d.scene.Mesh>>;
@@ -92,19 +92,23 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		#end
     }
 
-	function loadImage( imageNode, imgIdx, imageLoaded ) {
+	function loadImage( imageNode:Image, imgIdx, imageLoaded ) {
 		var entry;
 		if (imageNode.uri != null) {
 			var uri = imageNode.uri;
 			if ( StringTools.startsWith(uri, "data:") ) {
 				// Data URI for image bytes
 				var mimeType = uri.split(";")[0].substr(5);
-				var data = uri.substr( uri.indexOf(",")+1 );
+				var imageBytes = haxe.crypto.Base64.decode( uri.substr( uri.indexOf(",")+1 ) );
 				#if debug_gltf
-				trace("LoadImage: Data URI:"+mimeType+"\ndat="+data.substr(0, 100)+"...");
+				trace("LoadImage: Data URI:"+mimeType+"\ndat="+uri.substr( uri.indexOf(",")+1 ).substr(0, 100)+"...");
 				#end
-				images[ imgIdx ] = new hxd.res.Image( new DataURIEntry( "no-name-image-"+images.length, uri, haxe.crypto.Base64.decode( data ) ) );
+				#if (lime && js)
+				images[ imgIdx ] = decodeJSImage( imageBytes, imageLoaded );
+				#else 
+				images[ imgIdx ] = new hxd.res.Image( new DataURIEntry( "no-name-image-"+images.length+"."+imageNode.mimeType.toString().split("/")[1], uri, imageBytes ) ).toBitmap();
 				imageLoaded();
+				#end
 			#if openfl
 			} else if (baseURL != "" || StringTools.startsWith(uri, "http://") || StringTools.startsWith(uri, "https://")) {
 				// Remote URL request for image bytes (OpenFL only)
@@ -113,9 +117,13 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				trace("LoadImage: Remote URI:"+uri);
 				#end
 				requestURL( uri, function(e) {
-					var bytes = #if !flash cast( e.target, openfl.net.URLLoader).data #else Bytes.ofData( cast (e.target, openfl.net.URLLoader).data) #end;
-					images[ imgIdx ] = new hxd.res.Image( new DataURIEntry( uri.substr(uri.lastIndexOf("/")+1), uri, bytes ) );
+					var imageBytes = #if !flash cast( e.target, openfl.net.URLLoader).data #else Bytes.ofData( cast (e.target, openfl.net.URLLoader).data) #end;
+					#if (lime && js)
+					images[ imgIdx ] = decodeJSImage( imageBytes, imageLoaded );
+					#else 
+					images[ imgIdx ] = new hxd.res.Image( new DataURIEntry( uri.substr(uri.lastIndexOf("/")+1), uri, imageBytes ) ).toBitmap();
 					imageLoaded();
+					#end
 				} );
 			#end
 			} else {
@@ -123,30 +131,73 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				#if debug_gltf
 				trace("LoadImage: Loading URI:"+uri);
 				#end
-				images[ imgIdx ] = cast hxd.Res.load( uri ).toImage();
+				#if (lime && js)
+				var imageBytes = hxd.Res.load( uri ).entry.getBytes();
+				images[ imgIdx ] = decodeJSImage( imageBytes, imageLoaded );
+				#else 
+				images[ imgIdx ] = cast hxd.Res.load( uri ).toImage().toBitmap();
 				imageLoaded();
+				#end
 			}
 		} else {
 			// Binary buffer for image
-			var buf = GltfTools.getBufferBytes( this, imageNode.bufferView );
+			var imageBytes = GltfTools.getBufferBytes( this, imageNode.bufferView );
 			#if debug_gltf
 			trace("LoadImage: from buffer view:"+imageNode.bufferView);
 			#end
-			entry = new DataURIEntry( "no-name-image-"+images.length, "no-uri", buf ); 
-			images[ imgIdx ] = new hxd.res.Image( entry );
+			#if (lime && js)
+			images[ imgIdx ] = decodeJSImage( imageBytes, imageLoaded );
+			#else 
+			entry = new DataURIEntry( "no-name-image-"+images.length+"."+imageNode.mimeType.toString().split("/")[1], "no-uri", imageBytes ); 
+			images[ imgIdx ] = new hxd.res.Image( entry ).toBitmap();
 			imageLoaded();
+			#end
 		}
 	}
 
+	#if (lime && js)
+	function decodeJSImage( imageBytes:haxe.io.Bytes, imageLoaded ) {
+		var mimeType = "";
+		var header = imageBytes.getUInt16(0);
+		switch( header ) {
+			case 0xD8FF: mimeType = "image/jpeg";
+			case 0x5089: mimeType = "image/png";
+			case 0x4947: mimeType = "image/gif";
+			case 0x4444: mimeType = "image/vnd-ms.dds";
+			default: mimeType = "image/tga";
+		}
+
+		var b = new BitmapData( -101, -102 );
+		@:privateAccess b.data = new lime.graphics.Image(null, 0, 0, 1, 1);
+		var imgElement = new js.html.Image();
+		@:privateAccess var blob = new js.html.Blob( [ imageBytes.b ], { type: mimeType } );
+		@:privateAccess imgElement.src = js.html.URL.createObjectURL( blob );
+		imgElement.onload = function() { 
+			for (img in images)
+				@:privateAccess if (img!=null && img.data.buffer.__srcImage == imgElement) {
+				@:privateAccess 	img.data.width = imgElement.width; 
+				@:privateAccess 	img.data.height = imgElement.height; 
+								}
+			imageLoaded();
+		};
+		@:privateAccess b.data.buffer.__srcImage = imgElement;
+		return b;
+	}
+	#end
+
  	#if openfl
     function requestURL( url:String, onComplete:openfl.events.Event->Void ) {
+		trace("requestURL:"+url);
         var request = new openfl.net.URLRequest( url );
         var loader = new openfl.net.URLLoader();
         loader.dataFormat = openfl.net.URLLoaderDataFormat.BINARY;
 		var ext = url.substr( url.lastIndexOf(".")+1 );
 		dependencyInfo[ loader ] = { type:ext, totalBytes: -1, bytesLoaded: 0};
 
-        loader.addEventListener( openfl.events.Event.COMPLETE, onComplete );
+        loader.addEventListener( openfl.events.Event.COMPLETE, function(e) {
+			loader = null;
+			onComplete(e);
+		});
         loader.addEventListener( openfl.events.Event.OPEN, function(e) trace("requestURL.OPEN:"+e) );
         loader.addEventListener( openfl.events.ProgressEvent.PROGRESS, onProgress );
         loader.addEventListener( openfl.events.SecurityErrorEvent.SECURITY_ERROR, function(e) trace("requestURL.SECURITY_ERROR:"+e) );
@@ -159,15 +210,17 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		
 		pe.stopPropagation();
 		var info = dependencyInfo[pe.target];
-		if ( info.totalBytes==-1 ) {
-			info.totalBytes = Std.int(pe.bytesTotal);
-			totalBytesToLoad = 0; 
-			for (i in dependencyInfo) {
-				totalBytesToLoad += i.totalBytes;
+		if ( info != null) {
+			if (info.totalBytes==-1 ) {
+				info.totalBytes = Std.int(pe.bytesTotal);
+				totalBytesToLoad = 0; 
+				for (i in dependencyInfo) {
+					totalBytesToLoad += i.totalBytes;
+				}
 			}
-		}
 
-		info.bytesLoaded = Std.int(pe.bytesLoaded);
+			info.bytesLoaded = Std.int(pe.bytesLoaded);
+		}
 
 		var progressSoFar = 0;
 		var currentTotal = 0;
@@ -249,7 +302,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		if (material != null) {
 
 			if ( materialNode.normalTexture != null )
-				material.normalMap = getTexture( materialNode.normalTexture.index, true );
+				material.normalMap = getTexture( materialNode.normalTexture.index );
 
 			var emit = new h3d.Vector();
 			if ( materialNode.emissiveFactor != null ) {
@@ -422,30 +475,32 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		}
 	}
 
-	function getTexture( index : Int, remapNormals = false ) : h3d.mat.Texture {
+	function getTexture( index : Int ) : h3d.mat.Texture {
 		var node = root.textures[index];
 		var img = images[node.source]; // Pre-loaded image array
 
-		var size = img.getSize();
 		var format = h3d.mat.Texture.nativeFormat;
-		var tex = new h3d.mat.Texture(size.width, size.height, [NoAlloc], format);
+		var tex = new h3d.mat.Texture(img.width, img.height, [NoAlloc], format);
 
-		tex.setName(img.entry.path);
+		tex.setName(node.name==null ? "texture-"+index : node.name);
 		
 		tex.alloc();
-		var pixels = img.getPixels(tex.format);
-		if( pixels.width != tex.width || pixels.height != tex.height )
-			pixels.makeSquare();
-
-		if (remapNormals) pixels.flipChannel( Channel.R );
 
 		if ( Reflect.hasField(node, "sampler") ) 
 			applySampler(node.sampler, tex);
 
 		if (tex.mipMap!=None) tex.flags.set(MipMapped);
 
+		#if js
+		tex.uploadBitmap( img );
+		#else 
+		var pixels = img.getPixels();
+		if( pixels.width != tex.width || pixels.height != tex.height )
+			pixels.makeSquare();
+
 		tex.uploadPixels(pixels);
 		pixels.dispose();
+		#end
 
 		return tex;
 	}
