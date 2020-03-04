@@ -199,6 +199,9 @@ class Driver {
 	public function init( onCreate : Bool -> Void, forceSoftware = false ) {
 	}
 
+	public function offset( x : Int, y : Int ) {
+	}
+
 	public function resize( width : Int, height : Int ) {
 	}
 
