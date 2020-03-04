@@ -168,6 +168,8 @@ class GlDriver extends Driver {
 	var curColorMask = -1;
 	var currentDivisor : Array<Int> = [for( i in 0...32 ) 0];
 
+	var offsetX : Int = 0;
+	var offsetY : Int = 0;
 	var bufferWidth : Int;
 	var bufferHeight : Int;
 	var curTarget : h3d.mat.Texture;
@@ -630,7 +632,7 @@ class GlDriver extends Driver {
 			output texture coordinates. We also need to flip our culling.
 			The result is inverted if we are using a right handed camera.
 		*/
-		if( (curTarget == null) == rightHanded #if openfl && openfl.display.HeapsContainer.heapsRenderTargets.indexOf( curTarget ) == -1 #end ) { 
+		if( (curTarget == null) == rightHanded #if openfl || true #end ) { 
 			switch( pass.culling ) {
 			case Back: bits = (bits & ~Pass.culling_mask) | (2 << Pass.culling_offset);
 			case Front: bits = (bits & ~Pass.culling_mask) | (1 << Pass.culling_offset);
@@ -815,6 +817,12 @@ class GlDriver extends Driver {
 		if( curTarget != null ) curTarget.flags.set(WasCleared);
 	}
 
+	override function offset( x : Int, y : Int ) {
+		offsetX = x;
+		offsetY = y;
+		gl.viewport(offsetX, offsetY, bufferWidth, bufferHeight);
+	}
+
 	override function resize(width, height) {
 		#if (js && !lime)
 		// prevent infinite grow if pixelRatio != 1
@@ -827,7 +835,7 @@ class GlDriver extends Driver {
 		#end
 		bufferWidth = width;
 		bufferHeight = height;
-		gl.viewport(0, 0, width, height);
+		gl.viewport(offsetX, offsetY, width, height);
 
 		@:privateAccess if( defaultDepth != null ) {
 			disposeDepthBuffer(defaultDepth);
@@ -1594,7 +1602,7 @@ class GlDriver extends Driver {
 		curTarget = tex;
 		if( tex == null ) {
 			gl.bindFramebuffer(GL.FRAMEBUFFER, null);
-			gl.viewport(0, 0, bufferWidth, bufferHeight);
+			gl.viewport(offsetX, offsetY, bufferWidth, bufferHeight);
 			return;
 		}
 
