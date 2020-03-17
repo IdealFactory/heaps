@@ -9,6 +9,8 @@ class Library extends BaseLibrary {
 
     public function load( ?fileName:String = "gltffile", ?bytes:Bytes, gltfFileProcessed ) {	
 
+		createBRDFTexture();
+		
         this.gltfFileProcessed = gltfFileProcessed;
 
         #if debug_gltf
@@ -87,10 +89,6 @@ class Library extends BaseLibrary {
         // Setup materials
         if (root.materials != null)
             for (material in root.materials) materials.push( createMaterial( material ) );
-
-        // // Setup skins
-        // if (root.skins != null)
-        //     for (skin in root.skins) skins.push( loadSkin( skin ) );
 
         // Default scene
         var defaultSceneId = (root.scene == null) ? 0 : root.scene;

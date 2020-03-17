@@ -99,6 +99,10 @@ enum Feature {
 		Supports rendering in wireframe mode.
 	*/
 	Wireframe;
+	/*
+		Supports textureLOD
+	*/
+	TextureLod;
 }
 
 enum QueryKind {

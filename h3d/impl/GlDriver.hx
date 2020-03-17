@@ -256,6 +256,7 @@ class GlDriver extends Driver {
 		drawMode = GL.TRIANGLES;
 
 		#if js
+		gl.pixelStorei(GL.UNPACK_COLORSPACE_CONVERSION_WEBGL, 0);
 		// make sure to enable extensions
 		makeFeatures();
 		// setup shader optim
@@ -1741,6 +1742,9 @@ class GlDriver extends Driver {
 		case MultipleRenderTargets:
 			mrtExt != null || (mrtExt = gl.getExtension('WEBGL_draw_buffers')) != null;
 
+		case TextureLod:
+			gl.getExtension('EXT_shader_texture_lod') != null;
+	
 		default:
 			false;
 		}

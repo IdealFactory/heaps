@@ -24,7 +24,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
     public var scenes:Array<h3d.scene.Object>;
     public var cameras:Array<h3d.Camera>;
     public var images:Array<hxd.BitmapData>;
-    public var materials:Array<h3d.mat.Material>;
+    public var materials:Array<h3d.mat.PBRSinglePass>;
     public var textures:Array<h3d.mat.Texture>;
 	public var primitives:Map<h3d.scene.Object, Array<h3d.scene.Mesh>>;
 	public var meshes:Array<h3d.scene.Object>;
@@ -32,7 +32,8 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	public var currentScene:h3d.scene.Scene;
 	public var nodeObjects:Array<h3d.scene.Object>;
 	public var animator:TimelineAnimator = new TimelineAnimator();
-    
+	
+	var brdfTexture:h3d.mat.Texture;
 	var s3d : h3d.scene.Scene;
 	var baseURL:String = "";
 
@@ -40,6 +41,8 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	var dependencyInfo:Map<openfl.net.URLLoader,LoadInfo>;
 	var totalBytesToLoad = 0;
 	#end
+
+	var brdfBitmapData:BitmapData;
 
 	public function new( s3d ) {
 		#if openfl super(); #end
@@ -253,18 +256,79 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		return camera;
 	} 
 
-	function createMaterial( materialNode ) {
-		if (materialNode == null) return h3d.mat.Material.create(h3d.mat.Texture.fromColor(0xFF808080));
+	function createBRDFTexture() {
+		// var brdfData = "data:image/png;base64,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";
+		// var brdf = haxe.crypto.Base64.decode( brdfData.substr( brdfData.indexOf(",")+1));
+		// var imageBytes = haxe.crypto.Base64.decode( brdfData.substr( brdfData.indexOf(",")+1 ) );
+		
+		// #if (lime && js)
+		// var mimeType = "";
+		// var header = imageBytes.getUInt16(0);
+		// switch( header ) {
+		// 	case 0xD8FF: mimeType = "image/jpeg";
+		// 	case 0x5089: mimeType = "image/png";
+		// 	case 0x4947: mimeType = "image/gif";
+		// 	case 0x4444: mimeType = "image/vnd-ms.dds";
+		// 	default: mimeType = "image/tga";
+		// }
+		// brdfBitmapData = new BitmapData( -101, -102 );
+		// @:privateAccess brdfBitmapData.data = new lime.graphics.Image(null, 0, 0, 1, 1);
+		// var imgElement = new js.html.Image();
+		// @:privateAccess var blob = new js.html.Blob( [ imageBytes.b ], { type: mimeType } );
+		// @:privateAccess imgElement.src = js.html.URL.createObjectURL( blob );
+		// imgElement.onload = function() { 
+		// 	@:privateAccess if (brdfBitmapData!=null && brdfBitmapData.data.buffer.__srcImage == imgElement) {
+		// 	@:privateAccess 	brdfBitmapData.data.width = imgElement.width; 
+		// 	@:privateAccess 	brdfBitmapData.data.height = imgElement.height; 
+		// 					}
+		// 	setBRDFTexture();
+		// };
+		// @:privateAccess brdfBitmapData.data.buffer.__srcImage = imgElement;
+		// #else 
+		// brdfBitmapData = new hxd.res.Image( new DataURIEntry( "brdf-image.png", brdfData, imageBytes ) ).toBitmap();
+		// setBRDFTexture();
+		// #end
 
-		var material:h3d.mat.Material = null;
+		brdfTexture = hxd.Res.brdf.toTexture();
+	}
+
+	// function setBRDFTexture() {
+	// 	var format = h3d.mat.Texture.nativeFormat;
+	// 	var brdfTexture = new h3d.mat.Texture(brdfBitmapData.width, brdfBitmapData.height, [NoAlloc], format);
+	// 	brdfTexture.setName("brdf");
+	// 	brdfTexture.alloc();
+	// 	#if js
+	// 	brdfTexture.uploadBitmap( brdfBitmapData );
+	// 	#else 
+	// 	var pixels = brdfBitmapData.getPixels();
+	// 	if( pixels.width != brdfTexture.width || pixels.height != brdfTexture.height )
+	// 		pixels.makeSquare();
+
+	// 	brdfTexture.uploadPixels(pixels);
+	// 	pixels.dispose();
+	// 	#end
+	// }
+
+	function createMaterial( materialNode ) {
+		var material = new h3d.mat.PBRSinglePass();
+		
+		material.environmentBRDF = brdfTexture;
+
+		if (materialNode == null) {
+			material.texture = h3d.mat.Texture.fromColor(0xFF808080);
+			return material;
+		}
+
 		var pbrValues:h3d.shader.pbr.PropsValues = null;
 		var pbrTexture:h3d.shader.pbr.PropsTexture = null;
 
 		if ( materialNode.pbrMetallicRoughness != null ) {
 			var pbrmr = materialNode.pbrMetallicRoughness;
+			var tex:h3d.mat.Texture = null;
+
 			if ( pbrmr.baseColorTexture != null ) {
-				var tex = getTexture(pbrmr.baseColorTexture.index);
-				material = h3d.mat.Material.create( tex );
+				tex = getTexture(pbrmr.baseColorTexture.index);
+				material.texture = tex;
 			}
 
 			var a:Float, r:Float, g:Float, b:Float;
@@ -275,27 +339,34 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				g = pbrmr.baseColorFactor[1];
 				b = pbrmr.baseColorFactor[2];
 			}
-			var col = ( Std.int(a * 0xFF) << 24) | (Std.int(r * 0xFF) << 16) | (Std.int(g * 0xFF) << 8) | Std.int(b * 0xFF);
-			if (material == null) material = h3d.mat.Material.create(h3d.mat.Texture.fromColor( col ));
-			var color = new h3d.Vector(r, g, b);
-			material.color.load(color);
 
-			pbrValues = material.mainPass.getShader(h3d.shader.pbr.PropsValues);
+			var col = ( Std.int(a * 0xFF) << 24) | (Std.int(r * 0xFF) << 16) | (Std.int(g * 0xFF) << 8) | Std.int(b * 0xFF);
+			if (tex == null) {
+				tex = h3d.mat.Texture.fromColor( col );
+				material.texture = tex;
+			}
+
+			var color = new h3d.Vector(r, g, b);
+			// material.color.load(color);
+			// material.mainPass.addShader( new h3d.shader.PBRSinglePass() );
+
+			// pbrValues = material.mainPass.getShader(h3d.shader.pbr.PropsValues);
 
 			#if debug_gltf
 			trace("BaseColor:0x"+StringTools.hex(col, 8));
 			#end
 
+			//TODO-REMOVED FOR WEBGL1 INTEGRATION
 			if (pbrmr.metallicRoughnessTexture != null) {
 
-				if (pbrTexture == null) {
-					pbrTexture = new h3d.shader.pbr.PropsTexture( true );
-					material.mainPass.addShader( pbrTexture );
-				}
-				pbrTexture.texture = getTexture(pbrmr.metallicRoughnessTexture.index);
+				// if (pbrTexture == null) {
+				// 	pbrTexture = new h3d.shader.pbr.PropsTexture( true );
+				// 	material.mainPass.addShader( pbrTexture );
+				// }
+				material.reflectivityMap = getTexture(pbrmr.metallicRoughnessTexture.index);
 			}
-			pbrValues.metalness = Reflect.hasField(pbrmr, "metallicFactor") ? pbrmr.metallicFactor : 1;
-			pbrValues.roughness = Reflect.hasField(pbrmr, "roughnessFactor") ? pbrmr.roughnessFactor : 0;
+			// pbrValues.metalness = Reflect.hasField(pbrmr, "metallicFactor") ? pbrmr.metallicFactor : 1;
+			// pbrValues.roughness = Reflect.hasField(pbrmr, "roughnessFactor") ? pbrmr.roughnessFactor : 0;
 			
 		}
 
@@ -310,22 +381,23 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				emit.g = materialNode.emissiveFactor[1];
 				emit.b = materialNode.emissiveFactor[2];
 			} 
-			pbrValues.emissive.set( emit.r, emit.g, emit.b );
+			//TODO-REMOVED FOR WEBGL1 INTEGRATION
+			// pbrValues.emissive.set( emit.r, emit.g, emit.b );
 
 			if ( materialNode.emissiveTexture != null ) {
-				pbrTexture.hasEmissiveMap = true;
-				pbrTexture.emissiveMap = getTexture( materialNode.emissiveTexture.index );
-				pbrTexture.emissive.set( emit.r, emit.g, emit.b );
+				// pbrTexture.hasEmissiveMap = true;
+				material.emissiveMap = getTexture( materialNode.emissiveTexture.index );
+				// pbrTexture.emissive.set( emit.r, emit.g, emit.b );
 			}
 
 			if ( materialNode.occlusionTexture != null ) {
-				pbrTexture.hasOcclusionMap = true;
-				pbrTexture.occlusionMap = getTexture( materialNode.occlusionTexture.index );
-			} else {
-				if (pbrTexture != null) {
-					pbrTexture.hasOcclusionMap = true;
-					pbrTexture.occlusionMap = h3d.mat.Texture.fromColor( 0xFFFFFF );
-				}
+				// pbrTexture.hasOcclusionMap = true;
+				material.occlusionMap = getTexture( materialNode.occlusionTexture.index );
+			// } else {
+			// 	if (pbrTexture != null) {
+			// 		pbrTexture.hasOcclusionMap = true;
+			// 		pbrTexture.occlusionMap = h3d.mat.Texture.fromColor( 0xFFFFFF );
+			// 	}
 			}
 
 			if ( materialNode.name != null ) material.name = materialNode.name;
@@ -335,7 +407,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			trace("Material:"+material.name+" m="+pbrValues.metalness+" r="+pbrValues.roughness+" o="+pbrValues.occlusion+" e="+pbrValues.emissive);
 			#end
 		} else
-			material = h3d.mat.Material.create(h3d.mat.Texture.fromColor(0xFFFF0000));
+			material.texture = h3d.mat.Texture.fromColor(0xFFFF0000);
 
 		return material;
 	} 
