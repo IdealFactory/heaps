@@ -9,8 +9,6 @@ class Library extends BaseLibrary {
 
     public function load( ?fileName:String = "gltffile", ?bytes:Bytes, gltfFileProcessed ) {	
 
-		createBRDFTexture();
-		
         this.gltfFileProcessed = gltfFileProcessed;
 
         #if debug_gltf
