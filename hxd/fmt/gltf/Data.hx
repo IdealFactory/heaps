@@ -415,7 +415,9 @@ class GltfTools {
  		var pos = 0;
 		var out = "";
 		while ( pos < bytes.length ) {
-			if (pos < 128) out += bytes.getFloat( pos )+" ";
+			if (attribute!="TEXCOORD_0" && pos < 128) out += bytes.getFloat( pos )+" ";
+			if (attribute=="TEXCOORD_0" && pos %8==0) out += "\n";
+			if (attribute=="TEXCOORD_0") out += bytes.getFloat( pos )+" ";
 			buffer.push( bytes.getFloat( pos ));
 			pos += 4;
 		}
