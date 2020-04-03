@@ -12,6 +12,8 @@ class Surface extends hxsl.Shader {
         var microSurface:Float;
         var surfaceReflectivityColor:Vec3;
         var metallicRoughness:Vec2;
+
+        var testvar:Vec4;
     
         function fragment() {
             microSurface = vReflectivityColor.a; //float
@@ -24,6 +26,8 @@ class Surface extends hxsl.Shader {
             surfaceAlbedo = mix(baseColor.rgb * (1.0 - metallicF0.r), vec3(0., 0., 0.), metallicRoughness.r);
             surfaceReflectivityColor = mix(metallicF0, baseColor, metallicRoughness.r);
             microSurface = saturate(microSurface);
+
+            // testvar = vec4(vec3(baseColor.rgb), 1);
          }
     }
 

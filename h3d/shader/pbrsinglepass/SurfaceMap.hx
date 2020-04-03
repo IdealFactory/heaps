@@ -16,6 +16,8 @@ class SurfaceMap extends hxsl.Shader {
         var surfaceReflectivityColor:Vec3;
         var metallicRoughness:Vec2;
         var baseColor:Vec3;
+
+        var testvar:Vec4;
     
         function fragment() {
             microSurface = vReflectivityColor.a; //float

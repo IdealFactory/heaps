@@ -26,6 +26,8 @@ class FinalCombination extends hxsl.Shader {
 
         var lightingIntensity:Vec4;
 
+        var testvar:Vec4;
+
         function fragment() {
 
             lightingIntensity = vLightingIntensity;
@@ -45,6 +47,8 @@ class FinalCombination extends hxsl.Shader {
             finalDiffuse = max(finalDiffuse, 0.0);
             finalAmbient = vAmbientColor; //vec3
             finalAmbient *= surfaceAlbedo.rgb;
+
+            // testvar = 
         }
     }
     

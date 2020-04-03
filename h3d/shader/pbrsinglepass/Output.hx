@@ -29,13 +29,15 @@ class Output extends hxsl.Shader {
         /// DEBUG
         var environmentRadiance:Vec4;
         var specularEnvironmentReflectance:Vec3;
+        var specularBase:Vec3;
         var diffuseBase:Vec3;
         var energyConservationFactor:Vec3;
         var environmentBrdf:Vec3;
         var NdotV:Float;
         var NdotVUnclamped:Float;
+        
         var testvar:Vec4;
-
+        var viewDirectionW:Vec3;
         var normalW:Vec3;
 
         function fromRGBD(rgbd:Vec4):Vec3 {
@@ -89,7 +91,8 @@ class Output extends hxsl.Shader {
             finalColor = max(finalColor, 0.0);
             finalColor = applyImageProcessing(finalColor);
             finalColor.a *= visibility;
-            output.color = finalColor;//vec4(finalEmissive.rgb, 1);
+            // output.color = vec4(testvar.rgb, 1);
+            output.color = finalColor;//vec4(testvar.rgb, 1);
         }
     }
     

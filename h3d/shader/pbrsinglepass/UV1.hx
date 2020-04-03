@@ -40,17 +40,22 @@ class UV1 extends hxsl.Shader {
         // var vAlbedoColor:Vec4;
         var LinearEncodePowerApprox : Float;// = 2.2;
 
+        var testvar:Vec4;
+
 		function fragment() {
             surfaceAlbedo = vAlbedoColor.rgb; //vec3
             alpha = vAlbedoColor.a; //float
 
             uvMain = vMainUV1;
+            //uvMain.x = 1. - uvMain.x;
             var albedoTexture = albedoSampler.get(uvMain + uvOffset); //vec4 // vAlbedoUV -> vMainUV1
             surfaceAlbedo *= toLinearSpace(albedoTexture.rgb);
             surfaceAlbedo *= vAlbedoInfos.y;
 
             ambientOcclusionColor = vec3(1., 1., 1.); //vec3
             ambientInfos = vAmbientInfos;
+
+            testvar = vec4(vec3(surfaceAlbedo.rgb), 1);
         }
     };
 

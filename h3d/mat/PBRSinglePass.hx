@@ -7,6 +7,7 @@ class PBRSinglePass extends Material {
 	public var baseColor : h3d.shader.pbrsinglepass.BaseColor;
 	public var normal : h3d.shader.pbrsinglepass.Normal;
 	public var normalMapping : h3d.shader.pbrsinglepass.NormalMap;
+	public var tangent : h3d.shader.pbrsinglepass.Tangent;
 	public var uv1 : h3d.shader.pbrsinglepass.UV1;
 	public var surface : h3d.shader.pbrsinglepass.Surface;
 	public var surfaceMap : h3d.shader.pbrsinglepass.SurfaceMap;
@@ -23,6 +24,11 @@ class PBRSinglePass extends Material {
 	public var ambientOcclusion : h3d.shader.pbrsinglepass.AmbientOcclusion;
 	public var ambientOcclusionMap : h3d.shader.pbrsinglepass.AmbientOcclusionMap;
     public var output : h3d.shader.pbrsinglepass.Output;
+
+    public var hasTangentBuffer(default, set):Bool;
+
+    public var metalnessFactor(default, set):Float;
+    public var roughnessFactor(default, set):Float;
 
     private var baseMeshOffset:Int = 1;
 
@@ -99,16 +105,61 @@ class PBRSinglePass extends Material {
 	}
 
     override function get_normalMap() {
-        if( normalMapping == null ) return null;
-        return normalMapping.bumpSampler;
+        if( normalMapping != null ) return normalMapping.bumpSampler;
+        if( tangent != null ) return tangent.bumpSampler;
+        return null;
 	}
 
 	override function set_normalMap(t) {
-        if( t != null && normalMapping == null ) addNormalMap();
-        if( normalMapping == null ) return null;
-        normalMapping.bumpSampler = t;
+        if( t != null) {
+            if (this.hasTangentBuffer) {
+                if (tangent==null) addTangent();
+                tangent.bumpSampler = t;
+            } else {
+                if (normalMapping==null) addNormalMap();
+                normalMapping.bumpSampler = t;
+            }
+        }
 		return t;
-	}
+    }
+    
+    function set_hasTangentBuffer( val:Bool ):Bool {
+        this.hasTangentBuffer = val;
+        if (val) {
+            if (tangent==null) addTangent();
+        }
+        return val;
+    }
+
+
+    function set_metalnessFactor( val:Float ):Float {
+        this.metalnessFactor = val;
+        var mr = surface.vReflectivityColor;
+        if (surface!=null) {
+            surface.vReflectivityColor.x = val;
+            trace("Surface:Metalness:val="+val+" vector:"+surface.vReflectivityColor);
+        };
+        if (surfaceMap!=null) {
+            surfaceMap.vReflectivityColor.x = val;
+            trace("SurfaceMap:Metalness:val="+val+" vector:"+surfaceMap.vReflectivityColor);
+        };
+        return val;
+    }
+
+    function set_roughnessFactor( val:Float ):Float {
+        this.roughnessFactor = val;
+        var mr = surface.vReflectivityColor;
+        if (surface!=null) {
+            surface.vReflectivityColor.y = val;
+            trace("Surface:Roughness:val="+val+" vector:"+surface.vReflectivityColor);
+        };
+        if (surfaceMap!=null) {
+            surfaceMap.vReflectivityColor.y = val;
+            // surfaceMap.vReflectivityColor.set( mr.x, val, mr.z, mr.w );
+            trace("SurfaceMap:Roughness:val="+val+" vector:"+surfaceMap.vReflectivityColor);
+        };
+        return val;
+    }
 
     function get_environmentBRDF() {
 		if( envLighting == null ) return null;
@@ -175,6 +226,7 @@ class PBRSinglePass extends Material {
 
         if( uv1 != null )
             uv1.vAlbedoColor.set(r, g, b, a);
+        trace("SetColorRGBA:"+r+", "+g+", "+b+", "+a);
     }
 
     function traceSL() {
@@ -217,7 +269,7 @@ class PBRSinglePass extends Material {
     }
 
     function addNormalMap() {
-        var old = mainPass.getShader( h3d.shader.pbrsinglepass.NormalMap );
+        var old = mainPass.getShader( h3d.shader.pbrsinglepass.Normal );
         if (old != null) {
             mainPass.removeShader( old );
         }
@@ -226,6 +278,26 @@ class PBRSinglePass extends Material {
         }
         mainPass.addShaderAtIndex(normalMapping, 1+baseMeshOffset);
         trace("addNormalMap:");
+        traceSL();
+    }
+
+    function addTangent() {
+        var oldN = mainPass.getShader( h3d.shader.pbrsinglepass.Normal );
+        var oldNM = mainPass.getShader( h3d.shader.pbrsinglepass.NormalMap );
+        if (oldN != null) {
+            mainPass.removeShader( oldN ); // Remove old Normal shader
+        }
+        if (oldNM != null) {
+            mainPass.removeShader( oldNM ); // Remove old NormalMap shader
+        }
+        if (tangent == null) {
+            tangent = new h3d.shader.pbrsinglepass.Tangent();
+            if (oldNM != null) {
+                tangent.bumpSampler = oldNM.bumpSampler;
+            }
+        }
+        mainPass.addShaderAtIndex(tangent, 1+baseMeshOffset);
+        trace("addTangent:");
         traceSL();
     }
 
@@ -238,7 +310,7 @@ class PBRSinglePass extends Material {
 
     function addAmbientMonochrome() {
         ambientMonochrome = new h3d.shader.pbrsinglepass.AmbientMonochrome();
-        mainPass.addShaderAtIndex(ambientMonochrome, 7+baseMeshOffset);
+        mainPass.addShaderAtIndex(ambientMonochrome, 5+baseMeshOffset);
         trace("addAmbientMonochrome:");
         traceSL();
     }
@@ -256,7 +328,7 @@ class PBRSinglePass extends Material {
             mainPass.removeShader( oldAM );
         }
         ambientMonochromeLum = new h3d.shader.pbrsinglepass.AmbientMonochromeLum();
-        mainPass.addShaderAtIndex(ambientMonochromeLum, 7+baseMeshOffset);
+        mainPass.addShaderAtIndex(ambientMonochromeLum, 5+baseMeshOffset);
         trace("addAmbientOcculsionMap:");
         traceSL();
     }
@@ -275,6 +347,8 @@ class PBRSinglePass extends Material {
         }
         if (surfaceMap == null) {
             surfaceMap = new h3d.shader.pbrsinglepass.SurfaceMap();
+            if (old != null)
+                surfaceMap.vReflectivityColor.set( old.vReflectivityColor.x, old.vReflectivityColor.y, old.vReflectivityColor.z, old.vReflectivityColor.w ); 
         }
         mainPass.addShaderAtIndex(surfaceMap, 4+baseMeshOffset);
         trace("addSurfaceMap:");

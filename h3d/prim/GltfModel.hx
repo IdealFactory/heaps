@@ -139,7 +139,7 @@ class GltfModel extends MeshPrimitive {
 			#end
 		}
 
-		if (tangents == null) {
+		if (false) { //tangents == null) {
 			tangents = new hxd.FloatBuffer( verts.length );
 			var bitangents = new hxd.FloatBuffer( verts.length );
 			var vi = 0;

@@ -48,6 +48,10 @@ class EnvLighting extends hxsl.Shader {
 		
 		var environmentBrdf:Vec3;
 		var specularEnvironmentR90:Vec3;
+
+		var testvar:Vec4;
+		var positionW:Vec3;
+		var rawVNormalW:Vec3;
 		
 		function fromRGBD(rgbd:Vec4):Vec3 {
             rgbd.rgb=toLinearSpace(rgbd.bgr);
@@ -139,6 +143,8 @@ class EnvLighting extends hxsl.Shader {
 		// 	var specTerm = fresnel * distribution * smithVisibility; //vec3
 		// 	return specTerm * info.attenuation * info.NdotL * lightColor;
 		// }
+		// function computeSpecularLighting(infoH:Vec3, infoRoughness:Float, infoVdotH:Float, infoNdotL:Float, infoNdotV:Float, infoAttenuation:Float, N:Vec3, reflectance0:Vec3, reflectance90:Vec3, geometricRoughnessFactor:Float, lightColor:Vec3):Vec3 {
+		// info.specular = computeSpecularLighting(preInfo, normalW, specularEnvironmentR0, specularEnvironmentR90, AARoughnessFactors.x, vLightDiffuse0.rgb);
 		function computeSpecularLighting(infoH:Vec3, infoRoughness:Float, infoVdotH:Float, infoNdotL:Float, infoNdotV:Float, infoAttenuation:Float, N:Vec3, reflectance0:Vec3, reflectance90:Vec3, geometricRoughnessFactor:Float, lightColor:Vec3):Vec3 {
 			var NdotH = saturateEps(dot(N, infoH)); //float
 			var roughness = max(infoRoughness, geometricRoughnessFactor);  //float
@@ -215,6 +221,7 @@ class EnvLighting extends hxsl.Shader {
 
 			lIDiffuse = computeHemisphericDiffuseLighting(pLINdotL, vLightDiffuse0.rgb, vLightGround0);
 			lISpecular = computeSpecularLighting(pLIH, pLIRoughness, pLIVdotH, pLINdotL, pLINdotV, pLIAttenuation, normalW, specularEnvironmentR0, specularEnvironmentR90, AARoughnessFactors.x, vLightDiffuse0.rgb);
+			// lISpecular = computeSpecularLighting(pLIH, normalW, specularEnvironmentR0, specularEnvironmentR90, AARoughnessFactors.x, vLightDiffuse0.rgb);
 			// ##########################################################################################
 			
 			// info = computeHemisphericLighting(viewDirectionW, normalW, vLightData0, vLightDiffuse0.rgb, vLightSpecular0.rgb, vLightGround0, glossiness);
@@ -229,12 +236,40 @@ class EnvLighting extends hxsl.Shader {
 			// testvar = vec3(specComp);
 			// lISpecular = specComp * vLightSpecular0.rgb; //
 
+			// function computeSpecularLighting(infoH:Vec3, infoRoughness:Float, infoVdotH:Float, infoNdotL:Float, infoNdotV:Float, infoAttenuation:Float, N:Vec3, reflectance0:Vec3, reflectance90:Vec3, geometricRoughnessFactor:Float, lightColor:Vec3):Vec3 {
+			// 	// var nt = vec3(N.x, N.y, N.z);
+			// 	var NdotH = saturateEps(dot(N, infoH)); //float
+			// 	var roughness = max(infoRoughness, geometricRoughnessFactor);  //float
+			// 	var alphaG = convertRoughnessToAverageSlope(roughness); //float
+			// 	var fresnel = fresnelSchlickGGX(infoVdotH, reflectance0, reflectance90); //vec3
+			// 	var distribution = normalDistributionFunction_TrowbridgeReitzGGX(NdotH, alphaG);  //float
+			// 	var smithVisibility = smithVisibility_GGXCorrelated(infoNdotL, infoNdotV, alphaG); //float
+			// 	var specTerm = fresnel * distribution * smithVisibility; //vec3
+			// 	return specTerm * infoAttenuation * infoNdotL * lightColor;
+			// }
+
+			// vec3 computeSpecularLighting(preLightingInfo info, vec3 N, vec3 reflectance0, vec3 reflectance90, float geometricRoughnessFactor, vec3 lightColor) {
+			// 	float NdotH = saturateEps(dot(N, info.H));
+			// 	float roughness = max(info.roughness, geometricRoughnessFactor);
+			// 	float alphaG = convertRoughnessToAverageSlope(roughness);
+			// 	vec3 fresnel = fresnelSchlickGGX(info.VdotH, reflectance0, reflectance90);
+			// 	float distribution = normalDistributionFunction_TrowbridgeReitzGGX(NdotH, alphaG);
+			// 	float smithVisibility = smithVisibility_GGXCorrelated(info.NdotL, info.NdotV, alphaG);
+			// 	vec3 specTerm = fresnel * distribution * smithVisibility;
+			// 	return specTerm * info.attenuation * info.NdotL * lightColor;
+			// }
+					
 			// End convert
 			
 			shadow = 1.; //float
+			// lIDiffuse.rgb = vec3(-lIDiffuse.r, lIDiffuse.g, lIDiffuse.b);
 			diffuseBase += lIDiffuse.rgb * shadow;
 			specularBase += lISpecular * shadow;
 			specularEnvironmentReflectance = getReflectanceFromBRDFLookup(specularEnvironmentR0, environmentBrdf); //vec3
+
+			// testvar = vec4(vec3(fresnelSchlickGGX(pLIVdotH, specularEnvironmentR0, specularEnvironmentR90)), 1);
+			// testvar = vec4(vec3(vReflectivityColor), 1);
+			// testvar = vec4(vec3(convertRoughnessToAverageSlope(max(pLIRoughness, AARoughnessFactors.x))), 1);
         }
 	}
 

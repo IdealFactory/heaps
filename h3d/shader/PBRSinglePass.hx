@@ -84,6 +84,9 @@ class PBRSinglePass extends hxsl.Shader {
         var normalW:Vec3;
         var uvOffset:Vec2;
 
+        var finalWorld:Mat4;
+        var normalUpdated:Vec3;
+
         var surfaceAlbedo:Vec3;
         var alpha:Float;
         var ambientOcclusionColor:Vec3;
@@ -96,13 +99,21 @@ class PBRSinglePass extends hxsl.Shader {
         var environmentRadiance:Vec4;
         var environmentIrradiance:Vec3;
         var debugVar:Vec4;
+        var gmv:Mat4;
+        var flip:Mat4;
+
+        var testvar:Vec4;
+        @var var  vtestvar:Vec3;
 
 		function __init__() {
-			relativePosition = input.position;
-			transformedPosition = relativePosition * global.modelView.mat3x4();
-			projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
-			transformedNormal = (input.normal * global.modelView.mat3()).normalize();
-			camera.dir = (camera.position - transformedPosition).normalize();
+            flip = mat4( vec4(1, 0, 0, 0), vec4(0, -1, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, 0, 1));
+            gmv = global.modelView * flip;
+            relativePosition = input.position;
+            transformedPosition = relativePosition * gmv.mat3x4();
+            projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
+            transformedNormal = (vec3(input.normal.x, input.normal.y, input.normal.z) * gmv.mat3x4()).normalize();
+
+            camera.dir = (camera.position - transformedPosition).normalize();
 			pixelColor = color;
 			specPower = specularPower;
 			specColor = specularColor * specularAmount;
@@ -112,28 +123,19 @@ class PBRSinglePass extends hxsl.Shader {
 		}
 
         function vertex() {
-			output.position = projectedPosition * vec4(1, camera.projFlip, 1, 1);
+            output.position = projectedPosition * vec4(1, camera.projFlip, 1, 1);
 
 
-            // PI = 3.1415926535897932384626433832795;
-            // LinearEncodePowerApprox  = 2.2;
-            // GammaEncodePowerApprox  = 0.45454545454545454; //1.0/LinearEncodePowerApprox;
-            // LuminanceEncodeApprox  = vec3(0.2126,0.7152,0.0722);
-            // LuminanceEncodeApproxX  = 0.2126;
-            // LuminanceEncodeApproxY = 0.7152;
-            // LuminanceEncodeApproxZ  = 0.0722;
-            // Epsilon = 0.0000001;
-    
             rgbdMaxRange = 255.0;
     
             var positionUpdated = input.position; //vec3
-            var normalUpdated = input.normal; //vec3
-            var finalWorld = global.modelView;//world; //mat4
-            var worldPos = vec4(positionUpdated, 1.0) * finalWorld; //vec4 // finalWorld * vec4(positionUpdated, 1.0)
-            vPositionW = vec3(transformedPosition.r, transformedPosition.b, transformedPosition.g);//vec3(worldPos.rgb);
+            normalUpdated = vec3(input.normal.x, input.normal.y, input.normal.z); //vec3
+            finalWorld = gmv;//world; //mat4
+            var worldPos = positionUpdated * finalWorld.mat3x4(); //vec4 // finalWorld * vec4(positionUpdated, 1.0)
+            vPositionW = vec3(worldPos.r, worldPos.b, worldPos.g);//vec3(worldPos.rgb);
             var normalWorld = mat3(finalWorld); //mat3
-            var tmpNormal = normalUpdated * normalWorld;
-            vNormalW = normalize(vec3(tmpNormal.r, tmpNormal.b, tmpNormal.g)); // normalize(normalWorld * normalUpdated);
+            var tmpNormal = vec3(normalUpdated.r, normalUpdated.g, normalUpdated.b);
+            vNormalW = normalize(tmpNormal * finalWorld.mat3()).rbg; // normalize(normalWorld * normalUpdated);
             var uv2 = vec2(0., 0.); //vec2
             vEyePosition = vec3(camera.position.r, camera.position.b, camera.position.g); //camera.position;//
         }
@@ -158,7 +160,9 @@ class PBRSinglePass extends hxsl.Shader {
     
             viewDirectionW = normalize(vEyePosition.xyz - positionW); //vec3 // 
             uvOffset = vec2(0.0, 0.0); //vec2
-        
+
+            //testvar = vec4(viewDirectionW, 1);
+
 			// output.depth = depth;
 			// output.normal = transformedNormal;
 			// output.worldDist = worldDist;
@@ -168,7 +172,6 @@ class PBRSinglePass extends hxsl.Shader {
 
 	public function new() {
         super();
-        setPriority( -1 );
 	}
 
 }

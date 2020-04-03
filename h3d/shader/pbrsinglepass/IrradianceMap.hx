@@ -39,6 +39,8 @@ class IrradianceMap extends hxsl.Shader {
         var viewDirectionW:Vec3;
         var normalW:Vec3;
 
+        var testvar:Vec4;
+
         function absEps(x:Float):Float {
             return abs(x)+Epsilon;
         }
@@ -100,7 +102,7 @@ class IrradianceMap extends hxsl.Shader {
         }
 
         function fromRGBD(rgbd:Vec4):Vec3 {
-            rgbd.rgb=toLinearSpace(rgbd.rgb); //(rgbd.rgb);
+            rgbd.rgb=toLinearSpace(rgbd.bgr); //(rgbd.rgb);
             return rgbd.rgb/rgbd.a;
         }
 
@@ -119,8 +121,6 @@ class IrradianceMap extends hxsl.Shader {
                 vSphericalL21 * (normal.z * normal.x) +
                 vSphericalL22 * (normal.x * normal.x - (normal.y * normal.y));
         }
-
-        var testvar:Vec4;
 
         function fragment() {
             roughness = 1. - microSurface; //float
@@ -147,8 +147,8 @@ class IrradianceMap extends hxsl.Shader {
             environmentRadiance.rgb *= vReflectionInfos.x;
             environmentRadiance.rgb *= vReflectionColor.rgb;
             environmentIrradiance *= vReflectionColor.rgb;
-            
-            //testvar = vec4(environmentRadiance.rgb, 1);
+             
+            // testvar = vec4(vec3(environmentRadiance.rgb), 1);
         }
     }
 
@@ -167,7 +167,7 @@ class IrradianceMap extends hxsl.Shader {
         
         this.vReflectionInfos.set( 1, 0 );
 
-        this.reflectionMatrix.loadValues([ -1, 0, 0, 0, 0, 1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1]);
+        this.reflectionMatrix.loadValues([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 
         this.vReflectionColor.set( 1, 1, 1 );
         this.vReflectionMicrosurfaceInfos.set( 128, 0.8000, 0 );

@@ -239,6 +239,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	function createCamera( cameraNode ) {
 		
 		var camera = new h3d.Camera();
+		camera.rightHanded = true;
 		switch cameraNode.type {
 			case CameraType.Orthographic:
 				var orthoBounds = new h3d.col.Bounds();
@@ -908,7 +909,9 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 
 	function createMaterial( materialNode ) {
 		var material = new h3d.mat.PBRSinglePass();
-		
+		material.mainPass.culling = Front;
+		trace("MATERIAL:INITIALISED!!!!!");
+
 		material.environmentBRDF = brdfTexture;
 
 		if (materialNode == null) {
@@ -920,10 +923,13 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		// var pbrTexture:h3d.shader.pbr.PropsTexture = null;
 
 		if ( materialNode.pbrMetallicRoughness != null ) {
+			trace("MATERIAL:Setting metalness/roughness");
+
 			var pbrmr = materialNode.pbrMetallicRoughness;
 			var tex:h3d.mat.Texture = null;
 
 			if ( pbrmr.baseColorTexture != null ) {
+				trace("MATERIAL:using metalness/roughness texture");
 				tex = getTexture(pbrmr.baseColorTexture.index);
 				material.texture = tex;
 			}
@@ -937,13 +943,14 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				b = pbrmr.baseColorFactor[2];
 			}
 
-			// var col = ( Std.int(a * 0xFF) << 24) | (Std.int(r * 0xFF) << 16) | (Std.int(g * 0xFF) << 8) | Std.int(b * 0xFF);
 			// if (tex == null) {
+			// 	var col = ( Std.int(a * 0xFF) << 24) | (Std.int(r * 0xFF) << 16) | (Std.int(g * 0xFF) << 8) | Std.int(b * 0xFF);
 			// 	tex = h3d.mat.Texture.fromColor( col );
 			// 	material.texture = tex;
 			// }
 
 			// var color = new h3d.Vector(r, g, b);
+			trace("MATERIAL:setting m/r baseColor: "+r+", "+g+", "+b+", "+a);
 			material.setColorRGBA( r, g, b, a );
 			// material.color.load(color);
 			// material.mainPass.addShader( new h3d.shader.PBRSinglePass() );
@@ -951,7 +958,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			// pbrValues = material.mainPass.getShader(h3d.shader.pbr.PropsValues);
 
 			#if debug_gltf
-			trace("BaseColor:0x"+StringTools.hex(col, 8));
+			trace("BaseColor:RGBA"+r+", "+g+", "+b+", "+a);
 			#end
 
 			//TODO-REMOVED FOR WEBGL1 INTEGRATION
@@ -961,52 +968,63 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				// 	pbrTexture = new h3d.shader.pbr.PropsTexture( true );
 				// 	material.mainPass.addShader( pbrTexture );
 				// }
+				trace("MATERIAL:setting reflectivity map");
 				material.reflectivityMap = getTexture(pbrmr.metallicRoughnessTexture.index);
 			}
-			// pbrValues.metalness = Reflect.hasField(pbrmr, "metallicFactor") ? pbrmr.metallicFactor : 1;
-			// pbrValues.roughness = Reflect.hasField(pbrmr, "roughnessFactor") ? pbrmr.roughnessFactor : 0;
-			
+
+			material.metalnessFactor = Reflect.hasField(pbrmr, "metallicFactor") ? pbrmr.metallicFactor : 1;
+			material.roughnessFactor = Reflect.hasField(pbrmr, "roughnessFactor") ? pbrmr.roughnessFactor : 1;
+			trace("MATERIAL:setting m/r factors: "+material.metalnessFactor+"/"+material.roughnessFactor);
 		}
 
-		if (material != null) {
 
-			if ( materialNode.normalTexture != null )
-				material.normalMap = getTexture( materialNode.normalTexture.index );
+		if ( materialNode.normalTexture != null ) {
+			trace("MATERIAL:setting normal map:");
+			material.normalMap = getTexture( materialNode.normalTexture.index );
+		}
 
-			var emit = new h3d.Vector();
-			if ( materialNode.emissiveFactor != null ) {
-				emit.r = materialNode.emissiveFactor[0];
-				emit.g = materialNode.emissiveFactor[1];
-				emit.b = materialNode.emissiveFactor[2];
-			} 
-			//TODO-REMOVED FOR WEBGL1 INTEGRATION
-			// pbrValues.emissive.set( emit.r, emit.g, emit.b );
+		var emit = new h3d.Vector();
+		if ( materialNode.emissiveFactor != null ) {
+			emit.r = materialNode.emissiveFactor[0];
+			emit.g = materialNode.emissiveFactor[1];
+			emit.b = materialNode.emissiveFactor[2];
+			trace("MATERIAL:setting emissiveFactor:"+emit.r+", "+emit.g+", "+emit.b);
+		} 
+		//TODO-REMOVED FOR WEBGL1 INTEGRATION
+		// pbrValues.emissive.set( emit.r, emit.g, emit.b );
 
-			if ( materialNode.emissiveTexture != null ) {
-				// pbrTexture.hasEmissiveMap = true;
-				material.emissiveLightMap = getTexture( materialNode.emissiveTexture.index );
-				// pbrTexture.emissive.set( emit.r, emit.g, emit.b );
-			}
+		if ( materialNode.emissiveTexture != null ) {
+			// pbrTexture.hasEmissiveMap = true;
+			material.emissiveLightMap = getTexture( materialNode.emissiveTexture.index );
+			// pbrTexture.emissive.set( emit.r, emit.g, emit.b );
+		}
 
-			if ( materialNode.occlusionTexture != null ) {
-				// pbrTexture.hasOcclusionMap = true;
-				material.occlusionMap = getTexture( materialNode.occlusionTexture.index );
-			// } else {
-			// 	if (pbrTexture != null) {
-			// 		pbrTexture.hasOcclusionMap = true;
-			// 		pbrTexture.occlusionMap = h3d.mat.Texture.fromColor( 0xFFFFFF );
-			// 	}
-			}
+		if ( materialNode.occlusionTexture != null ) {
+			trace("MATERIAL:setting occlusion map:");
+			material.occlusionMap = getTexture( materialNode.occlusionTexture.index );
+		// } else {
+		// 	if (pbrTexture != null) {
+		// 		pbrTexture.hasOcclusionMap = true;
+		// 		pbrTexture.occlusionMap = h3d.mat.Texture.fromColor( 0xFFFFFF );
+		// 	}
+		}
 
-			if ( materialNode.name != null ) material.name = materialNode.name;
-			if ( Reflect.hasField(materialNode, "doubleSided" )) material.mainPass.culling = materialNode.doubleSided ? None : Back;
+		if ( materialNode.name != null ) {
+			trace("MATERIAL:setting name:"+materialNode.name);
+			material.name = materialNode.name;
+		}
+		if ( Reflect.hasField(materialNode, "doubleSided" )) {
+			material.mainPass.culling = materialNode.doubleSided ? None : Back;
+			trace("MATERIAL:setting double-sided:"+(materialNode.doubleSided ? "True" : "False"));
+		}
 
-			#if debug_gltf
-			trace("Material:"+material.name+" m="+pbrValues.metalness+" r="+pbrValues.roughness+" o="+pbrValues.occlusion+" e="+pbrValues.emissive);
-			#end
-		} else
-			material.texture = h3d.mat.Texture.fromColor(0xFFFF0000);
-
+		if (material.texture == null) {
+			h3d.mat.Texture.fromColor(0xFF808080);
+		}
+		// #if debug_gltf
+		// trace("Material:"+material.name+" m="+pbrValues.metalness+" r="+pbrValues.roughness+" o="+pbrValues.occlusion+" e="+pbrValues.emissive);
+		// #end
+		trace("MATERIAL:creation complete:");
 		return material;
 	} 
 
@@ -1144,7 +1162,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			}
 		}
 	}
-
+	var pos = 0;
 	function getTexture( index : Int ) : h3d.mat.Texture {
 		var node = root.textures[index];
 		var img = images[node.source]; // Pre-loaded image array
@@ -1163,6 +1181,12 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 
 		#if js
 		tex.uploadBitmap( img );
+		// var tile = h2d.Tile.fromBitmap(img);
+		// var bmp = new h2d.Bitmap( tile, PbrWebGL1.s2dscene );
+		// bmp.scaleX = bmp.scaleY = 0.2;
+		// bmp.x = pos;
+		// pos += Std.int(tile.width * 0.2);
+		// trace("BMP:pso="+pos);
 		#else 
 		var pixels = img.getPixels();
 		if( pixels.width != tex.width || pixels.height != tex.height )
@@ -1194,11 +1218,13 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	];
 
 	public function loadMesh( index : Int, transform : h3d.Matrix, parent:h3d.scene.Object, nodeName:String = null ) : h3d.scene.Object {
+		trace("LoadMesh:loading mesh:");
 		var meshNode = root.meshes[ index ];
 		if (meshNode == null) {trace("meshNode returned NULL for idx:"+index); return null; }
 
 
 		var meshName = (meshNode.name != null) ? meshNode.name : (nodeName != null ? nodeName : "Mesh_"+StringTools.hex(Std.random(0x7FFFFFFF), 8));
+		trace("LoadMesh:mesh:"+meshName);
 		
 		var mesh = new h3d.scene.Object( parent );
 		mesh.name = meshName;
@@ -1221,11 +1247,17 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			var primName = meshName+"_"+primCounter++;
 
 			var meshPrim = new GltfModel( new Geometry(this, prim), this );
-			meshPrim.name = primName;	
+			meshPrim.name = primName;
+			trace("LoadMesh:meshPrim:"+meshPrim.name);	
+			
 			var mat = materials[ prim.material ];
+			mat.hasTangentBuffer = meshPrim.geom.hasTangentBuffer;
+			trace("LoadMesh:got material: hasTangentBuffer="+mat.hasTangentBuffer);
 
+			trace("LoadMesh:about to create mesh prim");
 			var primMesh = new h3d.scene.Mesh( meshPrim, mat, mesh );
 			primMesh.name = primName;
+			trace("LoadMesh:mesh primitive created");
 
 			primitives[mesh].push( primMesh );
 			
@@ -1282,6 +1314,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			nm.material.mainPass.depthWrite = true;
 			#end
 		}
+		trace("LoadMesh:mesh complete");
 		return mesh;
 	}
 

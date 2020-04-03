@@ -10,6 +10,7 @@ class EmissiveMap extends hxsl.Shader {
         
         @var var vMainUV1 : Vec2;
 
+        var uvMain:Vec2;
         var uvOffset:Vec2;
         var finalEmissive:Vec3;
 

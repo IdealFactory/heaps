@@ -40,6 +40,8 @@ class Irradiance extends hxsl.Shader {
         var viewDirectionW:Vec3;
         var normalW:Vec3;
 
+        var testvar:Vec4;
+
         function absEps(x:Float):Float {
             return abs(x)+Epsilon;
         }
@@ -104,12 +106,14 @@ class Irradiance extends hxsl.Shader {
             reflectionLOD = reflectionLOD * vReflectionMicrosurfaceInfos.y + vReflectionMicrosurfaceInfos.z;
             var requestedReflectionLOD = reflectionLOD; //float
             environmentRadiance = textureLod(reflectionSampler, reflectionCoords, requestedReflectionLOD); // sampleReflectionLod
-            environmentRadiance.rgb = fromRGBD(environmentRadiance);
+            // environmentRadiance.rgb = fromRGBD(environmentRadiance);
             environmentIrradiance = vEnvironmentIrradiance;
             environmentRadiance.rgb *= vReflectionInfos.x;
             environmentRadiance.rgb *= vReflectionColor.rgb;
             environmentIrradiance *= vReflectionColor.rgb;
-        }
+ 
+            testvar = vec4(vec3(reflectionVector.rgb), 1);
+       }
     }
 
 	public function new() {

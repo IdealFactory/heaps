@@ -9,6 +9,7 @@ class Geometry {
 	
 	public var l (default, null) : BaseLibrary;
 	public var root (default, null) : MeshPrimitive;
+	public var hasTangentBuffer:Bool = false;
 
 	var intCache:Map<String, IndexBuffer>;
 	var floatCache:Map<String, FloatBuffer>;
@@ -16,6 +17,9 @@ class Geometry {
 	public function new ( l : BaseLibrary, root : MeshPrimitive ) {
 		this.l = l;
 		this.root = root;
+
+		var accId:Null<Int> = root.attributes.get( "TANGENT" );
+		if (accId != null) hasTangentBuffer = true;
 
 		intCache = new Map<String, IndexBuffer>();
 		floatCache = new Map<String, FloatBuffer>();

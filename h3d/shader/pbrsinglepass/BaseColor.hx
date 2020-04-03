@@ -24,6 +24,9 @@ class BaseColor extends hxsl.Shader {
 
         var normalW:Vec3;
 
+        @var var vtestvar:Vec3;
+        var testvar:Vec4;
+
         function computeEnvironmentIrradiance( normal:Vec3 ):Vec3 {
             return vSphericalL00 +
                 vSphericalL1_1 * (normal.y) +
@@ -38,7 +41,7 @@ class BaseColor extends hxsl.Shader {
 
         function vertex() {
             var reflectionVector = (reflectionMatrix * vec4(vNormalW, 0)).xyz;
-            reflectionVector.z *= -1.0;
+            // reflectionVector.z *= -1.0;
             vEnvironmentIrradiance = computeEnvironmentIrradiance(reflectionVector);
             var uvUpdated = vec2(0., 0.);
         }
@@ -52,14 +55,14 @@ class BaseColor extends hxsl.Shader {
             surfaceAlbedo = vAlbedoColor.rgb; //vec3
             alpha = vAlbedoColor.a; //float
 
-            ambientOcclusionColor = vec3(1., 1., 1.); //vec3            
+            ambientOcclusionColor = vec3(1., 1., 1.); //vec3  
         }
     }
 
     public function new() {
         super();
 
-        this.vAlbedoColor.set( 1., 1., 1, 1 );
+        this.vAlbedoColor.set( 1, 1, 1, 1 );
 
         this.vSphericalL10.set( 0.0979, 0.0495, 0.0295 );
         this.vSphericalL22.set( 0.0093, -0.0337, -0.1483 );

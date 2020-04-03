@@ -16,6 +16,6 @@ class Emissive extends hxsl.Shader {
     public function new() {
         super(); 
 
-        this.vEmissiveColor.set( 1, 1, 1 );
+        this.vEmissiveColor.set( 0, 0, 0 );
     }
 }
