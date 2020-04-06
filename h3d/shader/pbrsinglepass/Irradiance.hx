@@ -112,7 +112,7 @@ class Irradiance extends hxsl.Shader {
             environmentRadiance.rgb *= vReflectionColor.rgb;
             environmentIrradiance *= vReflectionColor.rgb;
  
-            testvar = vec4(vec3(reflectionVector.rgb), 1);
+            // testvar = vec4(vec3(reflectionVector.rgb), 1);
        }
     }
 

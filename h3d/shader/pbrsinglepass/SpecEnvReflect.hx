@@ -8,6 +8,8 @@ class SpecEnvReflect extends hxsl.Shader {
         var specularEnvironmentReflectance:Vec3;
 
         var NdotVUnclamped:Float;
+
+        var testvar:Vec4;
         
         function square(value:Float):Float {
             return value*value;
@@ -21,6 +23,8 @@ class SpecEnvReflect extends hxsl.Shader {
         function fragment() {
             var seo = environmentRadianceOcclusion(ambientMonochrome, NdotVUnclamped); //float
             specularEnvironmentReflectance *= seo;
+
+            // testvar = vec4(vec3(NdotVUnclamped), 1);
         }
 	}
 }

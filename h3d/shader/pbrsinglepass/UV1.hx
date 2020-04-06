@@ -55,7 +55,7 @@ class UV1 extends hxsl.Shader {
             ambientOcclusionColor = vec3(1., 1., 1.); //vec3
             ambientInfos = vAmbientInfos;
 
-            testvar = vec4(vec3(surfaceAlbedo.rgb), 1);
+            // testvar = vec4(vec3(surfaceAlbedo.rgb), 1);
         }
     };
 

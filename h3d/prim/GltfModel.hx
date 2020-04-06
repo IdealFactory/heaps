@@ -255,7 +255,7 @@ class GltfModel extends MeshPrimitive {
 
 		addBuffer("position", h3d.Buffer.ofFloats(verts, 3));
 		if( norms != null ) addBuffer("normal", h3d.Buffer.ofFloats(norms, 3));
-		if( tangents != null ) addBuffer("tangent", h3d.Buffer.ofFloats(tangents, 3));
+		if( tangents != null ) addBuffer("tangent", h3d.Buffer.ofFloats(tangents, 4));
 		addBuffer("uv", h3d.Buffer.ofFloats(uvs, 2));
 		indexes = h3d.Indexes.alloc(idx);
 	}

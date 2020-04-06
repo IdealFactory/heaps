@@ -24,6 +24,7 @@ class Tangent extends hxsl.Shader {
         var normalW:Vec3;
         var gmv:Mat4;
         var TBN:Mat3;
+        var testvar:Vec4;
 
         function perturbNormal(cotangentFrame:Mat3, textureSample:Vec3, scale:Float):Vec3 {
             textureSample = textureSample * 2.0 - 1.0;
@@ -32,19 +33,17 @@ class Tangent extends hxsl.Shader {
         }
 
         function vertex() {
-            var tangentUpdated = vec4(input.tangent.x, input.tangent.y, input.tangent.z, input.tangent.w);
-            var tbnNormal = normalize(input.normal * gmv.mat3());
-            var tbnTangent = normalize(tangentUpdated.xyz * vec3(1, -1, 1));
+            var tangentUpdated = input.tangent;
+            var tbnNormal = normalize(normalUpdated);
+            var tbnTangent = normalize(tangentUpdated.xyz);
             var tbnBitangent = cross(tbnNormal, tbnTangent) * tangentUpdated.w;
-            // vTBN = mat3( vec3(1, 0 , 0),vec3(0, -1, 0), vec3(0, 0 , 1) ) * finalWorld.mat3() * mat3(tbnTangent, tbnBitangent, tbnNormal);
             vTBN = finalWorld.mat3() * mat3(tbnTangent, tbnBitangent, tbnNormal);
         }
 
         function fragment() {
             TBN = vTBN;
-            var b = bumpSampler.get(vMainUV1);
-            var pt = perturbNormal(TBN, b.xyz, vBumpInfos.y);
-            normalW = pt.xyz;//vec3( pt.x, pt.y, pt.z);
+            var pt = perturbNormal(TBN, bumpSampler.get(vMainUV1).xyz, vBumpInfos.y);
+            normalW = vec3(pt.x, -pt.z, -pt.y);
         }
     };
 

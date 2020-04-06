@@ -11,6 +11,8 @@ class SpecEnvReflectMap extends hxsl.Shader {
 
         var NdotVUnclamped:Float;
 
+        var testvar:Vec4;
+
         function square(value:Float):Float {
             return value*value;
         }
@@ -31,6 +33,8 @@ class SpecEnvReflectMap extends hxsl.Shader {
             specularEnvironmentReflectance *= seo;
             var eho = environmentHorizonOcclusion(-viewDirectionW, normalW); //float
             specularEnvironmentReflectance *= eho;
+
+            //testvar = vec4(vec3(seo), 1);
         }
 	}
 }

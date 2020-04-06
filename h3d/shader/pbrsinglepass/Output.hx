@@ -91,8 +91,8 @@ class Output extends hxsl.Shader {
             finalColor = max(finalColor, 0.0);
             finalColor = applyImageProcessing(finalColor);
             finalColor.a *= visibility;
-            // output.color = vec4(testvar.rgb, 1);
-            output.color = finalColor;//vec4(testvar.rgb, 1);
+            // output.color = vec4(environmentRadiance.rgb, 1);
+            output.color = finalColor;
         }
     }
     

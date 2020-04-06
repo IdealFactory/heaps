@@ -48,7 +48,7 @@ class FinalCombination extends hxsl.Shader {
             finalAmbient = vAmbientColor; //vec3
             finalAmbient *= surfaceAlbedo.rgb;
 
-            // testvar = 
+            // testvar = finalRadiance
         }
     }
     

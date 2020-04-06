@@ -102,7 +102,7 @@ class IrradianceMap extends hxsl.Shader {
         }
 
         function fromRGBD(rgbd:Vec4):Vec3 {
-            rgbd.rgb=toLinearSpace(rgbd.bgr); //(rgbd.rgb);
+            rgbd.rgb=toLinearSpace(rgbd.rgb); //(rgbd.rgb);
             return rgbd.rgb/rgbd.a;
         }
 
@@ -140,7 +140,7 @@ class IrradianceMap extends hxsl.Shader {
             //TODO-NOTE: toRGBD is only required for HDR type env textures
             // environmentRadiance = toRGBD(textureLod(reflectionSampler, reflectionCoords.rgb, requestedReflectionLOD).rgb); // sampleReflectionLod
             environmentRadiance = textureLod(reflectionSampler, reflectionCoords.rgb, requestedReflectionLOD); // sampleReflectionLod
-            // environmentRadiance.rgb = fromRGBD(environmentRadiance);
+            environmentRadiance.rgb = fromRGBD(environmentRadiance);
             var irradianceVector = vec3((reflectionMatrix * vec4(normalW, 0)).rgb).xyz; //vec3 //vec3(reflectionMatrix * vec4(normalW, 0)).xyz
             irradianceVector.z *= -1.0;
             environmentIrradiance = computeEnvironmentIrradiance(irradianceVector);
@@ -148,7 +148,7 @@ class IrradianceMap extends hxsl.Shader {
             environmentRadiance.rgb *= vReflectionColor.rgb;
             environmentIrradiance *= vReflectionColor.rgb;
              
-            // testvar = vec4(vec3(environmentRadiance.rgb), 1);
+            // testvar = vec4(vec3(normalW.rgb), 1);
         }
     }
 

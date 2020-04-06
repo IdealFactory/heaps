@@ -43,9 +43,9 @@ class NormalMap extends hxsl.Shader {
 
 		function fragment() {
             normalW = normalize(vNormalW);
-            var TBN = cotangent_frameWithTS(normalW, positionW, vMainUV1, vTangentSpaceParams); //mat3 // vBumpUV -> vMainUV1
-            var bmp = bumpSampler.get(vMainUV1);
-            normalW = perturbNormal(TBN, bmp.xyz, vBumpInfos.y);
+            // var TBN = cotangent_frameWithTS(normalW, positionW, vMainUV1, vTangentSpaceParams); //mat3 // vBumpUV -> vMainUV1
+            // var bmp = bumpSampler.get(vMainUV1);
+            // normalW = perturbNormal(TBN, bmp.xyz, vBumpInfos.y);
         }
     };
 
