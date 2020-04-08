@@ -628,14 +628,14 @@ class GlslOut {
 		intelDriverFix = true;
 		#end
 
-		#if (!desktop)
-		decl("precision mediump float;");
-		#end
-
 		if( s.funs.length != 1 ) throw "assert";
 		var f = s.funs[0];
 		isVertex = f.kind == Vertex;
 		initVars(s);
+
+		#if (!desktop)
+		decl("precision " + (isVertex ? "highp" : "mediump") + " float;");
+		#end
 
 		var tmp = buf;
 		buf = new StringBuf();
