@@ -4,8 +4,6 @@ class Output extends hxsl.Shader {
 
 	static var SRC = {
 
-        // @param var environmentBrdfSampler : Sampler2D;
-
         @param var vLightingIntensity : Vec4;
         @param var visibility : Float;
         @param var exposureLinear : Float;
@@ -19,39 +17,10 @@ class Output extends hxsl.Shader {
         var alpha:Float;
         var finalAmbient:Vec3;
         var finalDiffuse:Vec3;
-        var finalSpecular:Vec3;
         var finalIrradiance:Vec3;
-        var finalRadiance:Vec3;
         var finalRadianceScaled:Vec3;
         var finalSpecularScaled:Vec3;
         var finalEmissive:Vec3;
-
-        /// DEBUG
-        var environmentRadiance:Vec4;
-        var specularEnvironmentReflectance:Vec3;
-        var specularBase:Vec3;
-        var diffuseBase:Vec3;
-        var energyConservationFactor:Vec3;
-        var environmentBrdf:Vec3;
-        var NdotV:Float;
-        var NdotVUnclamped:Float;
-        
-        var testvar:Vec4;
-        var viewDirectionW:Vec3;
-        var normalW:Vec3;
-
-        function fromRGBD(rgbd:Vec4):Vec3 {
-            rgbd.rgb=toLinearSpace(rgbd.rgb);
-            return rgbd.rgb/rgbd.a;
-        }
-
-        function toLinearSpace(color:Vec3):Vec3 {
-            return pow(color,vec3(LinearEncodePowerApprox));
-        }
-
-        var LinearEncodePowerApprox:Float;
-        
-        //END-DEBUG
 
         var output : {
 			color : Vec4
@@ -91,7 +60,6 @@ class Output extends hxsl.Shader {
             finalColor = max(finalColor, 0.0);
             finalColor = applyImageProcessing(finalColor);
             finalColor.a *= visibility;
-            // output.color = vec4(environmentRadiance.rgb, 1);
             output.color = finalColor;
         }
     }

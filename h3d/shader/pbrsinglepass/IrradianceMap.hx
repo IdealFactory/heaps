@@ -22,7 +22,6 @@ class IrradianceMap extends hxsl.Shader {
 
         @var var vEyePosition : Vec3;
         @var var vPositionW : Vec3;
-        // @var var vNormalW : Vec3;
         
         var MINIMUMVARIANCE : Float;
         var LinearEncodePowerApprox : Float;// = 2.2;
@@ -38,8 +37,6 @@ class IrradianceMap extends hxsl.Shader {
         
         var viewDirectionW:Vec3;
         var normalW:Vec3;
-
-        var testvar:Vec4;
 
         function absEps(x:Float):Float {
             return abs(x)+Epsilon;
@@ -147,8 +144,6 @@ class IrradianceMap extends hxsl.Shader {
             environmentRadiance.rgb *= vReflectionInfos.x;
             environmentRadiance.rgb *= vReflectionColor.rgb;
             environmentIrradiance *= vReflectionColor.rgb;
-             
-            // testvar = vec4(vec3(normalW.rgb), 1);
         }
     }
 

@@ -24,9 +24,6 @@ class BaseColor extends hxsl.Shader {
 
         var normalW:Vec3;
 
-        @var var vtestvar:Vec3;
-        var testvar:Vec4;
-
         function computeEnvironmentIrradiance( normal:Vec3 ):Vec3 {
             return vSphericalL00 +
                 vSphericalL1_1 * (normal.y) +
@@ -41,7 +38,6 @@ class BaseColor extends hxsl.Shader {
 
         function vertex() {
             var reflectionVector = (reflectionMatrix * vec4(vNormalW, 0)).xyz;
-            // reflectionVector.z *= -1.0;
             vEnvironmentIrradiance = computeEnvironmentIrradiance(reflectionVector);
             var uvUpdated = vec2(0., 0.);
         }
@@ -64,14 +60,15 @@ class BaseColor extends hxsl.Shader {
 
         this.vAlbedoColor.set( 1, 1, 1, 1 );
 
-        this.vSphericalL10.set( 0.0979, 0.0495, 0.0295 );
-        this.vSphericalL22.set( 0.0093, -0.0337, -0.1483 );
-        this.vSphericalL11.set( 0.0867, 0.1087, 0.1688 );
         this.vSphericalL00.set( 0.5444, 0.4836, 0.6262 );
+        this.vSphericalL10.set( 0.0979, 0.0495, 0.0295 );
         this.vSphericalL20.set( 0.0062, -0.0018, -0.0101 );
+        this.vSphericalL11.set( 0.0867, 0.1087, 0.1688 );
         this.vSphericalL21.set( 0.0408, 0.0495, 0.0935 );
-        this.vSphericalL2_2.set( 0.0154, 0.0403, 0.1151 );
+        this.vSphericalL22.set( 0.0093, -0.0337, -0.1483 );
+        this.vSphericalL1_1.set( 0.3098, 0.3471, 0.6107 );
         this.vSphericalL2_1.set( 0.0442, 0.0330, 0.0402 );
+        this.vSphericalL2_2.set( 0.0154, 0.0403, 0.1151 );
 
         this.reflectionMatrix.loadValues([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 

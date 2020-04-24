@@ -22,7 +22,6 @@ class Irradiance extends hxsl.Shader {
 
         @var var vEyePosition : Vec3;
         @var var vPositionW : Vec3; 
-        // @var var vNormalW : Vec3;
         @var var vEnvironmentIrradiance:Vec3;
 
         var MINIMUMVARIANCE : Float;
@@ -39,8 +38,6 @@ class Irradiance extends hxsl.Shader {
         
         var viewDirectionW:Vec3;
         var normalW:Vec3;
-
-        var testvar:Vec4;
 
         function absEps(x:Float):Float {
             return abs(x)+Epsilon;
@@ -106,27 +103,26 @@ class Irradiance extends hxsl.Shader {
             reflectionLOD = reflectionLOD * vReflectionMicrosurfaceInfos.y + vReflectionMicrosurfaceInfos.z;
             var requestedReflectionLOD = reflectionLOD; //float
             environmentRadiance = textureLod(reflectionSampler, reflectionCoords, requestedReflectionLOD); // sampleReflectionLod
-            // environmentRadiance.rgb = fromRGBD(environmentRadiance);
+            // environmentRadiance.rgb = fromRGBD(environmentRadiance); // When using RGBD HDR images
             environmentIrradiance = vEnvironmentIrradiance;
             environmentRadiance.rgb *= vReflectionInfos.x;
             environmentRadiance.rgb *= vReflectionColor.rgb;
             environmentIrradiance *= vReflectionColor.rgb;
- 
-            // testvar = vec4(vec3(reflectionVector.rgb), 1);
        }
     }
 
 	public function new() {
 		super();
         
-        this.vSphericalL10.set( 0.0979, 0.0495, 0.0295 );
-        this.vSphericalL22.set( 0.0093, -0.0337, -0.1483 );
-        this.vSphericalL11.set( 0.0867, 0.1087, 0.1688 );
         this.vSphericalL00.set( 0.5444, 0.4836, 0.6262 );
+        this.vSphericalL10.set( 0.0979, 0.0495, 0.0295 );
         this.vSphericalL20.set( 0.0062, -0.0018, -0.0101 );
+        this.vSphericalL11.set( 0.0867, 0.1087, 0.1688 );
         this.vSphericalL21.set( 0.0408, 0.0495, 0.0935 );
-        this.vSphericalL2_2.set( 0.0154, 0.0403, 0.1151 );
+        this.vSphericalL22.set( 0.0093, -0.0337, -0.1483 );
+        this.vSphericalL1_1.set( 0.3098, 0.3471, 0.6107 );
         this.vSphericalL2_1.set( 0.0442, 0.0330, 0.0402 );
+        this.vSphericalL2_2.set( 0.0154, 0.0403, 0.1151 );
 
         this.vReflectionInfos.set( 1, 0 );
 

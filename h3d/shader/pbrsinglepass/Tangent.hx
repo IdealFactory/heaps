@@ -22,10 +22,8 @@ class Tangent extends hxsl.Shader {
         var finalWorld:Mat4;
         var normalUpdated:Vec3;
         var normalW:Vec3;
-        var gmv:Mat4;
         var TBN:Mat3;
-        var testvar:Vec4;
-
+        
         function perturbNormal(cotangentFrame:Mat3, textureSample:Vec3, scale:Float):Vec3 {
             textureSample = textureSample * 2.0 - 1.0;
             textureSample = normalize(vec3(textureSample.x, textureSample.y, textureSample.z) * vec3(scale, scale, 1.0));

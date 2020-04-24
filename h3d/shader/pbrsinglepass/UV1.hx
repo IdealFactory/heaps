@@ -13,7 +13,6 @@ class UV1 extends hxsl.Shader {
         
         @param var vAlbedoInfos : Vec2;                                 // uniform vec2 vAlbedoInfos;
         @param var vAmbientInfos : Vec4;                                // uniform vec4 vAmbientInfos;
-        @param var vReflectivityInfos : Vec3;                           // uniform vec3 vReflectivityInfos;
 
         @param var vAlbedoColor : Vec4;                 // uniform vec4 vAlbedoColor;
 
@@ -29,7 +28,6 @@ class UV1 extends hxsl.Shader {
         }
 
         // Fragment vars
-        // var viewDirectionW:Vec3;
         var surfaceAlbedo:Vec3;
         var alpha:Float;
         var ambientOcclusionColor:Vec3;
@@ -37,7 +35,6 @@ class UV1 extends hxsl.Shader {
         var ambientInfos:Vec4;
         var uvMain:Vec2;
 
-        // var vAlbedoColor:Vec4;
         var LinearEncodePowerApprox : Float;// = 2.2;
 
         var testvar:Vec4;
@@ -47,16 +44,14 @@ class UV1 extends hxsl.Shader {
             alpha = vAlbedoColor.a; //float
 
             uvMain = vMainUV1;
-            //uvMain.x = 1. - uvMain.x;
+
             var albedoTexture = albedoSampler.get(uvMain + uvOffset); //vec4 // vAlbedoUV -> vMainUV1
             surfaceAlbedo *= toLinearSpace(albedoTexture.rgb);
             surfaceAlbedo *= vAlbedoInfos.y;
 
             ambientOcclusionColor = vec3(1., 1., 1.); //vec3
             ambientInfos = vAmbientInfos;
-
-            // testvar = vec4(vec3(surfaceAlbedo.rgb), 1);
-        }
+       }
     };
 
 	public function new() {
@@ -65,7 +60,6 @@ class UV1 extends hxsl.Shader {
         this.vAlbedoColor.set( 1, 1, 1, 1 );
         this.vAlbedoInfos.set( 0, 1 );
         this.vAmbientInfos.set( 0, 1, 1, 0 );
-        this.vReflectivityInfos.set( 0, 1, 1 );
 
     }
 }

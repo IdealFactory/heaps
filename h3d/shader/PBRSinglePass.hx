@@ -102,9 +102,6 @@ class PBRSinglePass extends hxsl.Shader {
         var gmv:Mat4;
         var flip:Mat4;
 
-        var testvar:Vec4;
-        @var var  vtestvar:Vec3;
-
 		function __init__() {
             flip = mat4( vec4(1, 0, 0, 0), vec4(0, -1, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, 0, 1));
             gmv = global.modelView * flip;
@@ -160,13 +157,6 @@ class PBRSinglePass extends hxsl.Shader {
     
             viewDirectionW = normalize(vEyePosition.xyz - positionW); //vec3 // 
             uvOffset = vec2(0.0, 0.0); //vec2
-
-            //testvar = vec4(viewDirectionW, 1);
-
-			// output.depth = depth;
-			// output.normal = transformedNormal;
-			// output.worldDist = worldDist;
-
         }
 	};
 
