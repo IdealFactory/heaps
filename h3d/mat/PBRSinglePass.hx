@@ -36,54 +36,29 @@ class PBRSinglePass extends Material {
 
 		super();
 
-        trace("AfterConstructorSuper:");
-        traceSL();
-
         pbrshader = new h3d.shader.PBRSinglePass();
         envLighting = new h3d.shader.pbrsinglepass.EnvLighting();
         finalCombination = new h3d.shader.pbrsinglepass.FinalCombination();
         output = new h3d.shader.pbrsinglepass.Output();
-        
-        // var col = h3d.mat.Texture.fromColor(0xFFFFFFFF);
-        // normalMap = col;
-        // environmentBRDF = col;
-        // reflectivityMap = col;
-        // emissiveMap = col;
-        // occlusionMap = col;
-        // reflectionCubeMap = h3d.mat.Texture.defaultCubeTexture();
-            
+                    
         var bm = mainPass.getShader( h3d.shader.BaseMesh );
         if (bm != null) {
             mainPass.removeShader( bm );
             baseMeshOffset = 0;
         }
 
-        mainPass.addShaderAtIndex(pbrshader, baseMeshOffset); // 1
-        addNormal();// mainPass.addShader(baseColor); 20 
-        addBaseColor();// mainPass.addShader(baseColor); 20 
-        addAmbientOcculsion();// mainPass.addShader(ambientOcclusion or ambientOcclusionMap); 30 
-        addSurface();// mainPass.addShader(surface or surfaceMap); 40 
-        addIrradiance();// mainPass.addShader(irradiance or irradianceMap); 50
-        mainPass.addShaderAtIndex(envLighting, 5 + baseMeshOffset); // 60
-        addAmbientMonochrome();// mainPass.addShader(ambientMonochrome or ambientMonochromeLum); 70
-        addSpecEnvReflect();// mainPass.addShader(specEnvReflect or specEnvReflectMap); 80
-        mainPass.addShaderAtIndex(finalCombination, 8 + baseMeshOffset); // 90
-        addEmissive(); // 110
-        mainPass.addShaderAtIndex(output, 10 + baseMeshOffset); // 110
-        
-        // mainPass.addShaderAtIndex( new h3d.shader.pbrsinglepass.Debug(), 11 ); // 110
-        
-
-        // if (normal!=null) addNormal();
-        // if (uv1==null) addBaseColor(); else addUV1();
-        // if (ambientOcclusionMap==null) addAmbientOcculsion(); else addAmbientOcculsionMap();
-        // if (surfaceMap==null) addSurface(); else addSurfaceMap();
-        // if (irradianceMap==null) addIrradiance(); else addIrradianceMap();
-        // addSpecEnvReflectMap();
-        // if (emissive!=null) addEmissiveMap();
-
-        trace("EndOfContructor:");
-        traceSL();
+        mainPass.addShaderAtIndex(pbrshader, baseMeshOffset);
+        addNormal();
+        addBaseColor();
+        addAmbientOcculsion();
+        addSurface();
+        addIrradiance();
+        mainPass.addShaderAtIndex(envLighting, 5 + baseMeshOffset);
+        addAmbientMonochrome();
+        addSpecEnvReflect();
+        mainPass.addShaderAtIndex(finalCombination, 8 + baseMeshOffset);
+        addEmissive();
+        mainPass.addShaderAtIndex(output, 10 + baseMeshOffset);
     }
 
     public var environmentBRDF(get, set) : h3d.mat.Texture;
@@ -137,11 +112,9 @@ class PBRSinglePass extends Material {
         var mr = surface.vReflectivityColor;
         if (surface!=null) {
             surface.vReflectivityColor.x = val;
-            trace("Surface:Metalness:val="+val+" vector:"+surface.vReflectivityColor);
         };
         if (surfaceMap!=null) {
             surfaceMap.vReflectivityColor.x = val;
-            trace("SurfaceMap:Metalness:val="+val+" vector:"+surfaceMap.vReflectivityColor);
         };
         return val;
     }
@@ -151,12 +124,9 @@ class PBRSinglePass extends Material {
         var mr = surface.vReflectivityColor;
         if (surface!=null) {
             surface.vReflectivityColor.y = val;
-            trace("Surface:Roughness:val="+val+" vector:"+surface.vReflectivityColor);
         };
         if (surfaceMap!=null) {
             surfaceMap.vReflectivityColor.y = val;
-            // surfaceMap.vReflectivityColor.set( mr.x, val, mr.z, mr.w );
-            trace("SurfaceMap:Roughness:val="+val+" vector:"+surfaceMap.vReflectivityColor);
         };
         return val;
     }
@@ -226,13 +196,8 @@ class PBRSinglePass extends Material {
 
         if( uv1 != null )
             uv1.vAlbedoColor.set(r, g, b, a);
-        trace("SetColorRGBA:"+r+", "+g+", "+b+", "+a);
     }
-
-    function traceSL() {
-        @:privateAccess shaderList( mainPass.shaders );
-    }
-    
+   
     function shaderList(sl:hxsl.ShaderList, ind:Int=0){
         if (sl!=null) {
             var txt = [ for (i in 0...ind) "  " ].join('');
@@ -244,8 +209,6 @@ class PBRSinglePass extends Material {
     function addBaseColor() {
         baseColor = new h3d.shader.pbrsinglepass.BaseColor();
         mainPass.addShaderAtIndex(baseColor, 2+baseMeshOffset);
-        trace("addBaseColor:");
-        traceSL();
     }
 
     function addUV1() {
@@ -257,15 +220,11 @@ class PBRSinglePass extends Material {
             uv1 = new h3d.shader.pbrsinglepass.UV1();
         }
         mainPass.addShaderAtIndex(uv1, 2+baseMeshOffset);
-        trace("addUV1:");
-        traceSL();
     }
 
     function addNormal() {
         normal = new h3d.shader.pbrsinglepass.Normal();
         mainPass.addShaderAtIndex(normal, 1+baseMeshOffset);
-        trace("addNormal:");
-        traceSL();
     }
 
     function addNormalMap() {
@@ -277,8 +236,6 @@ class PBRSinglePass extends Material {
             normalMapping = new h3d.shader.pbrsinglepass.NormalMap();
         }
         mainPass.addShaderAtIndex(normalMapping, 1+baseMeshOffset);
-        trace("addNormalMap:");
-        traceSL();
     }
 
     function addTangent() {
@@ -297,22 +254,16 @@ class PBRSinglePass extends Material {
             }
         }
         mainPass.addShaderAtIndex(tangent, 1+baseMeshOffset);
-        trace("addTangent:");
-        traceSL();
     }
 
     function addAmbientOcculsion() {
         ambientOcclusion = new h3d.shader.pbrsinglepass.AmbientOcclusion();
         mainPass.addShaderAtIndex(ambientOcclusion, 3+baseMeshOffset);
-        trace("addAmbientOcculsion:");
-        traceSL();
     }
 
     function addAmbientMonochrome() {
         ambientMonochrome = new h3d.shader.pbrsinglepass.AmbientMonochrome();
         mainPass.addShaderAtIndex(ambientMonochrome, 5+baseMeshOffset);
-        trace("addAmbientMonochrome:");
-        traceSL();
     }
 
     function addAmbientOcculsionMap() {
@@ -329,15 +280,11 @@ class PBRSinglePass extends Material {
         }
         ambientMonochromeLum = new h3d.shader.pbrsinglepass.AmbientMonochromeLum();
         mainPass.addShaderAtIndex(ambientMonochromeLum, 5+baseMeshOffset);
-        trace("addAmbientOcculsionMap:");
-        traceSL();
     }
 
     function addSurface() {
         surface = new h3d.shader.pbrsinglepass.Surface();
         mainPass.addShaderAtIndex(surface, 4+baseMeshOffset);
-        trace("addSurface:");
-        traceSL();
     }
 
     function addSurfaceMap() {
@@ -351,15 +298,11 @@ class PBRSinglePass extends Material {
                 surfaceMap.vReflectivityColor.set( old.vReflectivityColor.x, old.vReflectivityColor.y, old.vReflectivityColor.z, old.vReflectivityColor.w ); 
         }
         mainPass.addShaderAtIndex(surfaceMap, 4+baseMeshOffset);
-        trace("addSurfaceMap:");
-        traceSL();
     }
 
     function addIrradiance() {
         irradiance = new h3d.shader.pbrsinglepass.Irradiance();
         mainPass.addShaderAtIndex(irradiance, 5+baseMeshOffset);
-        trace("addIrradiance:");
-        traceSL();
     }
 
     function addIrradianceMap() {
@@ -371,16 +314,12 @@ class PBRSinglePass extends Material {
             irradianceMap = new h3d.shader.pbrsinglepass.IrradianceMap();
         }
         mainPass.addShaderAtIndex(irradianceMap, 5+baseMeshOffset);
-        trace("addIrradianceMap:");
-        traceSL();
 
     }
 
     function addSpecEnvReflect() {
         specEnvReflect = new h3d.shader.pbrsinglepass.SpecEnvReflect();
         mainPass.addShaderAtIndex(specEnvReflect, 6+baseMeshOffset);
-        trace("addSpecEnvReflect:");
-        traceSL();
     }
 
     function addSpecEnvReflectMap() {
@@ -392,15 +331,11 @@ class PBRSinglePass extends Material {
             specEnvReflectMap = new h3d.shader.pbrsinglepass.SpecEnvReflectMap();
         }
         mainPass.addShaderAtIndex(specEnvReflectMap, 6+baseMeshOffset);
-        trace("addSpecEnvReflectMap:");
-        traceSL();
     }
 
     function addEmissive() {
         emissive = new h3d.shader.pbrsinglepass.Emissive();
         mainPass.addShaderAtIndex(emissive, 10+baseMeshOffset);
-        trace("addEmissive:");
-        traceSL();
     }
 
     function addEmissiveMap() {
@@ -412,11 +347,5 @@ class PBRSinglePass extends Material {
             emissiveMap = new h3d.shader.pbrsinglepass.EmissiveMap();
         }
         mainPass.addShaderAtIndex(emissiveMap, 10+baseMeshOffset);
-        trace("addEmissiveMap:");
-        traceSL();
-    }
-
-    override function refreshProps() {
-        // pbrshader.vEyePosition.set( [] );
     }
 }
