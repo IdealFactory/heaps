@@ -5,6 +5,7 @@ class PBRSinglePass extends Material {
 
 	public var pbrshader : h3d.shader.PBRSinglePass;
 	public var baseColor : h3d.shader.pbrsinglepass.BaseColor;
+	public var baseColorUV : h3d.shader.pbrsinglepass.BaseColorUV;
 	public var normal : h3d.shader.pbrsinglepass.Normal;
 	public var normalMapping : h3d.shader.pbrsinglepass.NormalMap;
 	public var tangent : h3d.shader.pbrsinglepass.Tangent;
@@ -211,12 +212,27 @@ class PBRSinglePass extends Material {
         mainPass.addShaderAtIndex(baseColor, 2+baseMeshOffset);
     }
 
-    function addUV1() {
-        var old = mainPass.getShader( h3d.shader.pbrsinglepass.BaseColor );
-        if (old != null) {
-            mainPass.removeShader( old );
+    function addBaseColorUV() {
+        var oldBC = mainPass.getShader( h3d.shader.pbrsinglepass.BaseColor );
+        if (oldBC != null) {
+            mainPass.removeShader( oldBC );
         }
-        if (uv1 == null) {
+        if (baseColorUV==null) {
+            baseColorUV = new h3d.shader.pbrsinglepass.BaseColorUV();
+        }
+        mainPass.addShaderAtIndex(baseColorUV, 2+baseMeshOffset);
+    }
+
+    function addUV1() {
+        var oldBC = mainPass.getShader( h3d.shader.pbrsinglepass.BaseColor );
+        if (oldBC != null) {
+            mainPass.removeShader( oldBC );
+        }
+        var oldBCUV = mainPass.getShader( h3d.shader.pbrsinglepass.BaseColorUV );
+        if (oldBCUV != null) {
+            mainPass.removeShader( oldBCUV );
+        }
+       if (uv1 == null) {
             uv1 = new h3d.shader.pbrsinglepass.UV1();
         }
         mainPass.addShaderAtIndex(uv1, 2+baseMeshOffset);
@@ -228,6 +244,7 @@ class PBRSinglePass extends Material {
     }
 
     function addNormalMap() {
+        if (uv1 == null) addBaseColorUV();
         var old = mainPass.getShader( h3d.shader.pbrsinglepass.Normal );
         if (old != null) {
             mainPass.removeShader( old );
@@ -239,6 +256,7 @@ class PBRSinglePass extends Material {
     }
 
     function addTangent() {
+        if (uv1 == null) addBaseColorUV();
         var oldN = mainPass.getShader( h3d.shader.pbrsinglepass.Normal );
         var oldNM = mainPass.getShader( h3d.shader.pbrsinglepass.NormalMap );
         if (oldN != null) {
@@ -267,6 +285,7 @@ class PBRSinglePass extends Material {
     }
 
     function addAmbientOcculsionMap() {
+        if (uv1 == null) addBaseColorUV();
         var oldAO = mainPass.getShader( h3d.shader.pbrsinglepass.AmbientOcclusion );
         if (oldAO != null) {
             mainPass.removeShader( oldAO );
@@ -288,6 +307,7 @@ class PBRSinglePass extends Material {
     }
 
     function addSurfaceMap() {
+        if (uv1 == null) addBaseColorUV();
         var old = mainPass.getShader( h3d.shader.pbrsinglepass.Surface );
         if (old != null) {
             mainPass.removeShader( old );
@@ -339,6 +359,7 @@ class PBRSinglePass extends Material {
     }
 
     function addEmissiveMap() {
+        if (uv1 == null) addBaseColorUV();
         var old = mainPass.getShader( h3d.shader.pbrsinglepass.Emissive );
         if (old != null) {
             mainPass.removeShader( old );

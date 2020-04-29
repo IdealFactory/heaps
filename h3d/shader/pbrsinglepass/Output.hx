@@ -22,9 +22,11 @@ class Output extends hxsl.Shader {
         var finalSpecularScaled:Vec3;
         var finalEmissive:Vec3;
 
-        var output : {
-			color : Vec4
-		};
+        // var output : {
+		// 	color : Vec4
+        // };
+        
+        var pixelColor : Vec4;
 
         function saturateVec3(x:Vec3):Vec3 { 
             return clamp(x,0.0,1.0);
@@ -60,7 +62,7 @@ class Output extends hxsl.Shader {
             finalColor = max(finalColor, 0.0);
             finalColor = applyImageProcessing(finalColor);
             finalColor.a *= visibility;
-            output.color = finalColor;
+            pixelColor = finalColor;
         }
     }
     
