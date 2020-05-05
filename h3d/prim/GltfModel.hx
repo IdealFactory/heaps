@@ -23,13 +23,7 @@ class GltfModel extends MeshPrimitive {
 	}
 
 	override public function triCount() : Int {
-		// if (tcount == -1) {
-		// 	tcount = 0;
-		// 	for ( prim in geom.root.primitives ) {
-		// 		tcount += Std.int(geom.l.root.accessors[prim.indices].count / 3);
-		// 	}
-		// }
-		return tcount;
+		return Std.int( geom.getIndices().length / 3 );
 	}
 
 	override public function vertexCount():Int

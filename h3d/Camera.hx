@@ -43,9 +43,13 @@ class Camera {
 
 	public var frustum(default, null) : h3d.col.Frustum;
 
+	public var isYUp:Bool = false;
+
 	var minv : Matrix;
 	var miview : Matrix;
 	var needInv : Bool;
+	var yUpFlip : Matrix;
+	var yUpInv : Matrix;
 
 	public function new( fovY = 25., zoom = 1., screenRatio = 1.333333, zNear = 0.02, zFar = 4000., rightHanded = false ) {
 		this.fovY = fovY;
@@ -60,6 +64,9 @@ class Camera {
 		m = new Matrix();
 		mcam = new Matrix();
 		mproj = new Matrix();
+		yUpFlip = new h3d.Matrix();
+		yUpFlip.loadValues( [ 1, 0, 0, 0, 0, -1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1] );
+		yUpInv = new h3d.Matrix();
 		frustum = new h3d.col.Frustum();
 		update();
 	}
@@ -143,7 +150,8 @@ class Camera {
 	**/
 	public function unproject( screenX : Float, screenY : Float, camZ ) {
 		var p = new h3d.Vector(screenX, screenY, camZ);
-		p.project(getInverseViewProj());
+		if (isYUp) yUpInv.multiply( getInverseViewProj(), yUpFlip );
+		p.project(isYUp ? yUpInv : getInverseViewProj());
 		return p;
 	}
 
