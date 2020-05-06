@@ -369,4 +369,70 @@ class PBRSinglePass extends Material {
         }
         mainPass.addShaderAtIndex(emissiveMap, 10+baseMeshOffset);
     }
+
+    public function vSphericalL00(vx:Float, vy:Float, vz:Float) {
+        baseColor.vSphericalL00.set(vx, vy, vz); 
+        if (irradiance!=null) irradiance.vSphericalL00.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphericalL00.set(vx, vy, vz); 
+    }
+
+    public function vSphericalL10(vx:Float, vy:Float, vz:Float) {
+        baseColor.vSphericalL10.set(vx, vy, vz); 
+        if (irradiance!=null) irradiance.vSphericalL10.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphericalL10.set(vx, vy, vz); 
+    }
+
+    public function vSphericalL20(vx:Float, vy:Float, vz:Float) {
+        baseColor.vSphericalL20.set(vx, vy, vz); 
+        if (irradiance!=null) irradiance.vSphericalL20.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphericalL20.set(vx, vy, vz); 
+    }
+
+    public function vSphericalL11(vx:Float, vy:Float, vz:Float) {
+        baseColor.vSphericalL11.set(vx, vy, vz); 
+        if (irradiance!=null) irradiance.vSphericalL11.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphericalL11.set(vx, vy, vz); 
+    }
+
+    public function vSphericalL21(vx:Float, vy:Float, vz:Float) {
+        baseColor.vSphericalL21.set(vx, vy, vz); 
+        if (irradiance!=null) irradiance.vSphericalL21.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphericalL21.set(vx, vy, vz); 
+    }
+
+    public function vSphericalL22(vx:Float, vy:Float, vz:Float) {
+        baseColor.vSphericalL22.set(vx, vy, vz); 
+        if (irradiance!=null) irradiance.vSphericalL22.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphericalL22.set(vx, vy, vz); 
+    }
+
+    public function vSphericalL1_1(vx:Float, vy:Float, vz:Float) {
+        baseColor.vSphericalL1_1.set(vx, vy, vz); 
+        if (irradiance!=null) irradiance.vSphericalL1_1.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphericalL1_1.set(vx, vy, vz); 
+    }
+
+    public function vSphericalL2_1(vx:Float, vy:Float, vz:Float) {
+        baseColor.vSphericalL2_1.set(vx, vy, vz); 
+        if (irradiance!=null) irradiance.vSphericalL2_1.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphericalL2_1.set(vx, vy, vz); 
+    }
+
+    public function vSphericalL2_2(vx:Float, vy:Float, vz:Float) {
+        baseColor.vSphericalL2_2.set(vx, vy, vz); 
+        if (irradiance!=null) irradiance.vSphericalL2_2.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphericalL2_2.set(vx, vy, vz); 
+    }
+
+    public function vLightData( vx, vy, vz) {
+        envLighting.vLightData0.set( vx, vy, vz, 0);
+    }
+
+    public function vLightDiffuse( vx, vy, vz) {
+        envLighting.vLightDiffuse0.set( vx, vy, vz, 1);
+    }
+
+    public function vLightSpecular( vx, vy, vz) {
+        envLighting.vLightSpecular0.set( vx, vy, vz, 0);
+    }
 }
