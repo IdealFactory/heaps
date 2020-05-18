@@ -61,7 +61,7 @@ enum abstract ComponentType(Int) {
 	var CTShort = 5122;
 	var CTUnsignedShort = 5123;
 	// var CTInt;
-	// var CTUnsignedInt = 5125;
+	var CTUnsignedInt = 5125;
 	var CTFloat = 5126;
 
 	public inline function toInt():Int { return this; }
@@ -395,6 +395,10 @@ class GltfTools {
 					if (pos < 64) out += bytes.getUInt16( pos )+" ";
 					buffer.push( bytes.getUInt16( pos ));
 					pos += 2;
+				case CTUnsignedInt : 
+					out += bytes.getInt32( pos )+" ";
+					buffer.push( bytes.getInt32( pos ));
+					pos += 4;
 				case CTFloat :
 				default:
 					if (pos < 32) out += bytes.get( pos )+" ";
@@ -532,7 +536,7 @@ class GltfTools {
 		if (acc != null) {
 			switch (acc.componentType) {
 				case CTShort | CTUnsignedShort : componentSize = 2;
-				case CTFloat : componentSize = 4;
+				case CTFloat | CTUnsignedInt: componentSize = 4;
 				default: componentSize = 1;
 			}
 			switch (acc.type) {

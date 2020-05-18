@@ -129,13 +129,14 @@ class IrradianceMap extends hxsl.Shader {
             environmentRadiance = vec4(0., 0., 0., 0.); //vec4
             environmentIrradiance = vec3(0., 0., 0.); //vec3
             var reflectionVector = computeReflectionCoords(vec4(vPositionW, 1.0), normalW); //vec3
-            reflectionVector.z *= -1.0;
+            reflectionVector.y = -reflectionVector.y;
+            reflectionVector.x = -reflectionVector.x;
+            
             var reflectionCoords = reflectionVector; //vec3
             var reflectionLOD = getLodFromAlphaG(vReflectionMicrosurfaceInfos.x, alphaG); //float
             reflectionLOD = reflectionLOD * vReflectionMicrosurfaceInfos.y + vReflectionMicrosurfaceInfos.z;
             var requestedReflectionLOD = reflectionLOD; //float
-            //TODO-NOTE: toRGBD is only required for HDR type env textures
-            // environmentRadiance = toRGBD(textureLod(reflectionSampler, reflectionCoords.rgb, requestedReflectionLOD).rgb); // sampleReflectionLod
+            environmentRadiance = toRGBD(textureLod(reflectionSampler, reflectionCoords.rgb, requestedReflectionLOD).rgb); // sampleReflectionLod
             environmentRadiance = textureLod(reflectionSampler, reflectionCoords.rgb, requestedReflectionLOD); // sampleReflectionLod
             environmentRadiance.rgb = fromRGBD(environmentRadiance);
             var irradianceVector = vec3((reflectionMatrix * vec4(normalW, 0)).rgb).xyz; //vec3 //vec3(reflectionMatrix * vec4(normalW, 0)).xyz

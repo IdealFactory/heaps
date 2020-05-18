@@ -1147,13 +1147,18 @@ class GlDriver extends Driver {
 		restoreBind();
 	}
 
+	var lastBind:h3d.mat.Texture;
 	override function uploadTextureBitmap( t : h3d.mat.Texture, bmp : hxd.BitmapData, mipLevel : Int, side : Int ) {
 	#if (hl || lime)
 		#if js
 		@:privateAccess if (bmp.data.dirty) lime._internal.graphics.ImageCanvasUtil.convertToCanvas( bmp.data );
 		@:privateAccess var img = bmp.data.buffer.src;
-		gl.bindTexture(GL.TEXTURE_2D, t.t.t);
-		gl.texImage2DWEBGL(GL.TEXTURE_2D, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img);
+		var bind = getBindType(t);
+		var cubic = t.flags.has(Cube);
+		var face = cubic ? CUBE_FACES[side] : GL.TEXTURE_2D;
+		gl.bindTexture(bind, t.t.t);
+		gl.texImage2DWEBGL(face, mipLevel, t.t.internalFmt, getChannels(t.t), t.t.pixelFmt, img);
+		lastBind = t;
 		#else
 		var pixels = bmp.getPixels();
 		uploadTexturePixels(t, pixels, mipLevel, side);

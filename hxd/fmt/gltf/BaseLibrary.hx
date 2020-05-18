@@ -6,9 +6,13 @@ import h3d.prim.GltfModel;
 import h3d.scene.Mesh;
 import h3d.scene.Object;
 import hxd.Pixels;
+import h3d.mat.Data;
 import hxd.fmt.gltf.Data;
 
 #if openfl
+import openfl.display3D.Context3D;
+import openfl._internal.renderer.context3D.Context3DState;
+
 typedef LoadInfo = {
 	var type:String;
 	var totalBytes:Int;
@@ -16,6 +20,9 @@ typedef LoadInfo = {
 }
 #end
 
+@:access(hxd.Window)
+@:access(h3d.Engine)
+@:access(h3d.impl.GlDriver)
 class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	
 	public var fileName:String;
@@ -32,8 +39,11 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	public var currentScene:h3d.scene.Scene;
 	public var nodeObjects:Array<h3d.scene.Object>;
 	public var animator:TimelineAnimator = new TimelineAnimator();
+
+	private var stateStore:Context3DState;
 	
 	static var brdfTexture:h3d.mat.Texture;
+	var s2d : h2d.Scene;
 	var s3d : h3d.scene.Scene;
 	var baseURL:String = "";
 
@@ -42,8 +52,9 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	var totalBytesToLoad = 0;
 	#end
 
-	public function new( s3d ) {
+	public function new( s2d, s3d ) {
 		#if openfl super(); #end
+		this.s2d = s2d;
 		this.s3d = s3d;
 
 		if (brdfTexture == null)
@@ -581,15 +592,55 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		var brdfBitmapData = new hxd.res.Image( new DataURIEntry( "brdf-image.png", brdfData, imageBytes ) ).toBitmap();
 
 		var format = h3d.mat.Texture.nativeFormat;
-		brdfTexture = new h3d.mat.Texture(brdfBitmapData.width, brdfBitmapData.height, [NoAlloc], format);
-		brdfTexture.setName("brdf");
-		brdfTexture.alloc();
-		var pixels = brdfBitmapData.getPixels();
-		if( pixels.width != brdfTexture.width || pixels.height != brdfTexture.height )
-			pixels.makeSquare();
+		var sourceBRDFTexture = new h3d.mat.Texture(brdfBitmapData.width, brdfBitmapData.height, [NoAlloc], h3d.mat.Texture.nativeFormat);
+		sourceBRDFTexture.setName("sourcebrdf");
+		sourceBRDFTexture.uploadBitmap(brdfBitmapData);
 
-		brdfTexture.uploadPixels(pixels);
-		pixels.dispose();
+		brdfTexture = new h3d.mat.Texture(brdfBitmapData.width, brdfBitmapData.height, [TextureFlags.Target], h3d.mat.Texture.nativeFormat);
+		
+		var bmp = new h2d.Bitmap(h2d.Tile.fromTexture(brdfTexture), s2d);
+		var shader = new h3d.shader.pbrsinglepass.RGBDDecode();
+		shader.scale.set(1, 1);
+		shader.textureSampler = sourceBRDFTexture;
+		bmp.addShader(shader);
+		brdfTexture.depthBuffer = null;
+
+		var engine = h3d.Engine.getCurrent();
+		engine.pushTarget(brdfTexture);
+
+		var oldW = engine.width;
+		var oldH = engine.width;
+		engine.width = brdfBitmapData.width;
+		engine.height = brdfBitmapData.height;
+
+		@:privateAccess engine.needFlushTarget = true;
+
+		var driver:h3d.impl.GlDriver = cast engine.driver;
+		driver.curIndexBuffer = null;
+		driver.curAttribs = [];
+		driver.curAttribs = [];
+		driver.curStOpBits = -1;
+		driver.curStMaskBits = -1;
+
+		#if openfl
+		@:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
+		@:privateAccess if (openfl.Lib.current.stage.context3D.__state != null) stateStore = openfl.Lib.current.stage.context3D.__state.clone();
+		@:privateAccess openfl.Lib.current.stage.context3D.__contextState.stateDirty = true;
+		#end
+
+		s2d.render(engine);
+
+		engine.popTarget();
+
+		s2d.removeChild(bmp);
+
+		#if openfl
+		@:privateAccess if (stateStore != null) openfl.Lib.current.stage.context3D.__state.fromState(stateStore);
+		#end
+
+		engine.width = oldW;
+		engine.height = oldH;
+		engine.driver.resize(oldW, oldH);
 	}
 
 	function createMaterial( materialNode ) {

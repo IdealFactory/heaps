@@ -25,6 +25,7 @@ class PBRSinglePass extends Material {
 	public var ambientOcclusion : h3d.shader.pbrsinglepass.AmbientOcclusion;
 	public var ambientOcclusionMap : h3d.shader.pbrsinglepass.AmbientOcclusionMap;
     public var output : h3d.shader.pbrsinglepass.Output;
+    public var colorTransform : h3d.shader.ColorTransform;
 
     public var hasTangentBuffer(default, set):Bool;
 
@@ -41,6 +42,7 @@ class PBRSinglePass extends Material {
         envLighting = new h3d.shader.pbrsinglepass.EnvLighting();
         finalCombination = new h3d.shader.pbrsinglepass.FinalCombination();
         output = new h3d.shader.pbrsinglepass.Output();
+        colorTransform = new h3d.shader.ColorTransform();
                     
         var bm = mainPass.getShader( h3d.shader.BaseMesh );
         if (bm != null) {
@@ -60,6 +62,7 @@ class PBRSinglePass extends Material {
         mainPass.addShaderAtIndex(finalCombination, 8 + baseMeshOffset);
         addEmissive();
         mainPass.addShaderAtIndex(output, 10 + baseMeshOffset);
+        mainPass.addShaderAtIndex(colorTransform, 11 + baseMeshOffset);
     }
 
     public var environmentBRDF(get, set) : h3d.mat.Texture;
@@ -368,6 +371,21 @@ class PBRSinglePass extends Material {
             emissiveMap = new h3d.shader.pbrsinglepass.EmissiveMap();
         }
         mainPass.addShaderAtIndex(emissiveMap, 10+baseMeshOffset);
+    }
+
+    public var sphericalHarmonics(default, set):hxd.fmt.env.SphericalHarmonics;
+    function set_sphericalHarmonics(value:hxd.fmt.env.SphericalHarmonics):hxd.fmt.env.SphericalHarmonics {
+        this.sphericalHarmonics = value;
+        vSphericalL00( value.l00.x, value.l00.y, value.l00.z ); 
+        vSphericalL10( value.l10.x, value.l10.y, value.l10.z ); 
+        vSphericalL20( value.l20.x, value.l20.y, value.l20.z ); 
+        vSphericalL11( value.l11.x, value.l11.y, value.l11.z ); 
+        vSphericalL21( value.l21.x, value.l21.y, value.l21.z ); 
+        vSphericalL22( value.l22.x, value.l22.y, value.l22.z ); 
+        vSphericalL1_1( value.l1_1.x, value.l1_1.y, value.l1_1.z ); 
+        vSphericalL2_1( value.l2_1.x, value.l2_1.y, value.l2_1.z ); 
+        vSphericalL2_2( value.l2_1.x, value.l2_1.y, value.l2_1.z );
+        return value;
     }
 
     public function vSphericalL00(vx:Float, vy:Float, vz:Float) {
