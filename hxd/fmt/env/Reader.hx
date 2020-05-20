@@ -130,7 +130,14 @@ class Reader {
                 var bytes = imageData[im][face];
 
                 var entry = new hxd.fmt.gltf.DataURIEntry( "env"+(envCount++)+".env", "no-uri", bytes ); 
-                images[im][face] = new hxd.res.Image( entry ).toBitmap();
+                var img = new hxd.res.Image( entry );
+                var size = img.getSize();
+                var bmp = new hxd.BitmapData(size.width, size.height);
+		        var pixels = img.getPixels( hxd.PixelFormat.RGBA);
+		        bmp.setPixels(pixels);
+		        pixels.dispose();
+                // images[im][face] = new hxd.res.Image( entry ).toBitmap();
+                images[im][face] = bmp;
             }
         }
         imagesReady = true;
@@ -140,14 +147,17 @@ class Reader {
         if (!imagesReady) return null;
         if (texture != null) return texture;
 
-        texture = new h3d.mat.Texture( info.width, info.width, [Cube,MipMapped,ManualMipMapGen]);
+        @:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
+
+        texture = new h3d.mat.Texture( info.width, info.width, [Cube,MipMapped,ManualMipMapGen]);//h3d.mat.Texture.nativeFormat);
         texture.mipMap = Linear;
         texture.filter = Linear;
-        // texture.format = TextureFormat.RGBA16F;
         for (im in 0...mipmapsCount)
             for (face in 0...6) {
                texture.uploadBitmap(images[im][face], im, face);
             }
+            
+        @:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 
         return texture;
     }

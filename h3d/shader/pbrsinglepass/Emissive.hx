@@ -7,9 +7,11 @@ class Emissive extends hxsl.Shader {
         @param var vEmissiveColor : Vec3; 
         
         var finalEmissive:Vec3;
+        var lightingIntensity:Vec4;
 
         function fragment() {
             finalEmissive = vEmissiveColor;
+            finalEmissive *= lightingIntensity.y;
           }
     }
     

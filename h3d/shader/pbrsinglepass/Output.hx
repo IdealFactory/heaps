@@ -4,7 +4,6 @@ class Output extends hxsl.Shader {
 
 	static var SRC = {
 
-        @param var vLightingIntensity : Vec4;
         @param var visibility : Float;
         @param var exposureLinear : Float;
         @param var contrast : Float;
@@ -21,6 +20,7 @@ class Output extends hxsl.Shader {
         var finalRadianceScaled:Vec3;
         var finalSpecularScaled:Vec3;
         var finalEmissive:Vec3;
+        var lightingIntensity:Vec4;
 
         // var output : {
 		// 	color : Vec4
@@ -37,7 +37,6 @@ class Output extends hxsl.Shader {
         }
 
         function applyImageProcessing(result:Vec4):Vec4 {
-            result.rgb *= exposureLinear;
             result.rgb = toGammaSpaceVec3(result.rgb);
             result.rgb = saturateVec3(result.rgb);
             var resultHighContrast = result.rgb*result.rgb*(3.0-2.0*result.rgb);
@@ -53,11 +52,11 @@ class Output extends hxsl.Shader {
 		function fragment() {
             var finalColor = vec4(
                 finalAmbient * ambientOcclusionColor +
-                finalDiffuse * ambientOcclusionForDirectDiffuse * vLightingIntensity.x +
-                finalIrradiance * ambientOcclusionColor * vLightingIntensity.z +
+                finalDiffuse * ambientOcclusionForDirectDiffuse * lightingIntensity.x +
+                finalIrradiance * ambientOcclusionColor * lightingIntensity.z +
                 finalSpecularScaled + 
                 finalRadianceScaled +
-                finalEmissive * vLightingIntensity.y,
+                finalEmissive,
                 alpha);
             finalColor = max(finalColor, 0.0);
             finalColor = applyImageProcessing(finalColor);
@@ -69,7 +68,6 @@ class Output extends hxsl.Shader {
     public function new() {
         super();
 
-        this.vLightingIntensity.set( 1, 1, 1, 1 );
         this.visibility = 1;
         this.exposureLinear = 0.8;
         this.contrast = 1.2;

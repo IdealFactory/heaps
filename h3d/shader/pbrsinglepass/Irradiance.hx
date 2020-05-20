@@ -99,15 +99,15 @@ class Irradiance extends hxsl.Shader {
             var reflectionVector = computeReflectionCoords(vec4(vPositionW, 1.0), normalW); //vec3
             reflectionVector.y = -reflectionVector.y;
             reflectionVector.x = -reflectionVector.x;
+
             var reflectionCoords = reflectionVector; //vec3
             var reflectionLOD = getLodFromAlphaG(vReflectionMicrosurfaceInfos.x, alphaG); //float
             reflectionLOD = reflectionLOD * vReflectionMicrosurfaceInfos.y + vReflectionMicrosurfaceInfos.z;
-            var requestedReflectionLOD = reflectionLOD; //float
-            environmentRadiance = textureLod(reflectionSampler, reflectionCoords, requestedReflectionLOD); // sampleReflectionLod
+            environmentRadiance = textureLod(reflectionSampler, reflectionCoords, reflectionLOD); // sampleReflectionLod
             environmentRadiance.rgb = fromRGBD(environmentRadiance); // When using RGBD HDR images
-            environmentIrradiance = vEnvironmentIrradiance;
             environmentRadiance.rgb *= vReflectionInfos.x;
             environmentRadiance.rgb *= vReflectionColor.rgb;
+            environmentIrradiance = vEnvironmentIrradiance;
             environmentIrradiance *= vReflectionColor.rgb;
        }
     }

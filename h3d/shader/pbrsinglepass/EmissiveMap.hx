@@ -13,6 +13,7 @@ class EmissiveMap extends hxsl.Shader {
         var uvMain:Vec2;
         var uvOffset:Vec2;
         var finalEmissive:Vec3;
+        var lightingIntensity:Vec4;
 
         var LinearEncodePowerApprox : Float;// = 2.2;
         
@@ -22,6 +23,7 @@ class EmissiveMap extends hxsl.Shader {
 
         function fragment() {
             finalEmissive = vEmissiveColor;
+            finalEmissive *= lightingIntensity.y;
             var emissiveColorTex = emissiveSampler.get(vMainUV1 + uvOffset).rgb; //vec3 // vEmissiveUV -> vMainUV1
             finalEmissive *= toLinearSpace(emissiveColorTex.rgb);
             finalEmissive *= vEmissiveInfos.y;

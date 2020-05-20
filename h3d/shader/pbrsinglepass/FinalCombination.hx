@@ -8,6 +8,7 @@ class FinalCombination extends hxsl.Shader {
         @param var vAmbientColor : Vec3;
 
         var surfaceAlbedo:Vec3;
+        var ambientOcclusionColor:Vec3;
         var environmentRadiance:Vec4;
         var environmentIrradiance:Vec3;
 
@@ -32,6 +33,7 @@ class FinalCombination extends hxsl.Shader {
 
             finalIrradiance = environmentIrradiance; //vec3
             finalIrradiance *= surfaceAlbedo.rgb;
+            finalIrradiance *= ambientOcclusionColor;
             finalSpecular = specularBase;
             finalSpecular = max(finalSpecular, 0.0);
             finalSpecularScaled = finalSpecular * vLightingIntensity.x * vLightingIntensity.w;

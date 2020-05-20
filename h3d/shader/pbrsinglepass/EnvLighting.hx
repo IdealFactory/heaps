@@ -48,9 +48,10 @@ class EnvLighting extends hxsl.Shader {
 		
 		var environmentBrdf:Vec3;
 		var specularEnvironmentR90:Vec3;
+		var metallicReflectanceFactors:Vec4;
 
 		function fromRGBD(rgbd:Vec4):Vec3 {
-            rgbd.rgb=toLinearSpace(rgbd.bgr);
+            rgbd.rgb=toLinearSpace(rgbd.rgb);//toLinearSpace(rgbd.bgr);
             return rgbd.rgb/rgbd.a;
         }
 
@@ -88,11 +89,15 @@ class EnvLighting extends hxsl.Shader {
             return 1.0 + specularEnvironmentR0 * (1.0 / environmentBrdf.y - 1.0);
         }
         
-        function getReflectanceFromBRDFLookup(/*const*/ specularEnvironmentR0:Vec3, /*const*/ environmentBrdf:Vec3):Vec3 {
-            var reflectance = mix(environmentBrdf.xxx, environmentBrdf.yyy, specularEnvironmentR0); //vec3
-            return reflectance;
-        }
-
+        // function getReflectanceFromBRDFLookup(/*const*/ specularEnvironmentR0:Vec3, /*const*/ environmentBrdf:Vec3):Vec3 {
+        //     var reflectance = mix(environmentBrdf.xxx, environmentBrdf.yyy, specularEnvironmentR0); //vec3
+        //     return reflectance;
+        // }
+		function getReflectanceFromBRDFLookup(/*const*/ specularEnvironmentR0:Vec3, /*const*/ specularEnvironmentR90:Vec3, /*const*/ environmentBrdf:Vec3):Vec3 {
+			var reflectance = (specularEnvironmentR90-specularEnvironmentR0)*environmentBrdf.x+specularEnvironmentR0*environmentBrdf.y;
+			return reflectance;
+		}
+		
         function convertRoughnessToAverageSlope(roughness:Float):Float {
             return square(roughness) + MINIMUMVARIANCE;
         }
@@ -133,7 +138,8 @@ class EnvLighting extends hxsl.Shader {
             var reflectance = max(max(surfaceReflectivityColor.r, surfaceReflectivityColor.g), surfaceReflectivityColor.b); //float
             var reflectance90 = fresnelGrazingReflectance(reflectance); //float
             var specularEnvironmentR0 = surfaceReflectivityColor.rgb; //vec3
-            var specularEnvironmentR90 = vec3(1.0, 1.0, 1.0) * reflectance90; //vec3
+			// var specularEnvironmentR90 = vec3(1.0, 1.0, 1.0) * reflectance90; //vec3
+			var specularEnvironmentR90 = vec3(metallicReflectanceFactors.a); //vec3
             environmentBrdf = getBRDFLookup(NdotV, roughness); //vec3
             energyConservationFactor = getEnergyConservationFactor(specularEnvironmentR0, environmentBrdf); //vec3
 			
@@ -157,7 +163,8 @@ class EnvLighting extends hxsl.Shader {
 			shadow = 1.; //float
 			diffuseBase += lIDiffuse.rgb * shadow;
 			specularBase += lISpecular * shadow;
-			specularEnvironmentReflectance = getReflectanceFromBRDFLookup(specularEnvironmentR0, environmentBrdf); //vec3
+			// specularEnvironmentReflectance = getReflectanceFromBRDFLookup(specularEnvironmentR0, environmentBrdf); //vec3
+			specularEnvironmentReflectance = getReflectanceFromBRDFLookup(specularEnvironmentR0, specularEnvironmentR90, environmentBrdf); //vec3
        }
 	}
 
@@ -166,9 +173,8 @@ class EnvLighting extends hxsl.Shader {
 
 		this.vLightData0.set(0, 1, 0, 0);
 		this.vLightDiffuse0.set(1, 1, 1, 1);
-		this.vLightSpecular0.set(1, 1, 1, 0);
+		this.vLightSpecular0.set(0, 1, 0, 0);
 		this.vLightGround0.set(0, 0, 0);
 		this.glossiness = 1;
-
 	}
 }

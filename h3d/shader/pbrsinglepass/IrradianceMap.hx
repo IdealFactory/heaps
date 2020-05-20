@@ -131,19 +131,19 @@ class IrradianceMap extends hxsl.Shader {
             var reflectionVector = computeReflectionCoords(vec4(vPositionW, 1.0), normalW); //vec3
             reflectionVector.y = -reflectionVector.y;
             reflectionVector.x = -reflectionVector.x;
+            // reflectionVector.z = -reflectionVector.z;
             
             var reflectionCoords = reflectionVector; //vec3
             var reflectionLOD = getLodFromAlphaG(vReflectionMicrosurfaceInfos.x, alphaG); //float
             reflectionLOD = reflectionLOD * vReflectionMicrosurfaceInfos.y + vReflectionMicrosurfaceInfos.z;
-            var requestedReflectionLOD = reflectionLOD; //float
-            environmentRadiance = toRGBD(textureLod(reflectionSampler, reflectionCoords.rgb, requestedReflectionLOD).rgb); // sampleReflectionLod
-            environmentRadiance = textureLod(reflectionSampler, reflectionCoords.rgb, requestedReflectionLOD); // sampleReflectionLod
+            // environmentRadiance = toRGBD(textureLod(reflectionSampler, reflectionCoords, requestedReflectionLOD).rgb); // sampleReflectionLod
+            environmentRadiance = textureLod(reflectionSampler, reflectionCoords, reflectionLOD); // sampleReflectionLod
             environmentRadiance.rgb = fromRGBD(environmentRadiance);
             var irradianceVector = vec3((reflectionMatrix * vec4(normalW, 0)).rgb).xyz; //vec3 //vec3(reflectionMatrix * vec4(normalW, 0)).xyz
             irradianceVector.z *= -1.0;
-            environmentIrradiance = computeEnvironmentIrradiance(irradianceVector);
             environmentRadiance.rgb *= vReflectionInfos.x;
             environmentRadiance.rgb *= vReflectionColor.rgb;
+            environmentIrradiance = computeEnvironmentIrradiance(irradianceVector);
             environmentIrradiance *= vReflectionColor.rgb;
         }
     }
