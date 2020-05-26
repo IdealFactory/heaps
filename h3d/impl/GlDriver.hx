@@ -1811,7 +1811,7 @@ class GlDriver extends Driver {
 		gl.readPixels(x, y, pixels.width, pixels.height, getChannels(curTarget.t), curTarget.t.pixelFmt, buffer);
 		#end
 		var error = gl.getError();
-		if( error != 0 ) throw "Failed to capture pixels (error "+error+")";
+		// if( error != 0 ) throw "Failed to capture pixels (error "+error+")";
 		@:privateAccess pixels.innerFormat = curTarget.format;
 		#end
 	}
