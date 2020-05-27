@@ -442,15 +442,16 @@ class PBRSinglePass extends Material {
         if (irradianceMap!=null) irradianceMap.vSphericalL2_2.set(vx, vy, vz); 
     }
 
-    public function vLightData( vx, vy, vz) {
-        envLighting.vLightData0.set( vx, vy, vz, 0);
+    public function vLightData( vx, vy, vz ) {
+        envLighting.vLightData0.set( vx, vy, vz, 0 );
     }
 
-    public function vLightDiffuse( vx, vy, vz) {
-        envLighting.vLightDiffuse0.set( vx, vy, vz, 1);
+    public function vLightDiffuse( vx, vy, vz ) {
+        envLighting.vLightDiffuse0.set( vx, vy, vz, 1 );
     }
 
-    public function vLightSpecular( vx, vy, vz) {
-        envLighting.vLightSpecular0.set( vx, vy, vz, 0);
+    public function vLightingIntensity( vx, vy, vz, vw ) {
+        finalCombination.vLightingIntensity.set( vx, vy, vz, vw );
     }
+
 }

@@ -8,7 +8,6 @@ class EnvLighting extends hxsl.Shader {
 
 		@param var vLightData0 : Vec4;
 		@param var vLightDiffuse0 : Vec4;
-		@param var vLightSpecular0 : Vec4;
 		@param var vLightGround0 : Vec3;
 		@param var glossiness : Float;
 
@@ -173,7 +172,6 @@ class EnvLighting extends hxsl.Shader {
 
 		this.vLightData0.set(0, 1, 0, 0);
 		this.vLightDiffuse0.set(1, 1, 1, 1);
-		this.vLightSpecular0.set(0, 1, 0, 0);
 		this.vLightGround0.set(0, 0, 0);
 		this.glossiness = 1;
 	}
