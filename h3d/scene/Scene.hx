@@ -120,13 +120,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 		if( hitInteractives.length == 0 ) {
 
-			#if !openfl
 			var screenX = (event.relX / window.width - 0.5) * 2;
 			var screenY = -(event.relY / window.height - 0.5) * 2;
-			#else
-			var screenX = (event.relX / window.width - 0.5) * 2;
-			var screenY = -(event.relY / window.height - 0.5) * 2;
-			#end
 			var p0 = camera.unproject(screenX, screenY, 0);
 			var p1 = camera.unproject(screenX, screenY, 1);
 			var r = h3d.col.Ray.fromPoints(p0.toPoint(), p1.toPoint());
@@ -200,6 +195,14 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 					p.transform3x4(i.absPos);
 					p.project(camera.m);
 					i.hitPoint.w = p.z + wfactor;
+					if (Std.is(i.shape, h3d.col.ObjectCollider)) {
+						var c:h3d.col.ObjectCollider = cast i.shape;
+						if (Std.is(c.obj, h3d.scene.Mesh)) {
+							var m:h3d.scene.Mesh = cast c.obj;
+							if (m.material.mainPass.culling == h3d.mat.Data.Face.Front) 
+								i.hitPoint.w *= -1;
+						}
+					}
 				}
 				hitInteractives.sort(sortHitPointByCameraDistance);
 			}

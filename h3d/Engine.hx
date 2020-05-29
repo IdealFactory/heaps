@@ -22,6 +22,10 @@ class Engine {
 	public var mem(default,null) : h3d.impl.MemoryManager;
 
 	public var hardware(default, null) : Bool;
+	#if openfl
+	public var x(default, null) : Int;
+	public var y(default, null) : Int;
+	#end
 	public var width(default, null) : Int;
 	public var height(default, null) : Int;
 	public var debug(default, set) : Bool;
@@ -82,6 +86,7 @@ class Engine {
 		driver = new h3d.impl.LogDriver(new h3d.impl.NullDriver());
 		driver.logEnable = true;
 		#end
+		offset(0,0);
 		setCurrent();
 	}
 
@@ -273,6 +278,14 @@ class Engine {
 
 	public dynamic function onResized() {
 	}
+
+	#if openfl 
+	public function offset(x, y) {
+		this.x = x;
+		this.y = y;
+		driver.offset(x, y);
+	}
+	#end 
 
 	public function resize(width, height) {
 		// minimum 32x32 size
