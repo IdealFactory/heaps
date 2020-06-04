@@ -132,7 +132,7 @@ class PBRSinglePass extends hxsl.Shader {
             vPositionW = vec3(worldPos.r, worldPos.b, worldPos.g);//vec3(worldPos.rgb);
             var normalWorld = mat3(finalWorld); //mat3
             var tmpNormal = vec3(normalUpdated.r, normalUpdated.g, normalUpdated.b);
-            vNormalW = normalize(tmpNormal * finalWorld.mat3()).rbg; // normalize(normalWorld * normalUpdated);
+            vNormalW = normalize(tmpNormal * finalWorld.mat3())#if !flash .rbg#end; // normalize(normalWorld * normalUpdated);
             var uv2 = vec2(0., 0.); //vec2
             vEyePosition = vec3(camera.position.r, camera.position.b, camera.position.g); //camera.position;//
         }

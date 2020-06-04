@@ -86,7 +86,9 @@ class Engine {
 		driver = new h3d.impl.LogDriver(new h3d.impl.NullDriver());
 		driver.logEnable = true;
 		#end
+		#if openfl
 		offset(0,0);
+		#end
 		setCurrent();
 	}
 

@@ -15,7 +15,8 @@ class Parser {
 		if ( data.getInt32(0) == 0x46546C67 ) {
 			// binary glb
 			if ( data.getInt32(4) != 2 ) throw "Invalid GLB version!";
-			if ( data.getInt32(8) != data.length ) throw "GLB file size mismatch!";
+			var glbLen#if !flash :UInt #end = data.getInt32(8);
+			if ( glbLen != data.length ) throw "GLB file size mismatch!";
 
 			var pos = 12;
 			while ( pos < data.length ) {

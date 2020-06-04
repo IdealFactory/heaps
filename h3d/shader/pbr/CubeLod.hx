@@ -9,7 +9,7 @@ class CubeLod extends hxsl.Shader {
 		@param var texture : SamplerCube;
 		@param var lod : Float;
 		function fragment() {
-			pixelColor.rgb *= textureLod(texture,transformedNormal,lod).rgb;
+			pixelColor.rgb *= #if !flash textureLod(texture,transformedNormal,lod).rgb #else texture(texture,transformedNormal).rgb #end;
 		}
 
 	}

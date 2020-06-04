@@ -22,6 +22,7 @@ class Irradiance extends hxsl.Shader {
 
         @var var vEyePosition : Vec3;
         @var var vPositionW : Vec3; 
+        @var var vNormalW : Vec3; 
         @var var vEnvironmentIrradiance:Vec3;
 
         var MINIMUMVARIANCE : Float;
@@ -87,6 +88,23 @@ class Irradiance extends hxsl.Shader {
             return pow(color,vec3(LinearEncodePowerApprox));
         }
 
+        function computeEnvironmentIrradiance( normal:Vec3 ):Vec3 {
+            return vSphericalL00 +
+                vSphericalL1_1 * (normal.y) +
+                vSphericalL10 * (normal.z) +
+                vSphericalL11 * (normal.x) +
+                vSphericalL2_2 * (normal.y * normal.x) +
+                vSphericalL2_1 * (normal.y * normal.z) +
+                vSphericalL20 * ((3.0 * normal.z * normal.z) - 1.0) +
+                vSphericalL21 * (normal.z * normal.x) +
+                vSphericalL22 * (normal.x * normal.x - (normal.y * normal.y));
+        }
+
+        function vertex() {
+            var reflectionVector = (reflectionMatrix * vec4(vNormalW, 0)).xyz;
+            vEnvironmentIrradiance = computeEnvironmentIrradiance(reflectionVector);
+        }
+
         function fragment() {
             roughness = 1. - microSurface; //float
             NdotVUnclamped = dot(normalW, viewDirectionW); //float
@@ -103,7 +121,7 @@ class Irradiance extends hxsl.Shader {
             var reflectionCoords = reflectionVector; //vec3
             var reflectionLOD = getLodFromAlphaG(vReflectionMicrosurfaceInfos.x, alphaG); //float
             reflectionLOD = reflectionLOD * vReflectionMicrosurfaceInfos.y + vReflectionMicrosurfaceInfos.z;
-            environmentRadiance = textureLod(reflectionSampler, reflectionCoords, reflectionLOD); // sampleReflectionLod
+            environmentRadiance = #if !flash textureLod(reflectionSampler, reflectionCoords, reflectionLOD); #else texture(reflectionSampler, reflectionCoords); #end// sampleReflectionLod
             environmentRadiance.rgb = fromRGBD(environmentRadiance); // When using RGBD HDR images
             environmentRadiance.rgb *= vReflectionInfos.x;
             environmentRadiance.rgb *= vReflectionColor.rgb;

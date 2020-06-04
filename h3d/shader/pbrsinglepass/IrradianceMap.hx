@@ -137,7 +137,7 @@ class IrradianceMap extends hxsl.Shader {
             var reflectionLOD = getLodFromAlphaG(vReflectionMicrosurfaceInfos.x, alphaG); //float
             reflectionLOD = reflectionLOD * vReflectionMicrosurfaceInfos.y + vReflectionMicrosurfaceInfos.z;
             // environmentRadiance = toRGBD(textureLod(reflectionSampler, reflectionCoords, requestedReflectionLOD).rgb); // sampleReflectionLod
-            environmentRadiance = textureLod(reflectionSampler, reflectionCoords, reflectionLOD); // sampleReflectionLod
+            environmentRadiance = #if !flash textureLod(reflectionSampler, reflectionCoords, reflectionLOD); #else texture(reflectionSampler, reflectionCoords); #end// sampleReflectionLod
             environmentRadiance.rgb = fromRGBD(environmentRadiance);
             var irradianceVector = vec3((reflectionMatrix * vec4(normalW, 0)).rgb).xyz; //vec3 //vec3(reflectionMatrix * vec4(normalW, 0)).xyz
             irradianceVector.z *= -1.0;

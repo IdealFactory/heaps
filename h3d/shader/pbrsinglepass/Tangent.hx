@@ -35,7 +35,7 @@ class Tangent extends hxsl.Shader {
             var tbnNormal = normalize(normalUpdated);
             var tbnTangent = normalize(tangentUpdated.xyz);
             var tbnBitangent = cross(tbnNormal, tbnTangent) * tangentUpdated.w;
-            vTBN = finalWorld.mat3() * mat3(tbnTangent, tbnBitangent, tbnNormal);
+            vTBN = finalWorld.mat3() #if !flash * mat3(tbnTangent, tbnBitangent, tbnNormal) #end;
         }
 
         function fragment() {

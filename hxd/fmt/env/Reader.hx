@@ -147,7 +147,9 @@ class Reader {
         if (!imagesReady) return null;
         if (texture != null) return texture;
 
+        #if !flash
         @:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
+        #end
 
         texture = new h3d.mat.Texture( info.width, info.width, [Cube,MipMapped,ManualMipMapGen]);//h3d.mat.Texture.nativeFormat);
         texture.mipMap = Linear;
@@ -156,8 +158,10 @@ class Reader {
             for (face in 0...6) {
                texture.uploadBitmap(images[im][face], im, face);
             }
-            
+        
+        #if !flash
         @:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
+        #end
 
         return texture;
     }

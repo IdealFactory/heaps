@@ -419,6 +419,25 @@ class AgalOut {
 					op(ODp4(swiz(o, [Z]), offset(tmp, 2), b));
 					op(ODp4(swiz(o, [W]), offset(tmp, 3), b));
 				}
+			case [TMat3, TMat3]:
+				var tmp = allocReg(TMat3);
+				colsToRows(r1, tmp, TMat3);
+				for( i in 0...3 ) {
+					var b = offset(r2, i);
+					var o = offset(r, i);
+					op(ODp3(swiz(o, [X]), tmp, b));
+					op(ODp3(swiz(o, [Y]), offset(tmp, 1), b));
+					op(ODp3(swiz(o, [Z]), offset(tmp, 2), b));
+				}
+			case [TMat3, TVec(3, VFloat)]:
+				op(ODp3(swiz(r,[X]), r2, r1));
+				op(ODp3(swiz(r,[Y]), r2, offset(r1,1)));
+				op(ODp3(swiz(r,[Z]), r2, offset(r1,2)));
+			case [TMat4, TVec(4, VFloat)]:
+				op(ODp4(swiz(r,[X]), r2, r1));
+				op(ODp4(swiz(r,[Y]), r2, offset(r1,1)));
+				op(ODp4(swiz(r,[Z]), r2, offset(r1,2)));
+				op(ODp4(swiz(r,[W]), r2, offset(r1,3)));
 			default:
 				throw "assert " + [e1.t, e2.t];
 			}
@@ -443,6 +462,12 @@ class AgalOut {
 
 	function colsToRows( src : Reg, dst : Reg, t : Type ) {
 		switch( t ) {
+		case TMat3:
+			for( i in 0...3 ) {
+				var ldst = offset(dst, i);
+				for( j in 0...3 )
+					op(OMov(swiz(ldst, [COMPS[j]]), swiz(offset(src, j), [COMPS[i]])));
+			}
 		case TMat4:
 			for( i in 0...4 ) {
 				var ldst = offset(dst, i);
@@ -627,6 +652,16 @@ class AgalOut {
 			}
 			return r;
 		case [Texture, [et,uv]]:
+			var t = expr(et);
+			var uv = expr(uv);
+			var r = allocReg();
+			if( t.t != RTexture ) throw "assert";
+			var flags = [TIgnoreSampler];
+			if( et.t == TSamplerCube )
+				flags.push(TCube);
+			op(OTex(r, uv, { index : t.index, flags : flags }));
+			return r;
+		case [TextureLod, [et,uv,mip]]:
 			var t = expr(et);
 			var uv = expr(uv);
 			var r = allocReg();
