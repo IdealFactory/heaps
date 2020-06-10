@@ -114,7 +114,6 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	@:dox(hide) @:noCompletion
 	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) {
-
 		if( interactives.length == 0 )
 			return null;
 
@@ -158,6 +157,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 				i.hitPoint.x = hitPoint.x;
 				i.hitPoint.y = hitPoint.y;
 				i.hitPoint.z = hitPoint.z;
+				i.hitPoint.w = hit;
 
 				if( i.priority > priority ) {
 					while( hitInteractives.length > 0 ) hitInteractives.pop();
@@ -185,24 +185,17 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 							i.hitPoint.x = hitPoint.x;
 							i.hitPoint.y = hitPoint.y;
 							i.hitPoint.z = hitPoint.z;
+							i.hitPoint.w = hit;
 						} else
 							wfactor = 1.;
 						r.load(saveR);
 					}
 
-					var p = i.hitPoint.clone();
-					p.w = 1;
-					p.transform3x4(i.absPos);
-					p.project(camera.m);
-					i.hitPoint.w = p.z + wfactor;
-					if (Std.is(i.shape, h3d.col.ObjectCollider)) {
-						var c:h3d.col.ObjectCollider = cast i.shape;
-						if (Std.is(c.obj, h3d.scene.Mesh)) {
-							var m:h3d.scene.Mesh = cast c.obj;
-							if (m.material.mainPass.culling == h3d.mat.Data.Face.Front) 
-								i.hitPoint.w *= -1;
-						}
-					}
+				// 	var p = i.hitPoint.clone();
+				// 	p.w = 1;
+				// 	p.transform3x4(i.absPos);
+				// 	p.project(camera.m);
+					i.hitPoint.w += wfactor;
 				}
 				hitInteractives.sort(sortHitPointByCameraDistance);
 			}

@@ -277,6 +277,10 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			return material;
 		}
 
+		if ( materialNode.name != null ) {
+			material.name = materialNode.name;
+		}
+		
 		if ( materialNode.pbrMetallicRoughness != null ) {
 			var pbrmr = materialNode.pbrMetallicRoughness;
 			var tex:h3d.mat.Texture = null;
@@ -334,9 +338,6 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			material.occlusionMap = getTexture( materialNode.occlusionTexture.index );
 		}
 
-		if ( materialNode.name != null ) {
-			material.name = materialNode.name;
-		}
 		if ( Reflect.hasField(materialNode, "doubleSided" )) {
 			material.mainPass.culling = materialNode.doubleSided ? None : Front;
 		}

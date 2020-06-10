@@ -45,21 +45,17 @@ class GltfModel extends MeshPrimitive {
 		if( bounds != null )
 			return bounds;
 		bounds = new h3d.col.Bounds();
+		bounds.empty();
 		var verts = geom.getVertices();
 		// var gm = geom.getGeomMatrix();
 		var tmp = new h3d.col.Point();
-		if( verts.length > 0 ) {
-			tmp.set(verts[0], verts[1], verts[2]);
-			// if( gm != null ) tmp.transform(gm);
-			bounds.xMin = bounds.xMax = tmp.x;
-			bounds.yMin = bounds.yMax = tmp.y;
-			bounds.zMin = bounds.zMax = tmp.z;
-		}
-		var pos = 3;
-		for( i in 1...Std.int(verts.length / 3) ) {
+		bounds.xMin = bounds.yMin = bounds.zMin = Math.POSITIVE_INFINITY;
+		bounds.xMax = bounds.yMax = bounds.zMax = Math.NEGATIVE_INFINITY;
+		var pos = 0;
+		while( pos < verts.length ) {
 			var x = verts[pos++];
 			var y = verts[pos++];
-			var z = verts[pos++];
+			var z = -verts[pos++];
 			// if( gm != null ) {
 			// 	tmp.set(x, y, z);
 			// 	tmp.transform(gm);
