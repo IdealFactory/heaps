@@ -93,7 +93,6 @@ class Camera {
 		var c = new Camera(fovY, zoom, screenRatio, zNear, zFar, rightHanded);
 		c.pos = pos.clone();
 		c.up = up.clone();
-		c.isYUp = isYUp;
 		c.target = target.clone();
 		c.update();
 		return c;

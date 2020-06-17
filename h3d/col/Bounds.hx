@@ -60,7 +60,7 @@ class Bounds implements Collider {
 		var minmax = Math.min( Math.min(realMaxTx, realMaxTy), realMaxTz);
 		var maxmin = Math.max( Math.max(realMinTx, realMinTy), realMinTz);
 
-		if(minmax < maxmin)	return -1;
+		if (minmax-maxmin < 0) return Math.NEGATIVE_INFINITY;
 
 		return maxmin;
 	}

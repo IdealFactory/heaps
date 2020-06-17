@@ -55,7 +55,7 @@ class GltfModel extends MeshPrimitive {
 		while( pos < verts.length ) {
 			var x = verts[pos++];
 			var y = verts[pos++];
-			var z = -verts[pos++];
+			var z = verts[pos++];
 			// if( gm != null ) {
 			// 	tmp.set(x, y, z);
 			// 	tmp.transform(gm);
@@ -326,8 +326,7 @@ class GltfModel extends MeshPrimitive {
 
 		poly.setData(verts, inds);
 		if( collider == null ) {
-			var sphere = getBounds().toSphere();
-			collider = new h3d.col.Collider.OptimizedCollider(sphere, poly);
+			collider = new h3d.col.Collider.OptimizedCollider(getBounds(), poly);
 		}
 	}
 

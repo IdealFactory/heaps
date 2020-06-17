@@ -24,8 +24,8 @@ class OptimizedCollider implements hxd.impl.Serializable implements Collider {
 	}
 
 	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
-		if( a.rayIntersection(r, bestMatch) < 0 )
-			return -1;
+		if( a.rayIntersection(r, bestMatch) == Math.NEGATIVE_INFINITY )
+			return Math.NEGATIVE_INFINITY;
 		return b.rayIntersection(r, bestMatch);
 	}
 
