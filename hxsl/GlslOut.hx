@@ -634,7 +634,7 @@ class GlslOut {
 		initVars(s);
 
 		#if (!desktop)
-		decl("precision " + (isVertex ? "highp" : "mediump") + " float;");
+		decl("precision highp float;");
 		#end
 
 		var tmp = buf;
