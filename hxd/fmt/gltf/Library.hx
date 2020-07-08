@@ -97,8 +97,6 @@ class Library extends BaseLibrary {
 
         // Scenes
         for ( scene in root.scenes ) {
-            var s = s3d;
-            currentScene = s;
             var sceneContainer = new h3d.scene.Object();
 		    sceneContainer.rotate( Math.PI/2, 0, 0 );
             scenes.push( sceneContainer );
@@ -112,9 +110,10 @@ class Library extends BaseLibrary {
             for (animation in root.animations) createAnimations( animation );
 
 
-        for ( scene in scenes ) {
-            s3d.addChild(scene);
-        }
+        if (s3d != null)
+            for ( scene in scenes ) {
+                s3d.addChild(scene);
+            }
         
         #if openfl
         dispatchEvent(new openfl.events.Event(openfl.events.Event.COMPLETE));

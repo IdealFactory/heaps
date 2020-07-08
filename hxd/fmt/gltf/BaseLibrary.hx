@@ -36,7 +36,6 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	public var primitives:Map<h3d.scene.Object, Array<h3d.scene.Mesh>>;
 	public var meshes:Array<h3d.scene.Object>;
 	public var animations:Array<h3d.anim.Animation>;
-	public var currentScene:h3d.scene.Scene;
 	public var nodeObjects:Array<h3d.scene.Object>;
 	public var animator:TimelineAnimator = new TimelineAnimator();
 
@@ -53,7 +52,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	var totalBytesToLoad = 0;
 	#end
 
-	public function new( s2d, s3d ) {
+	public function new( s2d, ?s3d = null ) {
 		#if openfl super(); #end
 		this.s2d = s2d;
 		this.s3d = s3d;
@@ -502,11 +501,11 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		#if js
 		tex.uploadBitmap( img );
 		// var tile = h2d.Tile.fromBitmap(img);
-		// var bmp = new h2d.Bitmap( tile, PbrWebGL1.s2dscene );
+		// var bmp = new h2d.Bitmap( tile, s2d );
 		// bmp.scaleX = bmp.scaleY = 0.2;
 		// bmp.x = pos;
 		// pos += Std.int(tile.width * 0.2);
-		// trace("BMP:pso="+pos);
+		// trace("BMP:pos="+pos);
 		#else 
 		var pixels = img.getPixels();
 		if( pixels.width != tex.width || pixels.height != tex.height )
