@@ -5,54 +5,63 @@ typedef IndexBuffer = {};
 typedef VertexBuffer = {};
 typedef Texture = {};
 typedef DepthBuffer = {};
+typedef Framebuffer = {};
 typedef Query = {};
 #elseif flash
 typedef IndexBuffer = flash.display3D.IndexBuffer3D;
 typedef VertexBuffer = Stage3dDriver.VertexWrapper;
 typedef Texture = flash.display3D.textures.TextureBase;
 typedef DepthBuffer = {};
+typedef Framebuffer = {};
 typedef Query = {};
-#elseif js
+#elseif (js && !lime)
 typedef IndexBuffer = { b : js.html.webgl.Buffer, is32 : Bool };
 typedef VertexBuffer = { b : js.html.webgl.Buffer, stride : Int #if multidriver, driver : Driver #end };
 typedef Texture = { t : js.html.webgl.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int #if multidriver, driver : Driver #end };
 typedef DepthBuffer = { r : js.html.webgl.Renderbuffer #if multidriver, driver : Driver #end };
+typedef Framebuffer = { f : js.html.webgl.Framebuffer #if multidriver, driver : Driver #end, r : js.html.webgl.Renderbuffer #if multidriver, driver : Driver #end };
 typedef Query = {};
 #elseif lime
 typedef IndexBuffer = { b: lime.graphics.opengl.GLBuffer, is32: Bool };
 typedef VertexBuffer = { b : lime.graphics.opengl.GLBuffer, stride : Int };
 typedef Texture = { t : lime.graphics.opengl.GLTexture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int };
 typedef DepthBuffer = { r : lime.graphics.opengl.GLRenderbuffer };
+typedef Framebuffer = { f : lime.graphics.opengl.GLFramebuffer, r : lime.graphics.opengl.GLRenderbuffer };
 typedef Query = {};
 #elseif hlsdl
 typedef IndexBuffer = { b : sdl.GL.Buffer, is32 : Bool };
 typedef VertexBuffer = { b : sdl.GL.Buffer, stride : Int };
 typedef Texture = { t : sdl.GL.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int };
 typedef DepthBuffer = { r : sdl.GL.Renderbuffer };
+typedef Framebuffer = { f : sdl.GL.Framebuffer, r : sdl.GL.Renderbuffer };
 typedef Query = { q : sdl.GL.Query, kind : QueryKind };
 #elseif usegl
 typedef IndexBuffer = { b : haxe.GLTypes.Buffer, is32 : Bool };
 typedef VertexBuffer = { b : haxe.GLTypes.Buffer, stride : Int };
 typedef Texture = { t : haxe.GLTypes.Texture, width : Int, height : Int, internalFmt : Int, pixelFmt : Int, bits : Int, bind : Int };
 typedef DepthBuffer = { r : haxe.GLTypes.Renderbuffer };
+typedef Framebuffer = { f : haxe.GLTypes.Framebuffer, r : haxe.GLTypes.Renderbuffer };
 typedef Query = { q : haxe.GLTypes.Query, kind : QueryKind };
 #elseif hldx
 typedef IndexBuffer = { res : dx.Resource, count : Int, bits : Int };
 typedef VertexBuffer = { res : dx.Resource, count : Int, stride : Int };
 typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, rt : Array<dx.Driver.RenderTargetView>, mips : Int };
 typedef DepthBuffer = { res : dx.Resource, view : dx.Driver.DepthStencilView };
+typedef Framebuffer = {};
 typedef Query = {};
 #elseif usesys
 typedef IndexBuffer = haxe.GraphicsDriver.IndexBuffer;
 typedef VertexBuffer = haxe.GraphicsDriver.VertexBuffer;
 typedef Texture = haxe.GraphicsDriver.Texture;
 typedef DepthBuffer = haxe.GraphicsDriver.DepthBuffer;
+typedef Framebuffer = {};
 typedef Query = haxe.GraphicsDriver.Query;
 #else
 typedef IndexBuffer = {};
 typedef VertexBuffer = {};
 typedef Texture = {};
 typedef DepthBuffer = {};
+typedef Framebuffer = {};
 typedef Query = {};
 #end
 
@@ -255,6 +264,13 @@ class Driver {
 
 	public function getDefaultDepthBuffer() : h3d.mat.DepthBuffer {
 		return null;
+	}
+
+	public function createFrameBuffer( width:Int, height:Int, msaaLevel:Int = 0, format = null ) : Framebuffer {
+		return null;
+	}
+
+	public function blitFramebuffer( msaaFBO:h3d.impl.Driver.Framebuffer, targetFBO:h3d.impl.Driver.Framebuffer, tex : h3d.mat.Texture, w:Int, h:Int ) {
 	}
 
 	public function present() {

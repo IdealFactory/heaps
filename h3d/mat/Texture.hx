@@ -54,6 +54,11 @@ class Texture {
 		If set to null, depth testing is disabled.
 	**/
 	public var depthBuffer : DepthBuffer;
+	/**
+		If the target uses multisampling - this is the multisample framebuffer
+	**/
+	public var msaaBuffer : h3d.impl.Driver.Framebuffer;
+	public var customFBO : h3d.impl.Driver.Framebuffer;
 
 	var _lastFrame:Int;
 

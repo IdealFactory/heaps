@@ -821,6 +821,7 @@ class GlDriver extends Driver {
 	override function offset( x : Int, y : Int ) {
 		offsetX = x;
 		offsetY = y;
+		if (bufferWidth == null || bufferHeight == null) return;
 		gl.viewport(offsetX, offsetY, bufferWidth, bufferHeight);
 	}
 
@@ -1036,7 +1037,10 @@ class GlDriver extends Driver {
 			throw "Unsupported depth format "+b.format;
 		}
 		gl.bindRenderbuffer(GL.RENDERBUFFER, r);
-		gl.renderbufferStorage(GL.RENDERBUFFER, format, b.width, b.height);
+		if (b.multiSample == null)
+			gl.renderbufferStorage(GL.RENDERBUFFER, format, b.width, b.height);
+		else
+			gl.renderbufferStorageMultisample(GL.RENDERBUFFER, b.multiSample, GL.DEPTH_COMPONENT16, b.width, b.height);
 		gl.bindRenderbuffer(GL.RENDERBUFFER, null);
 		return { r : r #if multidriver, driver : this #end };
 	}
@@ -1060,6 +1064,20 @@ class GlDriver extends Driver {
 			defaultDepth.b = allocDepthBuffer(defaultDepth);
 		}
 		return defaultDepth;
+	}
+
+	override function createFrameBuffer( width:Int, height:Int, msaaLevel:Int = 0, format = null ) : h3d.impl.Driver.Framebuffer {
+		var fbo = gl.createFramebuffer();
+		var rbo = gl.createRenderbuffer();
+		gl.bindRenderbuffer(GL.RENDERBUFFER, rbo);
+		var fmt = format == null ? GL.RGBA8 : format;
+		if (msaaLevel == 0)
+			gl.renderbufferStorage(GL.RENDERBUFFER, fmt, width, height);
+		else {
+			gl.renderbufferStorageMultisample(GL.RENDERBUFFER, msaaLevel, fmt, width, height);
+		}
+		gl.bindRenderbuffer(GL.RENDERBUFFER, null);
+		return {f: fbo, r: rbo};
 	}
 
 	inline function discardError() {
@@ -1635,13 +1653,23 @@ class GlDriver extends Driver {
 		if( tex.t.driver != this )
 			throw "Invalid texture context";
 		#end
-		gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
-
-		if( tex.flags.has(IsArray) )
-			gl.framebufferTextureLayer(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.t.t, mipLevel, layer);
+		if (tex.customFBO != null)
+			@:privateAccess gl.bindFramebuffer(GL.FRAMEBUFFER, tex.customFBO.f);
+		else if (tex.msaaBuffer != null)
+			@:privateAccess gl.bindFramebuffer(GL.FRAMEBUFFER, tex.msaaBuffer.f);
 		else
-			gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[layer] : GL.TEXTURE_2D, tex.t.t, mipLevel);
-		if( tex.depthBuffer != null ) {
+			gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
+
+		if ( tex.msaaBuffer == null ) {
+			if( tex.flags.has(IsArray) )
+				gl.framebufferTextureLayer(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.t.t, mipLevel, layer);
+			else
+				gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, tex.flags.has(Cube) ? CUBE_FACES[layer] : GL.TEXTURE_2D, tex.t.t, mipLevel);
+		}
+		if( tex.msaaBuffer != null ) {
+			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.RENDERBUFFER, @:privateAccess tex.msaaBuffer.r );
+			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, @:privateAccess tex.depthBuffer.b.r );
+		} else if( tex.depthBuffer != null ) {
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.DEPTH_ATTACHMENT, GL.RENDERBUFFER, @:privateAccess tex.depthBuffer.b.r);
 			gl.framebufferRenderbuffer(GL.FRAMEBUFFER, GL.STENCIL_ATTACHMENT, GL.RENDERBUFFER, tex.depthBuffer.hasStencil() ? @:privateAccess tex.depthBuffer.b.r : null);
 		} else {
@@ -1659,6 +1687,19 @@ class GlDriver extends Driver {
 				throw "Invalid frame buffer: "+code;
 		}
 		#end
+	}
+	override function blitFramebuffer( msaaFBO:h3d.impl.Driver.Framebuffer, targetFBO:h3d.impl.Driver.Framebuffer, tex : h3d.mat.Texture, w:Int, h:Int ) {
+		gl.clearColor( 0.2, 0.5, 0.2, 1.0);
+		gl.bindFramebuffer(GL.READ_FRAMEBUFFER, msaaFBO.f);
+		gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, targetFBO.f);
+		gl.viewport(0, 0, w, h);
+		gl.framebufferTexture2D(GL.FRAMEBUFFER, GL.COLOR_ATTACHMENT0, GL.TEXTURE_2D, tex.t.t, 0);
+		gl.blitFramebuffer(0, 0, w, h,  // src rect
+			0, 0, w, h,  // dst rect
+			GL.COLOR_BUFFER_BIT, // buffer mask
+			GL.LINEAR); // scale filter
+		gl.bindFramebuffer(GL.FRAMEBUFFER, null);
+		gl.viewport(0, 0, w, h);
 	}
 
 	override function setRenderTargets( textures : Array<h3d.mat.Texture> ) {

@@ -16,14 +16,16 @@ class DepthBuffer {
 	public var width(default, null) : Int;
 	public var height(default, null) : Int;
 	public var format(default, null) : DepthFormat;
+	public var multiSample(default, null) : Int;
 
 	/**
 		Creates a new depth buffer, it can be attached to one or several render target Texture by setting their `depthBuffer` property.
 	**/
-	public function new( width : Int, height : Int, ?format : DepthFormat ) {
+	public function new( width : Int, height : Int, ?format : DepthFormat, ?multiSample : Int ) {
 		this.width = width;
 		this.height = height;
 		this.format = format;
+		this.multiSample = multiSample;
 		if( width > 0 ) alloc();
 	}
 
