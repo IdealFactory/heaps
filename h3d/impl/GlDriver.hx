@@ -170,8 +170,8 @@ class GlDriver extends Driver {
 
 	var offsetX : Int = 0;
 	var offsetY : Int = 0;
-	var bufferWidth : Int;
-	var bufferHeight : Int;
+	var bufferWidth : Int = 0;
+	var bufferHeight : Int = 0;
 	var curTarget : h3d.mat.Texture;
 	var curTargets : Array<h3d.mat.Texture> = [];
 	var numTargets : Int;
@@ -821,7 +821,7 @@ class GlDriver extends Driver {
 	override function offset( x : Int, y : Int ) {
 		offsetX = x;
 		offsetY = y;
-		if (bufferWidth == null || bufferHeight == null) return;
+		if (bufferWidth == 0 || bufferHeight == 0) return;
 		gl.viewport(offsetX, offsetY, bufferWidth, bufferHeight);
 	}
 
@@ -1037,7 +1037,7 @@ class GlDriver extends Driver {
 			throw "Unsupported depth format "+b.format;
 		}
 		gl.bindRenderbuffer(GL.RENDERBUFFER, r);
-		if (b.multiSample == null)
+		if (b.multiSample == 0)
 			gl.renderbufferStorage(GL.RENDERBUFFER, format, b.width, b.height);
 		else
 			gl.renderbufferStorageMultisample(GL.RENDERBUFFER, b.multiSample, GL.DEPTH_COMPONENT16, b.width, b.height);

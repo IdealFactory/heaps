@@ -25,7 +25,7 @@ class DepthBuffer {
 		this.width = width;
 		this.height = height;
 		this.format = format;
-		this.multiSample = multiSample;
+		this.multiSample = multiSample == null ? 0 : multiSample;
 		if( width > 0 ) alloc();
 	}
 
