@@ -5,7 +5,7 @@ class IrradianceMap extends hxsl.Shader {
 	static var SRC = {
 
         @param var vReflectionColor : Vec3;
-        @param var reflectionMatrix : Mat4;
+        // @param var reflectionMatrix : Mat4;
         @param var reflectionSampler : SamplerCube;
         @param var vReflectionMicrosurfaceInfos : Vec3;
         @param var vReflectionInfos : Vec2;
@@ -33,10 +33,12 @@ class IrradianceMap extends hxsl.Shader {
         var NdotV:Float;
         var environmentRadiance:Vec4;
         var environmentIrradiance:Vec3;
-        var Epsilon : Float;
+        var Epsilon:Float;
         
         var viewDirectionW:Vec3;
         var normalW:Vec3;
+        var reflectionVector:Vec3;
+        var reflectionMatrix:Mat4;
 
         function absEps(x:Float):Float {
             return abs(x)+Epsilon;
@@ -123,12 +125,13 @@ class IrradianceMap extends hxsl.Shader {
             roughness = 1. - microSurface; //float
             NdotVUnclamped = dot(normalW, viewDirectionW); //float
             NdotV = absEps(NdotVUnclamped); //float
+
             var alphaG = convertRoughnessToAverageSlope(roughness); //float
             AARoughnessFactors = getAARoughnessFactors(normalW.xyz); //vec2
             alphaG += AARoughnessFactors.y;
             environmentRadiance = vec4(0., 0., 0., 0.); //vec4
             environmentIrradiance = vec3(0., 0., 0.); //vec3
-            var reflectionVector = computeReflectionCoords(vec4(vPositionW, 1.0), normalW); //vec3
+            reflectionVector = computeReflectionCoords(vec4(vPositionW, 1.0), normalW); //vec3
             reflectionVector.y = -reflectionVector.y;
             reflectionVector.x = -reflectionVector.x;
             // reflectionVector.z = -reflectionVector.z;
@@ -163,7 +166,7 @@ class IrradianceMap extends hxsl.Shader {
         
         this.vReflectionInfos.set( 1, 0 );
 
-        this.reflectionMatrix.loadValues([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+        // this.reflectionMatrix.loadValues([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 
         this.vReflectionColor.set( 1, 1, 1 );
         this.vReflectionMicrosurfaceInfos.set( 128, 0.8000, 0 );

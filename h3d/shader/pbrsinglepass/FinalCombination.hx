@@ -4,9 +4,6 @@ class FinalCombination extends hxsl.Shader {
 
 	static var SRC = {
 
-        @param var vLightingIntensity : Vec4;
-        @param var vAmbientColor : Vec3;
-
         var surfaceAlbedo:Vec3;
         var ambientOcclusionColor:Vec3;
         var environmentRadiance:Vec4;
@@ -16,6 +13,10 @@ class FinalCombination extends hxsl.Shader {
         var diffuseBase:Vec3;
         var specularBase:Vec3;
         var specularEnvironmentReflectance:Vec3;
+        var clearCoatBase:Vec3;
+
+        var ccOutConservationFactor:Float;
+        var ccOutEnergyConsFCC:Vec3;
 
         var finalAmbient:Vec3;
         var finalDiffuse:Vec3;
@@ -24,36 +25,38 @@ class FinalCombination extends hxsl.Shader {
         var finalSpecularScaled:Vec3;
         var finalRadiance:Vec3;
         var finalRadianceScaled:Vec3;
+        var finalClearCoat:Vec3;
+        var finalClearCoatScaled:Vec3;
 
+        var ambientColor:Vec3;
         var lightingIntensity:Vec4;
 
         function fragment() {
-
-            lightingIntensity = vLightingIntensity;
-
             finalIrradiance = environmentIrradiance; //vec3
+            finalIrradiance *= ccOutConservationFactor;
             finalIrradiance *= surfaceAlbedo.rgb;
+            finalIrradiance *= lightingIntensity.z;
             finalIrradiance *= ambientOcclusionColor;
             finalSpecular = specularBase;
             finalSpecular = max(finalSpecular, 0.0);
-            finalSpecularScaled = finalSpecular * vLightingIntensity.x * vLightingIntensity.w;
+            finalSpecularScaled = finalSpecular * lightingIntensity.x * lightingIntensity.w;
             finalSpecularScaled *= energyConservationFactor;
             finalRadiance = environmentRadiance.rgb; //vec3
             finalRadiance *= specularEnvironmentReflectance;
             finalRadianceScaled = finalRadiance * lightingIntensity.z; //vec3
             finalRadianceScaled *= energyConservationFactor;
+            finalClearCoat = clearCoatBase;
+            finalClearCoat = max(finalClearCoat, 0.0);
+            finalClearCoatScaled = finalClearCoat * lightingIntensity.x * lightingIntensity.w;
+            finalClearCoatScaled *= ccOutEnergyConsFCC;
             finalDiffuse = diffuseBase; //vec3
             finalDiffuse *= surfaceAlbedo.rgb;
             finalDiffuse = max(finalDiffuse, 0.0);
-            finalAmbient = vAmbientColor; //vec3
+            finalDiffuse *= lightingIntensity.x;
+            finalDiffuse *= ambientOcclusionColor;
+            finalAmbient = ambientColor; //vec3
             finalAmbient *= surfaceAlbedo.rgb;
+            finalAmbient *= ambientOcclusionColor;
         }
-    }
-    
-    public function new() {
-        super();
-
-        this.vAmbientColor.set( 0, 0, 0 );
-        this.vLightingIntensity.set( 1, 1, 1, 1 );
     }
 }

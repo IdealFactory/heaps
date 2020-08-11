@@ -48,8 +48,8 @@ class BaseColorUV extends hxsl.Shader {
         super();
 
         this.vAlbedoColor.set( 1, 1, 1, 1 );
-        this.vAlbedoInfos.set( 0, 1 );
-        this.vAmbientInfos.set( 0, 1, 1, 0 );
+        this.vAlbedoInfos.set( 0, 1 );//0 );
+        this.vAmbientInfos.set( 0, 1, 1, 0) ;//0, 0, 0 );
 
     }
 }

@@ -151,13 +151,40 @@ class Reader {
         @:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
         #end
 
-        texture = new h3d.mat.Texture( info.width, info.width, [Cube,MipMapped,ManualMipMapGen]);//h3d.mat.Texture.nativeFormat);
+        var sourceTexture = new h3d.mat.Texture(info.width, info.width, [NoAlloc], h3d.mat.Data.TextureFormat.RGBA);
+		sourceTexture.setName("sourceTex");
+		sourceTexture.wrap = h3d.mat.Data.Wrap.Repeat;
+        
+        texture = new h3d.mat.Texture(info.width, info.width, [Target,Cube,MipMapped,ManualMipMapGen], h3d.mat.Data.TextureFormat.RGBA16F);//h3d.mat.Texture.nativeFormat);
+		texture.preventAutoDispose();
         texture.mipMap = Linear;
         texture.filter = Linear;
-        for (im in 0...mipmapsCount)
+
+		var shader = new h3d.shader.pbrsinglepass.RGBDDecode();
+		var screen = new h3d.pass.ScreenFx( shader );
+		var engine = h3d.Engine.getCurrent();
+
+        var size:Int = info.width;
+        for (im in 0...mipmapsCount) {
             for (face in 0...6) {
-               texture.uploadBitmap(images[im][face], im, face);
+                #if debug_gltf
+                trace("RGBDDecoding env:IM="+im+" face="+face);
+                #end
+                sourceTexture.resize( size, size );
+                sourceTexture.uploadBitmap(images[im][face]);
+                
+                // Render the RGBDDecode shader to create the HDR half-float mip-mapped environment cube-map faces
+                shader.textureSampler = sourceTexture;
+                engine.pushTarget( texture, face, im );
+                screen.render();
+                engine.popTarget();
+                @:privateAccess engine.flushTarget();  
+                // texture.uploadBitmap(texture, im, face);
             }
+            size = size >> 1;
+        }
+        
+        screen.dispose();
         
         #if !flash
         @:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
@@ -172,4 +199,3 @@ class Reader {
 		return reader;
 	}
 }
-

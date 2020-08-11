@@ -45,7 +45,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	
 	var s2d : h2d.Scene;
 	var s3d : h3d.scene.Scene;
-	var baseURL:String = "";
+	public var baseURL:String = "";
 
 	#if openfl
 	var dependencyInfo:Map<openfl.net.URLLoader,LoadInfo>;
@@ -79,7 +79,9 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		meshes = [];
 		animations = [];
 		nodeObjects = [];
-
+		#if openfl
+		dependencyInfo = new Map<openfl.net.URLLoader,BaseLibrary.LoadInfo>();
+        #end
     }
 
     function loadBuffer( uri:String, bytesLoaded:Bytes->Array<Bytes>->Int->Void, bin:Array<Bytes>, idx:Int ) {
@@ -308,7 +310,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				material.reflectivityMap = getTexture(pbrmr.metallicRoughnessTexture.index);
 			}
 
-			material.metalnessFactor = Reflect.hasField(pbrmr, "metallicFactor") ? pbrmr.metallicFactor : 1;
+			material.metalnessFactor = Reflect.hasField(pbrmr, "metallicFactor") ? pbrmr.metallicFactor : 0;
 			material.roughnessFactor = Reflect.hasField(pbrmr, "roughnessFactor") ? pbrmr.roughnessFactor : 1;
 			#if debug_gltf
 			trace("MATERIAL:setting m/r factors: "+material.metalnessFactor+"/"+material.roughnessFactor);
@@ -341,11 +343,29 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			material.mainPass.culling = materialNode.doubleSided ? None : Front;
 		}
 
+		if (materialNode.extensions != null) addExtensions(materialNode, material);
+
 		if (material.texture == null) {
 			h3d.mat.Texture.fromColor(0xFF808080);
 		}
 		return material;
 	} 
+
+	function addExtensions( materialNode, material ) {
+		var exts:Array<Dynamic> = cast materialNode.extensions;
+		if (Reflect.hasField( materialNode.extensions, "KHR_materials_clearcoat")) {
+			var cc:MaterialClearCoatExt = cast materialNode.extensions.KHR_materials_clearcoat;
+			var ccFactor = (cc.clearcoatFactor == null ? 1. : cc.clearcoatFactor);
+			var ccRoughnessFactor = (cc.clearcoatRoughnessFactor == null ? 0. : cc.clearcoatRoughnessFactor);
+			var ccTex = (cc.clearcoatTexture != null ? getTexture( cc.clearcoatTexture.index ) : null);
+			var ccRoughTex = (cc.clearcoatRoughnessTexture != null ? getTexture( cc.clearcoatRoughnessTexture.index ) : null);
+			var ccNormalTex = (cc.clearcoatNormalTexture != null ? getTexture( cc.clearcoatNormalTexture.index ) : null);
+			material.addClearCoat( ccFactor, ccRoughnessFactor, ccTex, ccRoughTex, ccNormalTex );
+			#if debug_gltf
+			trace( "ClearCoatExt: ccF="+ccFactor+" ccRF="+ccRoughnessFactor);
+			#end
+		}
+	}
 
 	function createAnimations( animationNode:Animation ) {
 		
@@ -583,6 +603,11 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			#if debug_gltf
 			trace(" - mesh primitive:"+primMesh.name);
 			#end
+
+			// var b = meshPrim.getBounds().clone();
+			// var mat = primMesh.getAbsPos();
+			// b.transform( mat );
+			// trace("GLTFBounds:"+primName+" B:"+b);
 
 			#if debug_gltf_normals
 			primMesh.material.mainPass.wireframe = true;

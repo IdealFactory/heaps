@@ -11,14 +11,17 @@ class Library extends BaseLibrary {
 
         this.gltfFileProcessed = gltfFileProcessed;
 
-        #if debug_gltf
-        trace("GLTF Loading scene:"+fileName);
-        #end
-
 		reset();
 
-		this.fileName = fileName;
-       
+        this.fileName = fileName;
+        
+        if (fileName.indexOf("http://")>-1 || fileName.indexOf("https://")>-1)
+            baseURL = fileName.substr(0, fileName.lastIndexOf("/")+1);
+
+        #if debug_gltf
+        trace("GLTF Loading scene:"+fileName+" BaseURL:"+baseURL);
+        #end
+
         var gltfBytes:Bytes;
         if (bytes != null) {
             parseglTF( bytes );
@@ -26,8 +29,6 @@ class Library extends BaseLibrary {
         #if openfl
         else if (fileName.indexOf("http://")>-1 || fileName.indexOf("https://")>-1) {
             totalBytesToLoad = 0;
-            baseURL = fileName.substr(0, fileName.lastIndexOf("/")+1);
-            dependencyInfo = new Map<openfl.net.URLLoader,BaseLibrary.LoadInfo>();
             requestURL( fileName, onComplete );
         } 
         #end
@@ -96,24 +97,25 @@ class Library extends BaseLibrary {
         #end
 
         // Scenes
-        for ( scene in root.scenes ) {
-            var sceneContainer = new h3d.scene.Object();
-		    sceneContainer.rotate( Math.PI/2, 0, 0 );
-            scenes.push( sceneContainer );
-			for ( node in scene.nodes ) {
-				traverseNodes(node, sceneContainer );
-			}
-		}
+        if (root.scenes != null)
+            for ( scene in root.scenes ) {
+                var sceneContainer = new h3d.scene.Object();
+                sceneContainer.name = "SceneContainer";
+                sceneContainer.rotate( Math.PI/2, 0, 0 );
+                scenes.push( sceneContainer );
+                if (scene.nodes != null)
+                    for ( node in scene.nodes )
+                        traverseNodes(node, sceneContainer );
+            }
 
         // Setup animations
         if (root.animations != null)
             for (animation in root.animations) createAnimations( animation );
 
 
-        if (s3d != null)
-            for ( scene in scenes ) {
-                s3d.addChild(scene);
-            }
+        for ( scene in scenes ) {
+            s3d.addChild(scene);
+        }
         
         #if openfl
         dispatchEvent(new openfl.events.Event(openfl.events.Event.COMPLETE));
@@ -153,6 +155,7 @@ class Library extends BaseLibrary {
         if (node.children != null) {
             if (mesh==null) {
                 mesh = new h3d.scene.Object( parent );
+                mesh.name = "Container";
                 mesh.setTransform( transform );
                 nodeObjects[ nodeId ] = mesh;
             }

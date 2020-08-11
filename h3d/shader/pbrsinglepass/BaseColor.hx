@@ -4,7 +4,6 @@ class BaseColor extends hxsl.Shader {
 
 	static var SRC = {
 
-        @var var vNormalW : Vec3;                        // varying vec3 vNormalW;        
         @param var reflectionMatrix : Mat4;             // uniform mat4 reflectionMatrix;
         
         @param var vAlbedoColor : Vec4;                 // uniform vec4 vAlbedoColor;
@@ -20,7 +19,6 @@ class BaseColor extends hxsl.Shader {
         var ambientOcclusionColor:Vec3;
 
         function fragment() {
-            normalW = normalize(vNormalW);
             surfaceAlbedo = vAlbedoColor.rgb; //vec3
             alpha = vAlbedoColor.a; //float
 

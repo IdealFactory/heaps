@@ -31,6 +31,12 @@ class RGBDDecode extends h3d.shader.ScreenShader {
             return rgbd.rgb/rgbd.a;
         }
         
+		function vertex() {
+            madd = vec2(0.5);
+            calculatedUV = (vec2(input.position.x, input.position.y * flipY) * madd + madd) * scale;
+			output.position = vec4(input.position.x, input.position.y * flipY, 0, 1);
+		}
+
         function fragment() {
             rgbdMaxRange = 255.0;
             PI = 3.1415926535897932384626433832795;
@@ -41,6 +47,12 @@ class RGBDDecode extends h3d.shader.ScreenShader {
             output.color = vec4(fromRGBD(textureSampler.get(calculatedUV)), 1.0);
         }
     };
+
+	public function new() {
+        super();
+
+        this.scale.set( 1, 1 );
+	}
 
     // static var SRC = {
     //     @:import h3d.shader.Base2d;

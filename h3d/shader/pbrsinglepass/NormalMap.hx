@@ -7,7 +7,6 @@ class NormalMap extends hxsl.Shader {
         @param var bumpSampler : Sampler2D;                             // uniform sampler2D bumpSampler;
 
         @var var vMainUV1 : Vec2;                                       // varying vec2 vMainUV1;
-        @var var vNormalW : Vec3;
         
         @param var vBumpInfos : Vec3;                                   // uniform vec3 vBumpInfos;
 
@@ -37,7 +36,6 @@ class NormalMap extends hxsl.Shader {
         }
 
 		function fragment() {
-            normalW = normalize(vNormalW);
             var TBN = cotangent_frameWithTS(normalW, positionW, vMainUV1, vec2(1.,-1.)); //mat3 // vBumpUV -> vMainUV1
             var bmp = bumpSampler.get(vMainUV1);
             var pt = perturbNormal(TBN, bmp.xyz, vBumpInfos.y);

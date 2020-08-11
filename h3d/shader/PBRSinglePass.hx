@@ -38,8 +38,6 @@ class PBRSinglePass extends hxsl.Shader {
         @var var vEyePosition : Vec3;
 
         // FRAGMENT
-        @param var vReflectionMicrosurfaceInfos : Vec3;                 // uniform vec3 vReflectionMicrosurfaceInfos;
-        @param var vAmbientColor : Vec3;                                // uniform vec3 vAmbientColor;
         @param var vCameraInfos : Vec4;                                 // uniform vec4 vCameraInfos;
 
         var output : {
@@ -61,7 +59,8 @@ class PBRSinglePass extends hxsl.Shader {
 		var specColor : Vec3;
 		var worldDist : Float;
 
-		@param var color : Vec4;
+        @param var color : Vec4;
+        @param var vReflectionMatrix : Mat4;
 		@range(0,100) @param var specularPower : Float;
 		@range(0,10) @param var specularAmount : Float;
         @param var specularColor : Vec3;
@@ -82,10 +81,16 @@ class PBRSinglePass extends hxsl.Shader {
         var viewDirectionW:Vec3;
         var rawVNormalW:Vec3;
         var normalW:Vec3;
+        var geometricNormalW:Vec3;
         var uvOffset:Vec2;
 
         var finalWorld:Mat4;
         var normalUpdated:Vec3;
+
+        var ccOutConservationFactor:Float;
+        var ccOutFinalClearCoatRadianceScaled:Vec3;
+        var ccOutEnergyConsFCC:Vec3;
+        var finalClearCoatScaled:Vec3;
 
         var surfaceAlbedo:Vec3;
         var alpha:Float;
@@ -101,6 +106,7 @@ class PBRSinglePass extends hxsl.Shader {
         var debugVar:Vec4;
         var gmv:Mat4;
         var flip:Mat4;
+        var reflectionMatrix:Mat4;
 
 		function __init__() {
             flip = mat4( vec4(1, 0, 0, 0), vec4(0, -1, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, 0, 1));
@@ -117,16 +123,19 @@ class PBRSinglePass extends hxsl.Shader {
 			screenUV = screenToUv(projectedPosition.xy / projectedPosition.w);
 			depth = projectedPosition.z / projectedPosition.w;
 			worldDist = length(transformedPosition - camera.position) / camera.zFar;
+            ccOutConservationFactor = 1.0;
+            ccOutFinalClearCoatRadianceScaled = vec3(0.);
+            ccOutEnergyConsFCC = vec3(0.);
+            finalClearCoatScaled = vec3(0.);
 		}
 
         function vertex() {
             output.position = projectedPosition * vec4(1, camera.projFlip, 1, 1);
-
-
             rgbdMaxRange = 255.0;
     
             var positionUpdated = input.position; //vec3
             normalUpdated = vec3(input.normal.x, input.normal.y, input.normal.z); //vec3
+            // normalUpdated.r = -normalUpdated.r;
             finalWorld = gmv;//world; //mat4
             var worldPos = positionUpdated * finalWorld.mat3x4(); //vec4 // finalWorld * vec4(positionUpdated, 1.0)
             vPositionW = vec3(worldPos.r, worldPos.b, worldPos.g);//vec3(worldPos.rgb);
@@ -135,12 +144,18 @@ class PBRSinglePass extends hxsl.Shader {
             vNormalW = normalize(tmpNormal * finalWorld.mat3())#if !flash .rbg#end; // normalize(normalWorld * normalUpdated);
             var uv2 = vec2(0., 0.); //vec2
             vEyePosition = vec3(camera.position.r, camera.position.b, camera.position.g); //camera.position;//
+            reflectionMatrix = vReflectionMatrix;
         }
 
         function fragment() {
-            debugVar = vec4(0, 0, 0, 1);
+            debugVar = vec4(0.3, 0.3, 0.3, 1);
             positionW = vPositionW;
             rawVNormalW = vNormalW;
+
+            reflectionMatrix = vReflectionMatrix;
+
+            normalW = normalize(vNormalW);
+            geometricNormalW = normalW;
 
             PI = 3.1415926535897932384626433832795;
             MINIMUMVARIANCE = 0.0005;
@@ -162,6 +177,8 @@ class PBRSinglePass extends hxsl.Shader {
 
 	public function new() {
         super();
+
+        this.vReflectionMatrix.loadValues([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 	}
 
 }

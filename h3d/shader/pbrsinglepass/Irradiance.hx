@@ -5,7 +5,6 @@ class Irradiance extends hxsl.Shader {
 	static var SRC = {
 
         @param var vReflectionColor : Vec3;
-        @param var reflectionMatrix : Mat4;
         @param var reflectionSampler : SamplerCube;
         @param var vReflectionMicrosurfaceInfos : Vec3;
         @param var vReflectionInfos : Vec2;
@@ -35,10 +34,12 @@ class Irradiance extends hxsl.Shader {
         var NdotV:Float;
         var environmentRadiance:Vec4;
         var environmentIrradiance:Vec3;
-        var Epsilon : Float;
+        var Epsilon:Float;
         
         var viewDirectionW:Vec3;
         var normalW:Vec3;
+        var reflectionVector:Vec3;
+        var reflectionMatrix:Mat4;
 
         function absEps(x:Float):Float {
             return abs(x)+Epsilon;
@@ -114,7 +115,7 @@ class Irradiance extends hxsl.Shader {
             alphaG += AARoughnessFactors.y;
             environmentRadiance = vec4(0., 0., 0., 0.); //vec4
             environmentIrradiance = vec3(0., 0., 0.); //vec3
-            var reflectionVector = computeReflectionCoords(vec4(vPositionW, 1.0), normalW); //vec3
+            reflectionVector = computeReflectionCoords(vec4(vPositionW, 1.0), normalW); //vec3
             reflectionVector.y = -reflectionVector.y;
             reflectionVector.x = -reflectionVector.x;
 
@@ -125,9 +126,11 @@ class Irradiance extends hxsl.Shader {
             environmentRadiance.rgb = fromRGBD(environmentRadiance); // When using RGBD HDR images
             environmentRadiance.rgb *= vReflectionInfos.x;
             environmentRadiance.rgb *= vReflectionColor.rgb;
-            environmentIrradiance = vEnvironmentIrradiance;
+            var irradianceVector = vec3((reflectionMatrix * vec4(normalW, 0)).rgb).xyz; //vec3 //vec3(reflectionMatrix * vec4(normalW, 0)).xyz
+            irradianceVector.x *= -1.0;
+            environmentIrradiance = computeEnvironmentIrradiance(irradianceVector);
             environmentIrradiance *= vReflectionColor.rgb;
-       }
+        }
     }
 
 	public function new() {
@@ -144,8 +147,6 @@ class Irradiance extends hxsl.Shader {
         this.vSphericalL2_2.set( 0.0154, 0.0403, 0.1151 );
 
         this.vReflectionInfos.set( 1, 0 );
-
-        this.reflectionMatrix.loadValues([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
 
         this.vReflectionColor.set( 1, 1, 1 );
         this.vReflectionMicrosurfaceInfos.set( 128, 0.8000, 0 );
