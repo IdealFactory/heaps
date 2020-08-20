@@ -272,6 +272,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		var material = new h3d.mat.PBRSinglePass();
 		material.mainPass.culling = Front;
 		material.environmentBRDF = brdfTexture;
+		// material.output.debug = true;
 
 		if (materialNode == null) {
 			material.texture = h3d.mat.Texture.fromColor(0xFF808080);
@@ -310,7 +311,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				material.reflectivityMap = getTexture(pbrmr.metallicRoughnessTexture.index);
 			}
 
-			material.metalnessFactor = Reflect.hasField(pbrmr, "metallicFactor") ? pbrmr.metallicFactor : 0;
+			material.metalnessFactor = Reflect.hasField(pbrmr, "metallicFactor") ? pbrmr.metallicFactor : 1;
 			material.roughnessFactor = Reflect.hasField(pbrmr, "roughnessFactor") ? pbrmr.roughnessFactor : 1;
 			#if debug_gltf
 			trace("MATERIAL:setting m/r factors: "+material.metalnessFactor+"/"+material.roughnessFactor);
@@ -353,6 +354,8 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 
 	function addExtensions( materialNode, material ) {
 		var exts:Array<Dynamic> = cast materialNode.extensions;
+		
+		// Clearcoat
 		if (Reflect.hasField( materialNode.extensions, "KHR_materials_clearcoat")) {
 			var cc:MaterialClearCoatExt = cast materialNode.extensions.KHR_materials_clearcoat;
 			var ccFactor = (cc.clearcoatFactor == null ? 1. : cc.clearcoatFactor);
@@ -363,6 +366,19 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			material.addClearCoat( ccFactor, ccRoughnessFactor, ccTex, ccRoughTex, ccNormalTex );
 			#if debug_gltf
 			trace( "ClearCoatExt: ccF="+ccFactor+" ccRF="+ccRoughnessFactor);
+			#end
+		}
+
+		// Sheen
+		if (Reflect.hasField( materialNode.extensions, "KHR_materials_sheen")) {
+			var sheen:MaterialSheenExt = cast materialNode.extensions.KHR_materials_sheen;
+			var sheenColorFactor = (sheen.sheenColorFactor == null ? [1., 1., 1.] : [ sheen.sheenColorFactor[0], sheen.sheenColorFactor[1], sheen.sheenColorFactor[2] ]);
+			var sheenIntensity = (sheen.sheenColorFactor == null || sheen.sheenColorFactor.length < 4 ? 1. : sheen.sheenColorFactor[3]);
+			var sheenRoughnessFactor = (sheen.sheenRoughnessFactor == null ? 0. : sheen.sheenRoughnessFactor);
+			var sheenTex = (sheen.sheenTexture != null ? getTexture( sheen.sheenTexture.index ) : null);
+			material.addSheen( sheenColorFactor, sheenIntensity, sheenRoughnessFactor, sheenTex );
+			#if debug_gltf
+			trace( "SheenExt: mat:"+material.name+" sheenCol="+sheenColorFactor+" sheenIntensity:"+sheenIntensity+" sheenRF="+sheenRoughnessFactor);
 			#end
 		}
 	}
@@ -467,6 +483,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	}
 
 	function applySampler( index : Int, mat : h3d.mat.Texture ) {
+		
 		var sampler = root.samplers[index];
 		mat.mipMap = Linear;
 		mat.filter = Linear;
@@ -506,6 +523,10 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		var node = root.textures[index];
 		var img = images[node.source]; // Pre-loaded image array
 
+		#if debug_gltf
+		trace("GLTF.getTexture: node="+node+" src:"+node.source);
+		#end 
+
 		var format = h3d.mat.Texture.nativeFormat;
 		var tex = new h3d.mat.Texture(img.width, img.height, [NoAlloc], format);
 
@@ -517,6 +538,11 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			applySampler(node.sampler, tex);
 
 		if (tex.mipMap!=None) tex.flags.set(MipMapped);
+
+
+		#if debug_gltf
+		trace("GLTF.applySampler: mipmap:"+tex.mipMap+" filter:"+tex.filter+" wrap:"+tex.wrap);
+		#end 
 
 		#if js
 		tex.uploadBitmap( img );

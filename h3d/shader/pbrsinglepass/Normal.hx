@@ -1,10 +1,8 @@
 package h3d.shader.pbrsinglepass;
 
-class Normal extends hxsl.Shader {
+class Normal extends PBRSinglePassLib {
 
 	static var SRC = {
-        
-        @var var vNormalW : Vec3;
         
         var normalW:Vec3;
         

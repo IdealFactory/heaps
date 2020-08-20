@@ -1,12 +1,8 @@
 package h3d.shader.pbrsinglepass;        
 
-class BaseColor extends hxsl.Shader {
+class BaseColor extends PBRSinglePassLib {
 
 	static var SRC = {
-
-        @param var reflectionMatrix : Mat4;             // uniform mat4 reflectionMatrix;
-        
-        @param var vAlbedoColor : Vec4;                 // uniform vec4 vAlbedoColor;
 
         var normalW:Vec3;
 
@@ -24,13 +20,6 @@ class BaseColor extends hxsl.Shader {
 
             ambientOcclusionColor = vec3(1., 1., 1.); //vec3  
         }
-    }
-
-    public function new() {
-        super();
-
-        this.vAlbedoColor.set( 1, 1, 1, 1 );
-
     }
 }
         

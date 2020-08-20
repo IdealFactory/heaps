@@ -1,24 +1,23 @@
 package h3d.shader.pbrsinglepass;
 
-class AmbientOcclusionMap extends hxsl.Shader {
+class AmbientOcclusionMap extends PBRSinglePassLib {
 
 	static var SRC = {
 
         @param var ambientSampler : Sampler2D;
         
-        @var var vMainUV1 : Vec2;
-
         var uvOffset:Vec2;
 
         var ambientOcclusionColor:Vec3;
-        var ambientInfos:Vec4;
         var ambientOcclusionForDirectDiffuse:Vec3;
 
         function fragment() {
-            var ambientOcclusionColorMap = ambientSampler.get(vMainUV1 + uvOffset).rgb * ambientInfos.y; //vec3 // vAmbientUV -> vMainUV1
+            ambientOcclusionColor = vec3(1., 1., 1.); //vec3
+ 
+            var ambientOcclusionColorMap = ambientSampler.get(vMainUV1 + uvOffset).rgb * vec3(vAmbientInfos.y); //vec3 // vAmbientUV -> vMainUV1
             ambientOcclusionColorMap = vec3(ambientOcclusionColorMap.r, ambientOcclusionColorMap.r, ambientOcclusionColorMap.r);
-            ambientOcclusionColor = mix(ambientOcclusionColor, ambientOcclusionColorMap, ambientInfos.z);
-            ambientOcclusionForDirectDiffuse = mix(vec3(1.), ambientOcclusionColor, ambientInfos.w); //vec3
+            ambientOcclusionColor = mix(ambientOcclusionColor, ambientOcclusionColorMap, vAmbientInfos.z);
+            ambientOcclusionForDirectDiffuse = mix(vec3(1.), ambientOcclusionColor, vAmbientInfos.w); //vec3
          }
     }
 }

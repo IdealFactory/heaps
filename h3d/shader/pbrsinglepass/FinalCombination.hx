@@ -1,11 +1,12 @@
 package h3d.shader.pbrsinglepass;
 
-class FinalCombination extends hxsl.Shader {
+class FinalCombination extends PBRSinglePassLib {
 
 	static var SRC = {
 
         var surfaceAlbedo:Vec3;
         var ambientOcclusionColor:Vec3;
+        var ambientOcclusionForDirectDiffuse:Vec3;
         var environmentRadiance:Vec4;
         var environmentIrradiance:Vec3;
 
@@ -13,8 +14,14 @@ class FinalCombination extends hxsl.Shader {
         var diffuseBase:Vec3;
         var specularBase:Vec3;
         var specularEnvironmentReflectance:Vec3;
-        var clearCoatBase:Vec3;
 
+        // Sheen extension
+        var sheenBase:Vec3;
+        var sheenOutSheenColor:Vec3;
+        var sheenOutSheenAlbedoScaling:Float;
+
+        // Clearcoat extension
+        var clearCoatBase:Vec3;
         var ccOutConservationFactor:Float;
         var ccOutEnergyConsFCC:Vec3;
 
@@ -25,6 +32,8 @@ class FinalCombination extends hxsl.Shader {
         var finalSpecularScaled:Vec3;
         var finalRadiance:Vec3;
         var finalRadianceScaled:Vec3;
+        var finalSheen:Vec3;
+        var finalSheenScaled:Vec3;
         var finalClearCoat:Vec3;
         var finalClearCoatScaled:Vec3;
 
@@ -45,6 +54,10 @@ class FinalCombination extends hxsl.Shader {
             finalRadiance *= specularEnvironmentReflectance;
             finalRadianceScaled = finalRadiance * lightingIntensity.z; //vec3
             finalRadianceScaled *= energyConservationFactor;
+            finalRadianceScaled *= sheenOutSheenAlbedoScaling;
+            finalSheen = sheenBase * sheenOutSheenColor;
+            finalSheen = max(finalSheen, 0.0);
+            finalSheenScaled = finalSheen * lightingIntensity.x * lightingIntensity.w;
             finalClearCoat = clearCoatBase;
             finalClearCoat = max(finalClearCoat, 0.0);
             finalClearCoatScaled = finalClearCoat * lightingIntensity.x * lightingIntensity.w;
@@ -53,10 +66,10 @@ class FinalCombination extends hxsl.Shader {
             finalDiffuse *= surfaceAlbedo.rgb;
             finalDiffuse = max(finalDiffuse, 0.0);
             finalDiffuse *= lightingIntensity.x;
-            finalDiffuse *= ambientOcclusionColor;
             finalAmbient = ambientColor; //vec3
             finalAmbient *= surfaceAlbedo.rgb;
             finalAmbient *= ambientOcclusionColor;
+            finalDiffuse *= ambientOcclusionForDirectDiffuse;
         }
     }
 }

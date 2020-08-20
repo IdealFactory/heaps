@@ -1,6 +1,6 @@
 package h3d.shader.pbrsinglepass;
 
-class Tangent extends hxsl.Shader {
+class Tangent extends PBRSinglePassLib {
 
 	static var SRC = {
         
@@ -16,7 +16,6 @@ class Tangent extends hxsl.Shader {
         @param var bumpSampler : Sampler2D;                             // uniform sampler2D bumpSampler;
         @param var vBumpInfos : Vec3;                                   // uniform vec3 vBumpInfos;
 
-        @var var vMainUV1 : Vec2;                                       // varying vec2 vMainUV1;
         @var var vTBN : Mat3;
         
         var finalWorld:Mat4;
@@ -24,12 +23,6 @@ class Tangent extends hxsl.Shader {
         var normalW:Vec3;
         var TBN:Mat3;
         
-        function perturbNormal(cotangentFrame:Mat3, textureSample:Vec3, scale:Float):Vec3 {
-            textureSample = textureSample * 2.0 - 1.0;
-            textureSample = normalize(vec3(textureSample.x, textureSample.y, textureSample.z) * vec3(scale, scale, 1.0));
-            return normalize( cotangentFrame * textureSample ); 
-        }
-
         function vertex() {
             var tangentUpdated = input.tangent;
             var tbnNormal = normalize(normalUpdated);

@@ -1,6 +1,6 @@
 package h3d.shader;        
 
-class PBRSinglePass extends hxsl.Shader {
+class PBRSinglePass extends h3d.shader.pbrsinglepass.PBRSinglePassLib {
 
 	static var SRC = {
 
@@ -33,12 +33,12 @@ class PBRSinglePass extends hxsl.Shader {
 
         @param var world : Mat4;                                        // uniform mat4 world;
         
-        @var var vPositionW : Vec3;                                     // varying vec3 vPositionW;
-        @var var vNormalW : Vec3;                                       // varying vec3 vNormalW;
-        @var var vEyePosition : Vec3;
+        // @var var vPositionW : Vec3;                                     // varying vec3 vPositionW;
+        // @var var vNormalW : Vec3;                                       // varying vec3 vNormalW;
+        // @var var vEyePosition : Vec3;
 
         // FRAGMENT
-        @param var vCameraInfos : Vec4;                                 // uniform vec4 vCameraInfos;
+        // @param var vCameraInfos : Vec4;                                 // uniform vec4 vCameraInfos;
 
         var output : {
 			var position : Vec4;
@@ -60,22 +60,22 @@ class PBRSinglePass extends hxsl.Shader {
 		var worldDist : Float;
 
         @param var color : Vec4;
-        @param var vReflectionMatrix : Mat4;
+        // @param var vReflectionMatrix : Mat4;
 		@range(0,100) @param var specularPower : Float;
 		@range(0,10) @param var specularAmount : Float;
         @param var specularColor : Vec3;
 
-        var PI : Float;// = 3.1415926535897932384626433832795;
-        var MINIMUMVARIANCE : Float;
-        var LinearEncodePowerApprox : Float;// = 2.2;
-        var GammaEncodePowerApprox : Float;// = 0.45454545454545454; //1.0/LinearEncodePowerApprox;
-        var LuminanceEncodeApprox : Vec3;// = vec3(0.2126,0.7152,0.0722);
-        var LuminanceEncodeApproxX : Float;// = 0.2126;
-        var LuminanceEncodeApproxY: Float;// = 0.7152;
-        var LuminanceEncodeApproxZ : Float;// = 0.0722;
-        var Epsilon : Float;// = 0.0000001;
+        // var PI : Float;// = 3.1415926535897932384626433832795;
+        // var MINIMUMVARIANCE : Float;
+        // var LinearEncodePowerApprox : Float;// = 2.2;
+        // var GammaEncodePowerApprox : Float;// = 0.45454545454545454; //1.0/LinearEncodePowerApprox;
+        // var LuminanceEncodeApprox : Vec3;// = vec3(0.2126,0.7152,0.0722);
+        // var LuminanceEncodeApproxX : Float;// = 0.2126;
+        // var LuminanceEncodeApproxY: Float;// = 0.7152;
+        // var LuminanceEncodeApproxZ : Float;// = 0.0722;
+        // var Epsilon : Float;// = 0.0000001;
 
-        var rgbdMaxRange : Float;// = 255.0;
+        // var rgbdMaxRange : Float;// = 255.0;
 
         var positionW:Vec3;
         var viewDirectionW:Vec3;
@@ -90,6 +90,7 @@ class PBRSinglePass extends hxsl.Shader {
         var ccOutConservationFactor:Float;
         var ccOutFinalClearCoatRadianceScaled:Vec3;
         var ccOutEnergyConsFCC:Vec3;
+        var finalSheenRadianceScaled:Vec3;
         var finalClearCoatScaled:Vec3;
 
         var surfaceAlbedo:Vec3;
@@ -101,12 +102,13 @@ class PBRSinglePass extends hxsl.Shader {
         var roughness:Float;
         var NdotVUnclamped:Float;
         var NdotV:Float;
+        var AARoughnessFactors:Vec2;
         var environmentRadiance:Vec4;
         var environmentIrradiance:Vec3;
-        var debugVar:Vec4;
+        // var debugVar:Vec4;
         var gmv:Mat4;
         var flip:Mat4;
-        var reflectionMatrix:Mat4;
+        // var reflectionMatrix:Mat4;
 
 		function __init__() {
             flip = mat4( vec4(1, 0, 0, 0), vec4(0, -1, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, 0, 1));
@@ -126,12 +128,13 @@ class PBRSinglePass extends hxsl.Shader {
             ccOutConservationFactor = 1.0;
             ccOutFinalClearCoatRadianceScaled = vec3(0.);
             ccOutEnergyConsFCC = vec3(0.);
+            finalSheenRadianceScaled = vec3(0.);
             finalClearCoatScaled = vec3(0.);
 		}
 
         function vertex() {
             output.position = projectedPosition * vec4(1, camera.projFlip, 1, 1);
-            rgbdMaxRange = 255.0;
+            // rgbdMaxRange = 255.0;
     
             var positionUpdated = input.position; //vec3
             normalUpdated = vec3(input.normal.x, input.normal.y, input.normal.z); //vec3
@@ -148,7 +151,7 @@ class PBRSinglePass extends hxsl.Shader {
         }
 
         function fragment() {
-            debugVar = vec4(0.3, 0.3, 0.3, 1);
+            // debugVar = vec4(0.3, 0.3, 0.3, 1);
             positionW = vPositionW;
             rawVNormalW = vNormalW;
 
@@ -160,25 +163,29 @@ class PBRSinglePass extends hxsl.Shader {
             PI = 3.1415926535897932384626433832795;
             MINIMUMVARIANCE = 0.0005;
             
-            LinearEncodePowerApprox  = 2.2;
-            GammaEncodePowerApprox  = 0.45454545454545454; //1.0/LinearEncodePowerApprox;
-            LuminanceEncodeApprox  = vec3(0.2126,0.7152,0.0722);
-            LuminanceEncodeApproxX  = 0.2126;
-            LuminanceEncodeApproxY = 0.7152;
-            LuminanceEncodeApproxZ  = 0.0722;
-            Epsilon = 0.0000001;
+            // LinearEncodePowerApprox  = 2.2;
+            // GammaEncodePowerApprox  = 0.45454545454545454; //1.0/LinearEncodePowerApprox;
+            // LuminanceEncodeApprox  = vec3(0.2126,0.7152,0.0722);
+            // LuminanceEncodeApproxX  = 0.2126;
+            // LuminanceEncodeApproxY = 0.7152;
+            // LuminanceEncodeApproxZ  = 0.0722;
+            // Epsilon = 0.0000001;
     
-            rgbdMaxRange = 255.0;
-    
+            // rgbdMaxRange = 255.0;
+
             viewDirectionW = normalize(vEyePosition.xyz - positionW); //vec3 // 
             uvOffset = vec2(0.0, 0.0); //vec2
+
+            NdotVUnclamped = dot(normalW, viewDirectionW);
+            NdotV = absEps(NdotVUnclamped);
+            AARoughnessFactors = getAARoughnessFactors(normalW.xyz);
         }
 	};
 
-	public function new() {
-        super();
+	// public function new() {
+    //     super();
 
-        this.vReflectionMatrix.loadValues([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-	}
+    //     this.vReflectionMatrix.loadValues([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+	// }
 
 }

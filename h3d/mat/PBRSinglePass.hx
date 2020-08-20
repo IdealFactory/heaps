@@ -19,6 +19,7 @@ class PBRSinglePass extends Material {
 	public var ambientMonochromeLum : h3d.shader.pbrsinglepass.AmbientMonochromeLum;
 	public var specEnvReflect : h3d.shader.pbrsinglepass.SpecEnvReflect;
     public var specEnvReflectMap : h3d.shader.pbrsinglepass.SpecEnvReflectMap;
+    public var sheen : h3d.shader.pbrsinglepass.Sheen;
     public var clearCoat : h3d.shader.pbrsinglepass.Clearcoat;
 	public var finalCombination : h3d.shader.pbrsinglepass.FinalCombination;
 	public var emissive : h3d.shader.pbrsinglepass.Emissive;
@@ -32,6 +33,9 @@ class PBRSinglePass extends Material {
 
     public var metalnessFactor(default, set):Float;
     public var roughnessFactor(default, set):Float;
+    public var sheenColor(default, set):Array<Float>;
+    public var sheenIntensity(default, set):Float;
+    public var sheenRoughness(default, set):Float;
     public var clearCoatIntensity(default, set):Float;
     public var clearCoatRoughness(default, set):Float;
     public var clearCoatIndexOfRefraction(default, set):Float;
@@ -66,6 +70,7 @@ class PBRSinglePass extends Material {
         addAmbientMonochrome();
         addSpecEnvReflect();
         mainPass.addShaderAtIndex(finalCombination, 8 + baseMeshOffset);
+        addSheen([1, 1, 1], 1, 0);
         addClearCoat( 0, 0 );
         addEmissive();
         mainPass.addShaderAtIndex(output, 10 + baseMeshOffset);
@@ -120,7 +125,6 @@ class PBRSinglePass extends Material {
 
     function set_metalnessFactor( val:Float ):Float {
         this.metalnessFactor = val;
-        var mr = surface.vReflectivityColor;
         if (surface!=null) {
             surface.vReflectivityColor.x = val;
         };
@@ -170,6 +174,33 @@ class PBRSinglePass extends Material {
         return val;
     }
 
+    function set_sheenColor( val:Array<Float> ):Array<Float> {
+        this.sheenColor = val;
+        if (sheen!=null) {
+            sheen.vSheenColor.r = val[0];
+            sheen.vSheenColor.g = val[1];
+            sheen.vSheenColor.b = val[2];
+        };
+       return val;
+    }
+
+    function set_sheenIntensity( val:Float ):Float {
+        this.sheenIntensity = val;
+        if (sheen!=null) {
+            sheen.vSheenColor.a = val;
+        };
+       return val;
+    }
+
+    function set_sheenRoughness( val:Float ):Float {
+        this.sheenRoughness = val;
+        if (sheen!=null) {
+            sheen.vSheenRoughness = val;
+        };
+        return val;
+    }
+
+
     function get_environmentBRDF() {
 		if( envLighting == null ) return null;
         return envLighting.environmentBrdfSampler;
@@ -178,6 +209,7 @@ class PBRSinglePass extends Material {
 	function set_environmentBRDF(t) {
         if( envLighting == null ) return null;
         envLighting.environmentBrdfSampler = t;
+        if (sheen != null) sheen.environmentBrdfSampler = t;
         if (clearCoat != null) clearCoat.environmentBrdfSampler = t;
 		return t;
 	}
@@ -217,6 +249,7 @@ class PBRSinglePass extends Material {
 	function set_reflectionCubeMap(t) {
         if (irradiance != null) irradiance.reflectionSampler = t;
         if (irradianceMap != null) irradianceMap.reflectionSampler = t;
+        if( sheen != null ) sheen.reflectionSampler = t;
         if( clearCoat != null ) clearCoat.reflectionSampler = t;
 		return t;
 	}
@@ -392,7 +425,7 @@ class PBRSinglePass extends Material {
 
     function addEmissive() {
         emissive = new h3d.shader.pbrsinglepass.Emissive();
-        mainPass.addShaderAtIndex(emissive, 10+baseMeshOffset);
+        mainPass.addShaderAtIndex(emissive, 11+baseMeshOffset);
     }
 
     function addEmissiveMap() {
@@ -404,7 +437,7 @@ class PBRSinglePass extends Material {
          if (emissiveMap == null) {
             emissiveMap = new h3d.shader.pbrsinglepass.EmissiveMap();
         }
-        mainPass.addShaderAtIndex(emissiveMap, 10+baseMeshOffset);
+        mainPass.addShaderAtIndex(emissiveMap, 11+baseMeshOffset);
     }
 
     public var sphericalHarmonics(default, set):hxd.fmt.env.SphericalHarmonics;
@@ -479,6 +512,23 @@ class PBRSinglePass extends Material {
         envLighting.vLightingIntensity.set( vx, vy, vz, vw );
     }
 
+    public function addSheen( sheenColor:Array<Float>, sheenIntensity:Float, sheenRoughness:Float, sheenTexture:h3d.mat.Texture = null ) {
+        if (sheen == null) sheen = new h3d.shader.pbrsinglepass.Sheen();
+
+        this.sheenColor = sheenColor;
+        this.sheenIntensity = sheenIntensity;
+        this.sheenRoughness = sheenRoughness;
+
+        if (sheenTexture != null) {
+            // sheen.sheenSampler = sheenTexture;
+        }
+
+        if (envLighting != null) sheen.environmentBrdfSampler = envLighting.environmentBrdfSampler;
+        if (irradianceMap != null) sheen.reflectionSampler = irradianceMap.reflectionSampler;
+
+        mainPass.addShaderAtIndex(sheen, 9+baseMeshOffset);
+    }
+
     public function addClearCoat( ccFactor:Float, ccRoughnessFactor:Float, ccTexture:h3d.mat.Texture = null, ccRoughnessTexture:h3d.mat.Texture = null, ccNormalTexture:h3d.mat.Texture = null ) {
         if (clearCoat == null) clearCoat = new h3d.shader.pbrsinglepass.Clearcoat();
 
@@ -498,7 +548,7 @@ class PBRSinglePass extends Material {
         if (envLighting != null) clearCoat.environmentBrdfSampler = envLighting.environmentBrdfSampler;
         if (irradianceMap != null) clearCoat.reflectionSampler = irradianceMap.reflectionSampler;
 
-        mainPass.addShaderAtIndex(clearCoat, 9+baseMeshOffset);
+        mainPass.addShaderAtIndex(clearCoat, 10+baseMeshOffset);
     }
 
 }

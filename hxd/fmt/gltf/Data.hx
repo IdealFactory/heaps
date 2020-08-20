@@ -377,6 +377,13 @@ typedef MaterialClearCoatExt = {
 	@:optional var clearcoatNormalTexture:MaterialNormalTextureInfo;
 }
 
+typedef MaterialSheenExt = {
+	>GltfProperty,
+	@:optional var sheenColorFactor:Array<Float>;
+	@:optional var sheenRoughnessFactor:Float;
+	@:optional var sheenTexture:TextureInfo;
+}
+
 typedef GltfContainer = {
 	var header:Gltf;
 	var buffers:Array<haxe.io.Bytes>;

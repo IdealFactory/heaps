@@ -1,6 +1,6 @@
 package h3d.shader.pbrsinglepass;
 
-class AmbientMonochromeLum extends hxsl.Shader {
+class AmbientMonochromeLum extends PBRSinglePassLib {
 
 	static var SRC = {
 

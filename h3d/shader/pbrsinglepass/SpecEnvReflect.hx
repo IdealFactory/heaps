@@ -1,6 +1,6 @@
 package h3d.shader.pbrsinglepass;
 
-class SpecEnvReflect extends hxsl.Shader {
+class SpecEnvReflect extends PBRSinglePassLib {
 
 	static var SRC = {
 
@@ -14,21 +14,6 @@ class SpecEnvReflect extends hxsl.Shader {
         var seo:Float;
         var eho:Float;
 
-        function square(value:Float):Float {
-            return value*value;
-        }
-
-        function environmentRadianceOcclusion(ambientOcclusion:Float, NdotVUnclamped:Float):Float {
-            var temp = NdotVUnclamped + ambientOcclusion; //float
-            return saturate(square(temp) - 1.0 + ambientOcclusion);
-        }
-
-        function environmentHorizonOcclusion(view:Vec3, normal:Vec3, geometricNormal:Vec3):Float {
-            var reflection = reflect(view, normal); //vec3
-            var temp = saturate(1.0 + 1.1 * dot(reflection, geometricNormal)); //float
-            return square(temp);
-        }
-         
         function fragment() {
             seo = environmentRadianceOcclusion(ambientMonochrome, NdotVUnclamped); //float
             eho = environmentHorizonOcclusion(-viewDirectionW, normalW, geometricNormalW); //float

@@ -1,6 +1,6 @@
 package h3d.shader.pbrsinglepass;
 
-class Emissive extends hxsl.Shader {
+class Emissive extends PBRSinglePassLib {
 
 	static var SRC = {
 
