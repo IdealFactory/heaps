@@ -111,19 +111,19 @@ class PBRSinglePassLib extends hxsl.Shader  {
             var maxRGB = maxEps(max(color.r, max(color.g, color.b))); //float
             var D = max(rgbdMaxRange / maxRGB, 1.); //float
             D = clamp(floor(D) / 255.0, 0., 1.);
-            var rgb = color.rgb * D; //vec3
+            var rgb = color.rgb * vec3(D); //vec3
             rgb = toGammaSpace_V3(rgb);
             return vec4(rgb, D);
         }
 
         function fromRGBD(rgbd:Vec4):Vec3 {
             rgbd.rgb = toLinearSpace_V3(rgbd.rgb); //toLinearSpace(rgbd.bgr);
-            return rgbd.rgb / rgbd.a;
+            return rgbd.rgb / vec3(rgbd.a);
         }
         
         function fromRGBD_BGR(rgbd:Vec4):Vec3 {
             rgbd.rgb = toLinearSpace_V3(rgbd.bgr); //toLinearSpace(rgbd.bgr);
-            return rgbd.rgb / rgbd.a;
+            return rgbd.rgb / vec3(rgbd.a);
         }
         
 		function fresnelGrazingReflectance(reflectance0:Float):Float {
@@ -170,7 +170,7 @@ class PBRSinglePassLib extends hxsl.Shader  {
         }
 
         function getReflectanceFromBRDFLookup(specularEnvironmentR0:Vec3, specularEnvironmentR90:Vec3, environmentBrdf:Vec3):Vec3 {
-			var reflectance = (specularEnvironmentR90 - specularEnvironmentR0) * environmentBrdf.x + specularEnvironmentR0 * environmentBrdf.y;
+			var reflectance = (specularEnvironmentR90 - specularEnvironmentR0) * vec3(environmentBrdf.x) + specularEnvironmentR0 * vec3(environmentBrdf.y);
 			return reflectance;
 		}
 
@@ -243,10 +243,10 @@ class PBRSinglePassLib extends hxsl.Shader  {
             var duv2:Vec2 = dFdy(uv); //vec2
             var dp2perp:Vec3 = cross(dp2, normal); //vec3 cross( dFdy(vPositionW), vNormal )
             var dp1perp:Vec3 = cross(normal, dp1); //vec3
-            var tangent:Vec3 = dp2perp * duv1.x + dp1perp * duv2.x; //vec3
-            var bitangent:Vec3 = dp2perp * duv1.y + dp1perp * duv2.y; //vec3
-            tangent *= tangentSpaceParams.x;
-            bitangent *= tangentSpaceParams.y;
+            var tangent:Vec3 = dp2perp * vec3(duv1.x) + dp1perp * vec3(duv2.x); //vec3
+            var bitangent:Vec3 = dp2perp * vec3(duv1.y) + dp1perp * vec3(duv2.y); //vec3
+            tangent *= vec3(tangentSpaceParams.x);
+            bitangent *= vec3(tangentSpaceParams.y);
             var invmax = inversesqrt(max(dot(tangent, tangent), dot(bitangent, bitangent))); //float
             return mat3(tangent * invmax, bitangent * invmax, normal);
         }

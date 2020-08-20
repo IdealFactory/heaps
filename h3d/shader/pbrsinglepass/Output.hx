@@ -43,7 +43,7 @@ class Output extends PBRSinglePassLib {
                 finalRadianceScaled +
                 finalSheenRadianceScaled +
                 ccOutFinalClearCoatRadianceScaled + 
-                finalEmissive * lightingIntensity.y,
+                finalEmissive,
                 alpha);
             finalColor = max(finalColor, 0.0);
             finalColor = applyImageProcessing(finalColor);

@@ -53,17 +53,17 @@ class Clearcoat extends h3d.shader.pbrsinglepass.PBRSinglePassLib  {
             var reflectionLOD = getLodFromAlphaG(vReflectionMicrosurfaceInfos.x, clearCoatAlphaG); //float
             reflectionLOD = reflectionLOD * vReflectionMicrosurfaceInfos.y + vReflectionMicrosurfaceInfos.z;
             environmentClearCoatRadiance = #if !flash textureLod(reflectionSampler, clearCoatReflectionCoords, reflectionLOD); #else texture(reflectionSampler, clearCoatReflectionCoords); #end// sampleReflectionLod
-            environmentClearCoatRadiance.rgb = fromRGBD(environmentClearCoatRadiance); // When using RGBD HDR images
+            // environmentClearCoatRadiance.rgb = fromRGBD(environmentClearCoatRadiance); // When using RGBD HDR images
             environmentClearCoatRadiance.rgb *= vec3(vReflectionInfos.x);
             environmentClearCoatRadiance.rgb *= vReflectionColor.rgb;
  
             var clearCoatEnvironmentReflectance:Vec3 = getReflectanceFromBRDFLookup2(vec3(vClearCoatRefractionParams.x), environmentClearCoatBrdf);
             var clearCoatSeo:Float = environmentRadianceOcclusion(ambientMonochrome, clearCoatNdotVUnclamped);
-            clearCoatEnvironmentReflectance *= clearCoatSeo;
+            clearCoatEnvironmentReflectance *= vec3(clearCoatSeo);
             var clearCoatEho:Float = environmentHorizonOcclusion(-viewDirectionW, clearCoatNormalW, geometricNormalW);
-            clearCoatEnvironmentReflectance *= clearCoatEho;
-            clearCoatEnvironmentReflectance *= clearCoatIntensity;
-            ccOutFinalClearCoatRadianceScaled = environmentClearCoatRadiance.rgb * clearCoatEnvironmentReflectance * lightingIntensity.z;
+            clearCoatEnvironmentReflectance *= vec3(clearCoatEho);
+            clearCoatEnvironmentReflectance *= vec3(clearCoatIntensity);
+            ccOutFinalClearCoatRadianceScaled = environmentClearCoatRadiance.rgb * clearCoatEnvironmentReflectance * vec3(lightingIntensity.z);
             var fresnelIBLClearCoat:Float = fresnelSchlickGGX(clearCoatNdotV, vClearCoatRefractionParams.x, 1.0); // CLEARCOATREFLECTANCE90 = 1.0
             fresnelIBLClearCoat *= clearCoatIntensity;
             ccOutConservationFactor = (1. - fresnelIBLClearCoat);
@@ -73,9 +73,9 @@ class Clearcoat extends h3d.shader.pbrsinglepass.PBRSinglePassLib  {
 
             specularEnvironmentReflectance = getReflectanceFromBRDFLookup(ccOutSpecularEnvironmentR0, specularEnvironmentR90, environmentBrdf);
             
-            specularEnvironmentReflectance *= clearCoatSeo;
-            specularEnvironmentReflectance *= clearCoatEho;
-            specularEnvironmentReflectance *= ccOutConservationFactor;
+            specularEnvironmentReflectance *= vec3(clearCoatSeo);
+            specularEnvironmentReflectance *= vec3(clearCoatEho);
+            specularEnvironmentReflectance *= vec3(ccOutConservationFactor);
 
             energyConservationFactor = getEnergyConservationFactor(ccOutSpecularEnvironmentR0, environmentBrdf);
         }

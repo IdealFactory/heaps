@@ -29,7 +29,7 @@ class Sheen extends PBRSinglePassLib {
             var sheenIntensity:Float = vSheenColor.a;
             var sheenColor:Vec3 = vSheenColor.rgb;
             var sheenRoughness:Float = vSheenRoughness;
-            sheenColor *= sheenIntensity;
+            sheenColor *= vec3(sheenIntensity);
             var environmentSheenBrdf:Vec3 = getBRDFLookup(NdotV, sheenRoughness);
             var sheenAlphaG:Float = convertRoughnessToAverageSlope(sheenRoughness);
             sheenAlphaG += AARoughnessFactors.y;
@@ -38,20 +38,19 @@ class Sheen extends PBRSinglePassLib {
             // Expanded sampleReflectionTexture( sheenAlphaG, vReflectionMicrosurfaceInfos, vReflectionInfos, vReflectionColor, reflectionSampler, reflectionCoords, environmentSheenRadiance );
             var reflectionLOD:Float = getLodFromAlphaG(vReflectionMicrosurfaceInfos.x, sheenAlphaG);
             reflectionLOD = reflectionLOD * vReflectionMicrosurfaceInfos.y + vReflectionMicrosurfaceInfos.z;
-            var requestedReflectionLOD:Float = reflectionLOD;
             var environmentSheenRadiance:Vec4 = #if !flash textureLod(reflectionSampler, reflectionCoords, reflectionLOD); #else texture(reflectionSampler, reflectionCoords); #end//sampleReflectionLod(reflectionSampler, reflectionCoords, reflectionLOD);
-            environmentSheenRadiance.rgb = fromRGBD(environmentSheenRadiance);
+            // environmentSheenRadiance.rgb = fromRGBD(environmentSheenRadiance);
             environmentSheenRadiance.rgb *= vec3(vReflectionInfos.x);
             environmentSheenRadiance.rgb *= vReflectionColor.rgb;
             // end sampleReflectionTexture
 
             var sheenEnvironmentReflectance:Vec3 = getSheenReflectanceFromBRDFLookup(sheenColor, environmentSheenBrdf);
-            sheenEnvironmentReflectance *= seo;
-            sheenEnvironmentReflectance *= eho;
+            sheenEnvironmentReflectance *= vec3(seo);
+            sheenEnvironmentReflectance *= vec3(eho);
             finalSheenRadianceScaled =
                 environmentSheenRadiance.rgb *
                 sheenEnvironmentReflectance *
-                lightingIntensity.z;
+                vec3(lightingIntensity.z);
             sheenOutSheenAlbedoScaling = 1.0 - sheenIntensity * max(max(sheenColor.r, sheenColor.g), sheenColor.b) * environmentSheenBrdf.b;
             sheenOutSheenIntensity = sheenIntensity;
             sheenOutSheenColor = sheenColor;

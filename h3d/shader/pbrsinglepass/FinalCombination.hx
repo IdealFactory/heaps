@@ -34,6 +34,7 @@ class FinalCombination extends PBRSinglePassLib {
         var finalRadianceScaled:Vec3;
         var finalSheen:Vec3;
         var finalSheenScaled:Vec3;
+        var finalSheenRadianceScaled:Vec3;
         var finalClearCoat:Vec3;
         var finalClearCoatScaled:Vec3;
 
@@ -42,30 +43,31 @@ class FinalCombination extends PBRSinglePassLib {
 
         function fragment() {
             finalIrradiance = environmentIrradiance; //vec3
-            finalIrradiance *= ccOutConservationFactor;
+            finalIrradiance *= vec3(ccOutConservationFactor);
             finalIrradiance *= surfaceAlbedo.rgb;
-            finalIrradiance *= lightingIntensity.z;
+            finalIrradiance *= vec3(lightingIntensity.z);
             finalIrradiance *= ambientOcclusionColor;
             finalSpecular = specularBase;
             finalSpecular = max(finalSpecular, 0.0);
-            finalSpecularScaled = finalSpecular * lightingIntensity.x * lightingIntensity.w;
+            finalSpecularScaled = finalSpecular * vec3(lightingIntensity.x) * vec3(lightingIntensity.w);
             finalSpecularScaled *= energyConservationFactor;
             finalRadiance = environmentRadiance.rgb; //vec3
             finalRadiance *= specularEnvironmentReflectance;
-            finalRadianceScaled = finalRadiance * lightingIntensity.z; //vec3
+            finalRadianceScaled = finalRadiance * vec3(lightingIntensity.z); //vec3
             finalRadianceScaled *= energyConservationFactor;
-            finalRadianceScaled *= sheenOutSheenAlbedoScaling;
+            finalRadianceScaled *= vec3(sheenOutSheenAlbedoScaling);
             finalSheen = sheenBase * sheenOutSheenColor;
             finalSheen = max(finalSheen, 0.0);
-            finalSheenScaled = finalSheen * lightingIntensity.x * lightingIntensity.w;
+            finalSheenScaled = finalSheen * vec3(lightingIntensity.x) * vec3(lightingIntensity.w);
+            finalSheenRadianceScaled *= vec3(ccOutConservationFactor);
             finalClearCoat = clearCoatBase;
             finalClearCoat = max(finalClearCoat, 0.0);
-            finalClearCoatScaled = finalClearCoat * lightingIntensity.x * lightingIntensity.w;
+            finalClearCoatScaled = finalClearCoat * vec3(lightingIntensity.x) * vec3(lightingIntensity.w);
             finalClearCoatScaled *= ccOutEnergyConsFCC;
             finalDiffuse = diffuseBase; //vec3
             finalDiffuse *= surfaceAlbedo.rgb;
             finalDiffuse = max(finalDiffuse, 0.0);
-            finalDiffuse *= lightingIntensity.x;
+            finalDiffuse *= vec3(lightingIntensity.x);
             finalAmbient = ambientColor; //vec3
             finalAmbient *= surfaceAlbedo.rgb;
             finalAmbient *= ambientOcclusionColor;

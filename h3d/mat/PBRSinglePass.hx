@@ -70,7 +70,7 @@ class PBRSinglePass extends Material {
         addAmbientMonochrome();
         addSpecEnvReflect();
         mainPass.addShaderAtIndex(finalCombination, 8 + baseMeshOffset);
-        addSheen([1, 1, 1], 1, 0);
+        addSheen([1, 1, 1], 0, 0);
         addClearCoat( 0, 0 );
         addEmissive();
         mainPass.addShaderAtIndex(output, 10 + baseMeshOffset);
