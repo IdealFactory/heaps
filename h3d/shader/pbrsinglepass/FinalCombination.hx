@@ -42,9 +42,10 @@ class FinalCombination extends PBRSinglePassLib {
         var lightingIntensity:Vec4;
 
         function fragment() {
+            var sA:Vec3 = vec3(sheenOutSheenAlbedoScaling) * surfaceAlbedo.rgb;
             finalIrradiance = environmentIrradiance; //vec3
             finalIrradiance *= vec3(ccOutConservationFactor);
-            finalIrradiance *= surfaceAlbedo.rgb;
+            finalIrradiance *= sA;
             finalIrradiance *= vec3(lightingIntensity.z);
             finalIrradiance *= ambientOcclusionColor;
             finalSpecular = specularBase;
@@ -65,11 +66,11 @@ class FinalCombination extends PBRSinglePassLib {
             finalClearCoatScaled = finalClearCoat * vec3(lightingIntensity.x) * vec3(lightingIntensity.w);
             finalClearCoatScaled *= ccOutEnergyConsFCC;
             finalDiffuse = diffuseBase; //vec3
-            finalDiffuse *= surfaceAlbedo.rgb;
+            finalDiffuse *= sA;
             finalDiffuse = max(finalDiffuse, 0.0);
             finalDiffuse *= vec3(lightingIntensity.x);
             finalAmbient = ambientColor; //vec3
-            finalAmbient *= surfaceAlbedo.rgb;
+            finalAmbient *= sA;
             finalAmbient *= ambientOcclusionColor;
             finalDiffuse *= ambientOcclusionForDirectDiffuse;
         }
