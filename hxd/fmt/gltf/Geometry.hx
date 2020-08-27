@@ -13,16 +13,32 @@ class Geometry {
 
 	var intCache:Map<String, IndexBuffer>;
 	var floatCache:Map<String, FloatBuffer>;
+	var hasDraco:Bool = false;
+	var needsDraco:Bool = false;
+	var dracoLoaded:Bool = false;
 
-	public function new ( l : BaseLibrary, root : MeshPrimitive ) {
+	public function new ( l : BaseLibrary, root : MeshPrimitive, hasDraco:Bool = false, needsDraco:Bool = false ) {
+		intCache = new Map<String, IndexBuffer>();
+		floatCache = new Map<String, FloatBuffer>();
+
 		this.l = l;
 		this.root = root;
+		this.hasDraco = hasDraco;
+		this.needsDraco = needsDraco;
+
+		checkDraco();
 
 		var accId:Null<Int> = root.attributes.get( "TANGENT" );
 		if (accId != null) hasTangentBuffer = true;
+	}
 
-		intCache = new Map<String, IndexBuffer>();
-		floatCache = new Map<String, FloatBuffer>();
+
+	public function checkDraco() {
+		if (dracoLoaded) return;
+		if (needsDraco) {
+			GltfTools.decodeDracoBuffer( l, root, intCache, floatCache );
+			dracoLoaded = true;
+		}
 	}
 
 	public function getIndices() {

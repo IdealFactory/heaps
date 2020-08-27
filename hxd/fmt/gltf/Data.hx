@@ -7,7 +7,7 @@ import hxd.IndexBuffer;
 typedef GltfId = Int;
 
 typedef GltfProperty = {
-	@:optional var extensions:Dynamic;
+	@:optional var extensions:Extensions;
 	@:optional var extras:Dynamic;
 }
 
@@ -358,6 +358,13 @@ typedef Texture = {
 }
 
 // Extensions
+typedef Extensions = {
+	>GltfProperty,
+	@:optional var KHR_materials_pbrSpecularGlossiness:MaterialSpecularGlossinessExt;
+	@:optional var KHR_materials_clearcoat:MaterialClearCoatExt;
+	@:optional var KHR_materials_sheen:MaterialSheenExt;
+	@:optional var KHR_draco_mesh_compression:DracoMeshCompressionExt;
+}
 
 typedef MaterialSpecularGlossinessExt = {
 	>GltfProperty,
@@ -384,6 +391,12 @@ typedef MaterialSheenExt = {
 	@:optional var sheenTexture:TextureInfo;
 }
 
+typedef DracoMeshCompressionExt = {
+	>GltfProperty,
+	var bufferView:GltfId;
+	var attributes:GltfAccessor<GltfId>;
+}
+
 typedef GltfContainer = {
 	var header:Gltf;
 	var buffers:Array<haxe.io.Bytes>;
@@ -394,6 +407,97 @@ typedef BytePointer = {
 }
 
 class GltfTools {
+
+	public static function decodeDracoBuffer( l : BaseLibrary, root : MeshPrimitive, intCache:Map<String, IndexBuffer>, floatCache:Map<String, FloatBuffer> ) {
+		#if js
+
+		var dracoExt = root.extensions.KHR_draco_mesh_compression;
+		var bv = dracoExt.bufferView;
+		var bytes = getBufferBytes( l, bv );
+
+		var decoderModule:Dynamic = null;
+		var decoder:Dynamic = null;
+		var buffer:Dynamic = null;
+		untyped __js__ ("
+
+			if (typeof window['DracoDecoderModule'] != 'undefined') {
+				decoderModule = new DracoDecoderModule();
+				decoder = new decoderModule.Decoder();
+				buffer = new decoderModule.DecoderBuffer();
+			}
+		");
+		
+		if (decoderModule == null) {
+			throw "Error: DracoDecoderModule Javascropt library is not loaded.";
+		}
+
+		@:privateAccess buffer.Init( bytes.b, bytes.length );
+
+		var geometryType = decoder.GetEncodedGeometryType(buffer);
+		var geometry:Dynamic;
+		var status:Dynamic;
+        switch (geometryType) {
+            case 1: //decoderModule.TRIANGULAR_MESH:
+                geometry = untyped __js__ ("new decoderModule.Mesh();");
+                status = decoder.DecodeBufferToMesh(buffer, geometry);
+             case 0://decoderModule.POINT_CLOUD:
+                geometry = untyped __js__ ("new decoderModule.PointCloud();");
+                status = decoder.DecodeBufferToPointCloud(buffer, geometry);
+            default:
+                throw "Invalid geometry type "+geometryType;
+		}
+		
+		if (!status.ok() || geometry.ptr==null) {
+            throw status.error_msg();
+        }
+
+		var numPoints = geometry.num_points();
+
+		if (geometryType == 1 /*decoderModule.TRIANGULAR_MESH */) {
+            var numFaces = geometry.num_faces();
+            var faceIndices = untyped __js__ ("new decoderModule.DracoInt32Array();");
+            try {
+                var indices = new IndexBuffer(numFaces * 3);//new Uint32Array(numFaces * 3);
+				for (i in 0...numFaces) {
+                    decoder.GetFaceFromMesh(geometry, i, faceIndices);
+                    var offset = i * 3;
+                    indices[offset + 0] = faceIndices.GetValue(0);
+                    indices[offset + 1] = faceIndices.GetValue(1);
+                    indices[offset + 2] = faceIndices.GetValue(2);
+                }
+                intCache["INDEX"] = indices;
+            }
+            faceIndices = null;
+		}
+
+		var attributes = dracoExt.attributes;
+		if (attributes != null) {
+			for ( attribute in attributes.keys()) {
+				var attrId:Int = attributes.get(attribute);
+				//trace("Getting data for "+attribute+" id="+attrId);
+				floatCache.set(attribute, processDracoAttribute( decoderModule, decoder, geometry, numPoints, attrId ));
+			}
+		}
+		#end
+	}
+
+	private static function processDracoAttribute( decoderModule, decoder, geometry, numPoints, id ) : FloatBuffer {
+		var dracoData = untyped __js__ ("new decoderModule.DracoFloat32Array();");
+
+		var attribute = decoder.GetAttributeByUniqueId(geometry, id);
+		decoder.GetAttributeFloatForAllPoints(geometry, attribute, dracoData);
+
+		var numComponents = attribute.num_components();
+		var buffer:FloatBuffer = null;
+		if (numComponents!=null && numComponents!=0) {
+			buffer = new FloatBuffer(numPoints * numComponents);
+			for (i in 0...buffer.length) {
+				buffer[i] = dracoData.GetValue(i);
+			}
+		}
+		dracoData = null;
+		return buffer;
+	}
 
 	public static function getIndexBuffer( attribute, l, accId ) : IndexBuffer {
 		var buffer:IndexBuffer = new IndexBuffer();

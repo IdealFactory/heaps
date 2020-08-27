@@ -3,7 +3,10 @@ package h3d.shader.pbrsinglepass;
 class UV1 extends PBRSinglePassLib {
 
 	static var SRC = {
-		@input var input : {
+        @param var hasAlpha : Int;
+        @param var alphaCutoff : Float;
+
+        @input var input : {
             var uv : Vec2;
         }
 
@@ -25,8 +28,25 @@ class UV1 extends PBRSinglePassLib {
             alpha = vAlbedoColor.a; //float
 
             var albedoTexture = albedoSampler.get(vMainUV1 + uvOffset); //vec4 // vAlbedoUV -> vMainUV1
+            if (hasAlpha==1) {
+                // if (alphaCutoff>0) {
+                //     if (albedoTexture.a < alphaCutoff) 
+                //         discard;
+                // } else {
+                //     alpha *= 0.5;
+                // }
+                alpha *= albedoTexture.a;
+            }
             surfaceAlbedo *= toLinearSpace_V3(albedoTexture.rgb);
             surfaceAlbedo *= vAlbedoInfos.y;
        }
     };
+
+    public function new() {
+        super();
+
+        this.hasAlpha = 0;
+        this.alphaCutoff = 0;
+    }
+
 }

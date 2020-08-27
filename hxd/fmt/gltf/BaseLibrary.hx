@@ -39,6 +39,9 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	public var nodeObjects:Array<h3d.scene.Object>;
 	public var animator:TimelineAnimator = new TimelineAnimator();
 
+	public var hasDracoExt:Bool = false;
+	public var requiresDracoExt:Bool = false;
+
 	private var stateStore:Context3DState;
 	
 	public static var brdfTexture:h3d.mat.Texture;
@@ -290,6 +293,15 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			if ( pbrmr.baseColorTexture != null ) {
 				tex = getTexture(pbrmr.baseColorTexture.index);
 				material.texture = tex;
+
+				//TODO: Alpha mode is still not quite working
+				if ( materialNode.alphaMode == MaterialAlphaMode.Blend || materialNode.alphaMode == MaterialAlphaMode.Mask) {
+					material.uv1.hasAlpha = 1;
+					material.mainPass.depthWrite = true;
+					material.mainPass.setBlendMode( h3d.mat.BlendMode.Alpha ); //h3d.mat.BlendMode.Alpha;
+					if (materialNode.alphaMode == MaterialAlphaMode.Mask)
+						material.uv1.alphaCutoff = Reflect.hasField(materialNode, "alphaCutoff") ? materialNode.alphaCutoff : 0.5;
+				}
 			}
 
 			var a:Float, r:Float, g:Float, b:Float;
@@ -344,7 +356,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			material.mainPass.culling = materialNode.doubleSided ? None : Front;
 		}
 
-		if (materialNode.extensions != null) addExtensions(materialNode, material);
+		if (materialNode.extensions != null) addMaterialExtensions(materialNode, material);
 
 		if (material.texture == null) {
 			h3d.mat.Texture.fromColor(0xFF808080);
@@ -352,7 +364,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		return material;
 	} 
 
-	function addExtensions( materialNode, material ) {
+	function addMaterialExtensions( materialNode, material ) {
 		var exts:Array<Dynamic> = cast materialNode.extensions;
 		
 		// Clearcoat
@@ -381,6 +393,17 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			trace( "SheenExt: mat:"+material.name+" sheenCol="+sheenColorFactor+" sheenIntensity:"+sheenIntensity+" sheenRF="+sheenRoughnessFactor);
 			#end
 		}
+	}
+
+	function addPrimitiveExtensions( primitiveNode, material ) {
+		// Draco mesh compression
+		if (Reflect.hasField( primitiveNode.extensions, "KHR_draco_mesh_compression")) {
+			var draco:DracoMeshCompressionExt = cast primitiveNode.extensions.KHR_draco_mesh_compression;
+			#if debug_gltf
+			trace( "DracoMeshCompressionExt:");
+			#end
+		}
+
 	}
 
 	function createAnimations( animationNode:Animation ) {
@@ -482,8 +505,15 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		return null;//animation;
 	}
 
-	function applySampler( index : Int, mat : h3d.mat.Texture ) {
+	function applySampler( index : Null<Int>, mat : h3d.mat.Texture ) {
 		
+		if (index == null) {
+			mat.mipMap = Linear;
+			mat.filter = Linear;
+			mat.wrap = Repeat;
+			return;
+		}
+
 		var sampler = root.samplers[index];
 		mat.mipMap = Linear;
 		mat.filter = Linear;
@@ -518,7 +548,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			}
 		}
 	}
-	var pos = 0;
+
 	function getTexture( index : Int ) : h3d.mat.Texture {
 		var node = root.textures[index];
 		var img = images[node.source]; // Pre-loaded image array
@@ -534,8 +564,8 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		
 		tex.alloc();
 
-		if ( Reflect.hasField(node, "sampler") ) 
-			applySampler(node.sampler, tex);
+		// if ( Reflect.hasField(node, "sampler") ) 
+		applySampler(node.sampler, tex);
 
 		if (tex.mipMap!=None) tex.flags.set(MipMapped);
 
@@ -583,13 +613,10 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	];
 
 	public function loadMesh( index : Int, transform : h3d.Matrix, parent:h3d.scene.Object, nodeName:String = null ) : h3d.scene.Object {
-		trace("LoadMesh:loading mesh:");
 		var meshNode = root.meshes[ index ];
 		if (meshNode == null) {trace("meshNode returned NULL for idx:"+index); return null; }
 
-
 		var meshName = (meshNode.name != null) ? meshNode.name : (nodeName != null ? nodeName : "Mesh_"+StringTools.hex(Std.random(0x7FFFFFFF), 8));
-		trace("LoadMesh:mesh:"+meshName);
 		
 		var mesh = new h3d.scene.Object( parent );
 		mesh.name = meshName;
@@ -611,22 +638,19 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 
 			var primName = meshName+"_"+primCounter++;
 
-			var meshPrim = new GltfModel( new Geometry(this, prim), this );
+			var meshPrim = new GltfModel( new Geometry(this, prim, hasDracoExt, requiresDracoExt ), this );
 			meshPrim.name = primName;
-			trace("LoadMesh:meshPrim:"+meshPrim.name+" TriCount="+meshPrim.triCount());	
-			
+
 			var mat = materials[ prim.material ];
 			mat.hasTangentBuffer = meshPrim.geom.hasTangentBuffer;
-			trace("LoadMesh:got material: hasTangentBuffer="+mat.hasTangentBuffer);
 
-			trace("LoadMesh:about to create mesh prim");
 			var primMesh = new h3d.scene.Mesh( meshPrim, mat, mesh );
 			primMesh.name = primName;
-			trace("LoadMesh:mesh primitive created");
-
 			primitives[mesh].push( primMesh );
 			
 			#if debug_gltf
+			trace("LoadMesh:meshPrim:"+meshPrim.name+" TriCount="+meshPrim.triCount());	
+			trace(" - got material: hasTangentBuffer="+mat.hasTangentBuffer);
 			trace(" - mesh primitive:"+primMesh.name);
 			#end
 
@@ -684,7 +708,6 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			nm.material.mainPass.depthWrite = true;
 			#end
 		}
-		trace("LoadMesh:mesh complete");
 		return mesh;
 	}
 

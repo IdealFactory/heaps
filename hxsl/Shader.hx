@@ -31,6 +31,7 @@ class Shader {
 				shader = new SharedShader(curClass.SRC);
 				curClass._SHADER = shader;
 			}
+			trace("Shader:"+std.Type.getClassName(cl));
 		}
 	}
 

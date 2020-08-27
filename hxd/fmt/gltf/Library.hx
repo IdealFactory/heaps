@@ -78,6 +78,15 @@ class Library extends BaseLibrary {
 
 	function processglTF() {
 
+        // Check for Draco compression
+        if ( root.extensionsUsed != null && root.extensionsUsed.length > 0 ) {
+            hasDracoExt = root.extensionsUsed.indexOf( "KHR_draco_mesh_compression" ) > -1;
+            if (hasDracoExt) {
+                if ( root.extensionsRequired != null && root.extensionsRequired.length > 0 ) 
+                    requiresDracoExt = root.extensionsRequired.indexOf( "KHR_draco_mesh_compression" ) > -1;
+            }
+        }
+
         // Setup cameras
         if (root.cameras != null)
             for (camera in root.cameras) {
