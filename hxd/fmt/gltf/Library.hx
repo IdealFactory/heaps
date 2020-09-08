@@ -141,13 +141,13 @@ class Library extends BaseLibrary {
         var transform = new h3d.Matrix();
         transform.identity();
         if (node.matrix != null) transform.loadValues( node.matrix );
-        if (node.translation != null) transform.translate( node.translation[0], node.translation[1], node.translation[2] );
         if (node.rotation != null) {
             var q = new h3d.Quat( node.rotation[0], node.rotation[1], node.rotation[2], node.rotation[3] );
             transform.multiply( transform, q.toMatrix() );
         }
         if (node.scale != null) transform.scale( node.scale[0], node.scale[1], node.scale[2] );
-
+        if (node.translation != null) transform.translate( node.translation[0], node.translation[1], node.translation[2] );
+        
         if (node.camera != null) {
             var c = cameras[ node.camera ];
             //TODO: Set camera position/rotation/scale from Matrix
@@ -164,10 +164,13 @@ class Library extends BaseLibrary {
         if (node.children != null) {
             if (mesh==null) {
                 mesh = new h3d.scene.Object( parent );
-                mesh.name = "Container";
+                mesh.name = (node.name==null ? "Node" : node.name) + "Container";
                 mesh.setTransform( transform );
                 nodeObjects[ nodeId ] = mesh;
-            }
+                #if debug_gltf
+                trace("Create Empty(Container)-forChildObjects:"+mesh.name+" parent:"+(parent.name == null ? Type.getClassName(Type.getClass(parent)) : parent.name)+" transform:"+transform.getFloats());
+                #end
+                    }
             for ( child in node.children ) {
                 traverseNodes(child, mesh);
             }
