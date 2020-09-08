@@ -247,7 +247,8 @@ class GltfModel extends MeshPrimitive {
 		if( norms != null ) addBuffer("normal", h3d.Buffer.ofFloats(norms, 3));
 		if( tangents != null ) addBuffer("tangent", h3d.Buffer.ofFloats(tangents, 4));
 		addBuffer("uv", h3d.Buffer.ofFloats(uvs, 2));
-		indexes = h3d.Indexes.alloc(idx);
+		var moreThan64KVertices = verts.length>65535;
+		indexes = h3d.Indexes.alloc(idx, 0, -1, moreThan64KVertices);
 	}
 
 	public function getFaces():Array<TriFace> {

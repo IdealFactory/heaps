@@ -134,7 +134,7 @@ class MemoryManager {
 	@:access(h3d.Buffer)
 	function allocBuffer( b : Buffer, stride : Int ) {
 		// split big buffers
-		var max = b.flags.has(Quads) ? 65532 : b.flags.has(Triangles) ? 65533 : 65534;
+		var max = driver.hasFeature(ElementIndexUInt) ? 0x7fffffff : b.flags.has(Quads) ? 65532 : b.flags.has(Triangles) ? 65533 : 65534;
 		if( b.vertices > max ) {
 			if( max == 65534 )
 				throw "Cannot split buffer with "+b.vertices+" vertices if it's not Quads/Triangles";

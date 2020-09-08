@@ -58,6 +58,7 @@ private typedef Uniform = Dynamic;
 private typedef Program = lime.graphics.opengl.GLProgram;
 private typedef GLShader = lime.graphics.opengl.GLShader;
 private typedef Framebuffer = lime.graphics.opengl.GLFramebuffer;
+private typedef Uint32Array = lime.utils.UInt32Array;
 private typedef Uint16Array = lime.utils.UInt16Array;
 private typedef Uint8Array = lime.utils.UInt8Array;
 private typedef Float32Array = lime.utils.Float32Array;
@@ -1037,10 +1038,14 @@ class GlDriver extends Driver {
 			throw "Unsupported depth format "+b.format;
 		}
 		gl.bindRenderbuffer(GL.RENDERBUFFER, r);
+		#if !lime
+		gl.renderbufferStorage(GL.RENDERBUFFER, format, b.width, b.height);
+		#else
 		if (b.multiSample == 0)
 			gl.renderbufferStorage(GL.RENDERBUFFER, format, b.width, b.height);
 		else
 			gl.renderbufferStorageMultisample(GL.RENDERBUFFER, b.multiSample, GL.DEPTH_COMPONENT16, b.width, b.height);
+		#end
 		gl.bindRenderbuffer(GL.RENDERBUFFER, null);
 		return { r : r #if multidriver, driver : this #end };
 	}
@@ -1070,12 +1075,16 @@ class GlDriver extends Driver {
 		var fbo = gl.createFramebuffer();
 		var rbo = gl.createRenderbuffer();
 		gl.bindRenderbuffer(GL.RENDERBUFFER, rbo);
+		#if !lime
+		gl.renderbufferStorage(GL.RENDERBUFFER, format, width, height);
+		#else
 		var fmt = format == null ? GL.RGBA8 : format;
 		if (msaaLevel == 0)
 			gl.renderbufferStorage(GL.RENDERBUFFER, fmt, width, height);
 		else {
 			gl.renderbufferStorageMultisample(GL.RENDERBUFFER, msaaLevel, fmt, width, height);
 		}
+		#end
 		gl.bindRenderbuffer(GL.RENDERBUFFER, null);
 		return {f: fbo, r: rbo};
 	}
@@ -1325,7 +1334,7 @@ class GlDriver extends Driver {
 		gl.bufferSubData(GL.ARRAY_BUFFER, startVertex * stride * 4, vertexCount * stride * 4, sub);
 		#elseif (lime && js)
 		var data : Float32Array = buf.getNative();
-		var sub = new Float32Array(data.buffer, bufPos, vertexCount * stride);
+		var sub = new Float32Array(data.buffer, bufPos * 4, vertexCount * stride);
 		gl.bufferSubDataWEBGL(GL.ARRAY_BUFFER, startVertex * stride, sub, 0, vertexCount * stride);
 		#else
 		var buf : Float32Array = buf.getNative();
@@ -1360,7 +1369,7 @@ class GlDriver extends Driver {
 		var data = #if hl hl.Bytes.getArray(buf.getNative()) #else buf.getNative() #end;
 		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice << bits, streamData(data,bufPos << bits,indiceCount << bits), (bufPos << bits) * STREAM_POS, indiceCount << bits);
 		#elseif lime
-		var sub = new Uint16Array(buf.getNative(), bufPos << bits, indiceCount);
+		var sub:Dynamic = i.is32 ? new Uint32Array(buf.getNative(), bufPos << bits, indiceCount) : new Uint16Array(buf.getNative(), bufPos << bits-1, indiceCount << bits-1);
 		#if js
 		gl.bufferSubDataWEBGL(GL.ELEMENT_ARRAY_BUFFER, startIndice, sub, 0, indiceCount);
 		#else
@@ -1689,6 +1698,7 @@ class GlDriver extends Driver {
 		#end
 	}
 	override function blitFramebuffer( msaaFBO:h3d.impl.Driver.Framebuffer, targetFBO:h3d.impl.Driver.Framebuffer, tex : h3d.mat.Texture, w:Int, h:Int ) {
+		#if lime
 		gl.clearColor( 0.2, 0.5, 0.2, 1.0);
 		gl.bindFramebuffer(GL.READ_FRAMEBUFFER, msaaFBO.f);
 		gl.bindFramebuffer(GL.DRAW_FRAMEBUFFER, targetFBO.f);
@@ -1700,6 +1710,7 @@ class GlDriver extends Driver {
 			GL.LINEAR); // scale filter
 		gl.bindFramebuffer(GL.FRAMEBUFFER, null);
 		gl.viewport(0, 0, w, h);
+		#end
 	}
 
 	override function setRenderTargets( textures : Array<h3d.mat.Texture> ) {
@@ -1790,6 +1801,9 @@ class GlDriver extends Driver {
 
 		case TextureLod:
 			gl.getExtension('EXT_shader_texture_lod') != null;
+
+		case ElementIndexUInt:
+			(glES >= 3) || (gl.getExtension('OES_element_index_uint') != null);
 	
 		default:
 			false;

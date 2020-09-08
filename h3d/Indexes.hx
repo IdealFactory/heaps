@@ -37,9 +37,9 @@ class Indexes {
 			mem.deleteIndexes(this);
 	}
 
-	public static function alloc( i : hxd.IndexBuffer, startPos = 0, length = -1 ) {
+	public static function alloc( i : hxd.IndexBuffer, startPos = 0, length = -1, is32:Bool = false ) {
 		if( length < 0 ) length = i.length;
-		var idx = new Indexes( length );
+		var idx = new Indexes( length, is32 );
 		idx.upload(i, 0, length);
 		return idx;
 	}

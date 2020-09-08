@@ -114,6 +114,10 @@ enum Feature {
 	*/
 	TextureLod;
 	#end
+	/*
+		Use 32bit indices buffer
+	*/
+	ElementIndexUInt;
 }
 
 enum QueryKind {
