@@ -50,10 +50,14 @@ class Clearcoat extends h3d.shader.pbrsinglepass.PBRSinglePassLib  {
             var clearCoatReflectionCoords:Vec3 = clearCoatReflectionVector * vec3(-1, -1, 1);
             ccOutEnergyConsFCC = vec3(0.);
 
+            // Expanded sampleReflectionTexture
             var reflectionLOD = getLodFromAlphaG(vReflectionMicrosurfaceInfos.x, clearCoatAlphaG); //float
             reflectionLOD = reflectionLOD * vReflectionMicrosurfaceInfos.y + vReflectionMicrosurfaceInfos.z;
             environmentClearCoatRadiance = #if !flash textureLod(reflectionSampler, clearCoatReflectionCoords, reflectionLOD); #else texture(reflectionSampler, clearCoatReflectionCoords); #end// sampleReflectionLod
-            // environmentClearCoatRadiance.rgb = fromRGBD(environmentClearCoatRadiance); // When using RGBD HDR images
+            if (rgbdDecodeEnv) {
+                environmentClearCoatRadiance.rgb = fromRGBD(environmentClearCoatRadiance);
+            }
+            // environmentClearCoatRadiance.rgb = toLinearSpace_V3(environmentClearCoatRadiance.rgb);
             environmentClearCoatRadiance.rgb *= vec3(vReflectionInfos.x);
             environmentClearCoatRadiance.rgb *= vReflectionColor.rgb;
  

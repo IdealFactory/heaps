@@ -4,6 +4,8 @@ class PBRSinglePassLib extends hxsl.Shader  {
 
 	static var SRC = {
 
+        @const var rgbdDecodeEnv : Bool;
+        
         @param var environmentBrdfSampler : Sampler2D;
         @param var clearCoatSampler : SamplerCube;
 
@@ -313,7 +315,9 @@ class PBRSinglePassLib extends hxsl.Shader  {
     }
 
     public function new() {
-		super();
+        super();
+        
+        this.rgbdDecodeEnv = #if js @:privateAccess cast (@:privateAccess h3d.Engine.getCurrent().driver, h3d.impl.GlDriver).glES < 3; #else false; #end
         
         this.vAlbedoColor.set( 1, 1, 1, 1 );
         this.vAlbedoInfos.set( 0, 1 );
