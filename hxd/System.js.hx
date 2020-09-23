@@ -136,9 +136,11 @@ class System {
 	static function get_lang() : String return "en";
 	static function get_platform() : Platform {
 		var ua = js.Browser.navigator.userAgent.toLowerCase();
+		// TODO: From iOS 13, iPads are defined as MacIntel not iPad, therefore need to detect teh max touch points which is 0 for desktop/laptop (for the time being)
+		var hasMultiTouchPoints = (js.Browser.navigator.platform == 'MacIntel' && js.Browser.navigator.maxTouchPoints > 1);
 		if( ua.indexOf("android")>=0 )
 			return Android;
-		else if( ua.indexOf("ipad")>=0 || ua.indexOf("iphone")>=0 || ua.indexOf("ipod")>=0 )
+		else if( ua.indexOf("ipad")>=0 || ua.indexOf("iphone")>=0 || ua.indexOf("ipod")>=0 || hasMultiTouchPoints )
 			return IOS;
 		else
 			return PC;

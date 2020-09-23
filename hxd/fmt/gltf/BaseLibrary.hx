@@ -274,7 +274,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	function createMaterial( materialNode ) {
 		var material = new h3d.mat.PBRSinglePass();
 		material.mainPass.culling = Front;
-		material.environmentBRDF = brdfTexture;
+		// material.environmentBRDF = brdfTexture;
 		// material.output.debug = true;
 
 		if (materialNode == null) {

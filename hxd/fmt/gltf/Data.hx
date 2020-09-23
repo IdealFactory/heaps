@@ -858,24 +858,38 @@ class GltfTools {
 		var imageBytes = haxe.crypto.Base64.decode( brdfData.substr( brdfData.indexOf(",")+1 ) );
 		var brdfBitmapData = new hxd.res.Image( new DataURIEntry( "brdf-image.png", brdfData, imageBytes ) ).toBitmap();
 		
-		var sourceBRDFTexture = new h3d.mat.Texture(brdfBitmapData.width, brdfBitmapData.height, [NoAlloc], h3d.mat.Data.TextureFormat.RGBA);
+		var sourceBRDFTexture = new h3d.mat.Texture(brdfBitmapData.width, brdfBitmapData.height, null, h3d.mat.Data.TextureFormat.RGBA);
 		sourceBRDFTexture.setName("sourcebrdf");
 		sourceBRDFTexture.wrap = h3d.mat.Data.Wrap.Repeat;
 		sourceBRDFTexture.uploadBitmap(brdfBitmapData);
 
-		var brdfTexture = new h3d.mat.Texture(brdfBitmapData.width, brdfBitmapData.height, [h3d.mat.Data.TextureFlags.Target], h3d.mat.Data.TextureFormat.RGBA16F);
-		brdfTexture.preventAutoDispose();
-
-		var shader = new h3d.shader.pbrsinglepass.RGBDDecode();
-		shader.textureSampler = sourceBRDFTexture;
-
-		var screen = new h3d.pass.ScreenFx( shader );
 		var engine = h3d.Engine.getCurrent();
-		engine.pushTarget( brdfTexture );
-		screen.render();
-		engine.popTarget();
-		screen.dispose();
-		@:privateAccess engine.flushTarget();
+			
+		var brdfTexture:h3d.mat.Texture;
+		var supportsHalfFloatTargetTextures = (hxd.System.platform != hxd.System.Platform.IOS) && engine.driver.hasFeature(FloatTextures);
+		trace("hxd.System.platform:"+hxd.System.platform);
+		trace("supportsHalfFloatTargetTextures:"+supportsHalfFloatTargetTextures);
+        if (supportsHalfFloatTargetTextures) {
+
+			brdfTexture = new h3d.mat.Texture(brdfBitmapData.width, brdfBitmapData.height, [h3d.mat.Data.TextureFlags.Target], RGBA16F);
+			brdfTexture.preventAutoDispose();
+
+			var shader = new h3d.shader.pbrsinglepass.RGBDDecode();
+			shader.textureSampler = sourceBRDFTexture;
+
+			var screen = new h3d.pass.ScreenFx( shader );
+			engine.pushTarget( brdfTexture );
+			screen.render();
+			engine.popTarget();
+			screen.dispose();
+			@:privateAccess engine.flushTarget();
+	
+		} else {
+
+            brdfTexture = sourceBRDFTexture;
+			
+		}
+		brdfTexture.setName("EnvBRDFTexture");
 
 		hxd.fmt.gltf.BaseLibrary.brdfTexture = brdfTexture;
 	}

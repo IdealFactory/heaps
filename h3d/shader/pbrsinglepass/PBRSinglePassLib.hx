@@ -6,7 +6,9 @@ class PBRSinglePassLib extends hxsl.Shader  {
 
         @const var rgbdDecodeEnv : Bool;
         
-        @param var environmentBrdfSampler : Sampler2D;
+        @global var environmentBrdfSampler : Sampler2D;
+        @global var reflectionSampler : SamplerCube;
+        
         @param var clearCoatSampler : SamplerCube;
 
         @param var vAlbedoColor : Vec4;                                 // uniform vec4 vAlbedoColor;
@@ -14,7 +16,6 @@ class PBRSinglePassLib extends hxsl.Shader  {
         @param var vAmbientInfos : Vec4;                                // uniform vec4 vAmbientInfos;
 
         @param var vReflectionColor : Vec3;
-        @param var reflectionSampler : SamplerCube;
         @param var vReflectionMicrosurfaceInfos : Vec3;
         @param var vReflectionInfos : Vec2;
         @param var vReflectionMatrix : Mat4;

@@ -272,6 +272,7 @@ class GlDriver extends Driver {
 		var extension:Dynamic = gl.getExtension("EXT_texture_filter_anisotropic");
 
 		#if (js && html5)
+		if (extension == null || extension.MAX_TEXTURE_MAX_ANISOTROPY_EXT == null) extension = gl.getExtension("EXT_texture_filter_anisotropic");
 		if (extension == null || extension.MAX_TEXTURE_MAX_ANISOTROPY_EXT == null) extension = gl.getExtension("MOZ_EXT_texture_filter_anisotropic");
 		if (extension == null || extension.MAX_TEXTURE_MAX_ANISOTROPY_EXT == null) extension = gl.getExtension("WEBKIT_EXT_texture_filter_anisotropic");
 		#end
@@ -620,9 +621,9 @@ class GlDriver extends Driver {
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_S, w);
 					gl.texParameteri(mode, GL.TEXTURE_WRAP_T, w);
 				}
-                if (h3d.mat.Texture.maxTextureMaxAnisotropy>0 && t.anisotropy>0) {
-				 	gl.texParameterf(mode, h3d.mat.Texture.textureMaxAnisotropy, t.anisotropy);
-               }
+                if (pt.t != TSamplerCube && h3d.mat.Texture.maxTextureMaxAnisotropy>0 && t.anisotropy>0) {
+					gl.texParameterf(mode, h3d.mat.Texture.textureMaxAnisotropy, t.anisotropy);
+				}
 			}
 		}
 	}

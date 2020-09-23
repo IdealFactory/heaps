@@ -77,10 +77,8 @@ class PBRSinglePass extends Material {
         mainPass.addShaderAtIndex(colorTransform, 11 + baseMeshOffset);
     }
 
-    public var environmentBRDF(get, set) : h3d.mat.Texture;
 	public var reflectivityMap(get, set) : h3d.mat.Texture;
 	public var emissiveLightMap(get, set) : h3d.mat.Texture;
-	public var reflectionCubeMap(get, set) : h3d.mat.Texture;
 	public var occlusionMap(get, set) : h3d.mat.Texture;
 
     override function get_texture() {
@@ -200,20 +198,6 @@ class PBRSinglePass extends Material {
         return val;
     }
 
-
-    function get_environmentBRDF() {
-		if( envLighting == null ) return null;
-        return envLighting.environmentBrdfSampler;
-	}
-
-	function set_environmentBRDF(t) {
-        if( envLighting == null ) return null;
-        envLighting.environmentBrdfSampler = t;
-        if (sheen != null) sheen.environmentBrdfSampler = t;
-        if (clearCoat != null) clearCoat.environmentBrdfSampler = t;
-		return t;
-	}
-
     function get_reflectivityMap() {
         if( surfaceMap == null ) return null;
         return surfaceMap.reflectivitySampler;
@@ -235,22 +219,6 @@ class PBRSinglePass extends Material {
         if( t != null && emissiveMap == null ) addEmissiveMap();
         if( emissiveMap == null ) return null;
         emissiveMap.emissiveSampler = t;
-		return t;
-	}
-
-    function get_reflectionCubeMap() {
-		if( irradiance == null && irradianceMap == null ) return null;
-        if( irradiance != null) 
-            return irradiance.reflectionSampler;
-        else
-            return irradianceMap.reflectionSampler;
-	}
-
-	function set_reflectionCubeMap(t) {
-        if (irradiance != null) irradiance.reflectionSampler = t;
-        if (irradianceMap != null) irradianceMap.reflectionSampler = t;
-        if( sheen != null ) sheen.reflectionSampler = t;
-        if( clearCoat != null ) clearCoat.reflectionSampler = t;
 		return t;
 	}
 
@@ -523,9 +491,6 @@ class PBRSinglePass extends Material {
             // sheen.sheenSampler = sheenTexture;
         }
 
-        if (envLighting != null) sheen.environmentBrdfSampler = envLighting.environmentBrdfSampler;
-        if (irradianceMap != null) sheen.reflectionSampler = irradianceMap.reflectionSampler;
-
         mainPass.addShaderAtIndex(sheen, 9+baseMeshOffset);
     }
 
@@ -545,10 +510,6 @@ class PBRSinglePass extends Material {
             // clearCoat.reflectivitySampler = ccNormalTexture;
         }
 
-        if (envLighting != null) clearCoat.environmentBrdfSampler = envLighting.environmentBrdfSampler;
-        if (irradianceMap != null) clearCoat.reflectionSampler = irradianceMap.reflectionSampler;
-
         mainPass.addShaderAtIndex(clearCoat, 10+baseMeshOffset);
     }
-
 }
