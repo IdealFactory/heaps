@@ -4,6 +4,7 @@ class PBRSinglePassLib extends hxsl.Shader  {
 
 	static var SRC = {
 
+        @const var rgbdDecodeBRDF: Bool;
         @const var rgbdDecodeEnv : Bool;
         
         @global var environmentBrdfSampler : Sampler2D;
@@ -168,7 +169,10 @@ class PBRSinglePassLib extends hxsl.Shader  {
 
         function getBRDFLookup(NdotV:Float, perceptualRoughness:Float):Vec3 {
             var UV = vec2(NdotV, perceptualRoughness); //vec2
-            var brdfLookup = environmentBrdfSampler.get(UV);//fromRGBD(environmentBrdfSampler.get(UV)); //vec4
+            var brdfLookup = environmentBrdfSampler.get(UV); //vec4
+            if (rgbdDecodeBRDF) {
+                brdfLookup.rgb = fromRGBD_BGR(brdfLookup.rgba);
+            }
             return brdfLookup.rgb;
         }
 
@@ -313,13 +317,32 @@ class PBRSinglePassLib extends hxsl.Shader  {
 
             rgbdMaxRange = 255.0;
         }
+
+        function __init__frgament() {
+
+            debugVar = vec4(0,0,0,1);
+
+            PI = 3.1415926535897932384626433832795;
+            MINIMUMVARIANCE = 0.0005;
+
+            LinearEncodePowerApprox  = 2.2;
+            GammaEncodePowerApprox  = 0.45454545454545454; //1.0/LinearEncodePowerApprox;
+            LuminanceEncodeApprox  = vec3(0.2126,0.7152,0.0722);
+            LuminanceEncodeApproxX  = 0.2126;
+            LuminanceEncodeApproxY = 0.7152;
+            LuminanceEncodeApproxZ  = 0.0722;
+            Epsilon = 0.0000001;
+
+            rgbdMaxRange = 255.0;
+        }
     }
 
     public function new() {
         super();
         
-        this.rgbdDecodeEnv = #if js @:privateAccess cast (@:privateAccess h3d.Engine.getCurrent().driver, h3d.impl.GlDriver).glES < 3; #else false; #end
-        
+        this.rgbdDecodeBRDF = #if js !hxd.fmt.gltf.Data.supportsHalfFloatTargetTextures; #else false; #end
+        this.rgbdDecodeEnv = #if js !hxd.fmt.gltf.Data.supportsHalfFloatTargetTextures || @:privateAccess cast (@:privateAccess h3d.Engine.getCurrent().driver, h3d.impl.GlDriver).glES < 3; #else false; #end
+
         this.vAlbedoColor.set( 1, 1, 1, 1 );
         this.vAlbedoInfos.set( 0, 1 );
         this.vAmbientInfos.set( 0, 1, 1, 0 );

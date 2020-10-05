@@ -406,6 +406,10 @@ typedef BytePointer = {
 	var pos:Int;
 }
 
+class Data {
+	public static var supportsHalfFloatTargetTextures:Bool = false;
+}
+
 class GltfTools {
 
 	public static function decodeDracoBuffer( l : BaseLibrary, root : MeshPrimitive, intCache:Map<String, IndexBuffer>, floatCache:Map<String, FloatBuffer> ) {
@@ -855,6 +859,8 @@ class GltfTools {
 		"rGkUS4LeSUjg8dD7+D7w/ybIfy7vlB9/HJ978zr7/45Qgajzj+4EjIK/ULHPRAOlKr/aG0AFcqCyu0GcW45Igh6JMJmhA49/U+cEssHNJhtXDC1MOya3j/sAiAGcrEtqtgjBD6wEzSDc7D8o6C8rIqAZyPk+NQoNLAZ1hR64Yl1FBY648smUYKnSg1Xwk/0DyRyArByM" +
 		"UobyByhCcPnOaPyoegREFS4jNfYAw+IHCjdC1J2WDZBke/OyN85J24WiXwDYPoJyYuCD238ulvuzwt6KgHf0shWKsqCFFGjB/w8HU8eeTED9wAAAAABJRU5ErkJggg==";
 
+		@:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
+		
 		var imageBytes = haxe.crypto.Base64.decode( brdfData.substr( brdfData.indexOf(",")+1 ) );
 		var brdfBitmapData = new hxd.res.Image( new DataURIEntry( "brdf-image.png", brdfData, imageBytes ) ).toBitmap();
 		
@@ -866,10 +872,14 @@ class GltfTools {
 		var engine = h3d.Engine.getCurrent();
 			
 		var brdfTexture:h3d.mat.Texture;
-		var supportsHalfFloatTargetTextures = (hxd.System.platform != hxd.System.Platform.IOS) && engine.driver.hasFeature(FloatTextures);
+		Data.supportsHalfFloatTargetTextures = (hxd.System.platform != hxd.System.Platform.IOS) && engine.driver.hasFeature(FloatTextures);
+		
+		#if debug_gltf
 		trace("hxd.System.platform:"+hxd.System.platform);
-		trace("supportsHalfFloatTargetTextures:"+supportsHalfFloatTargetTextures);
-        if (supportsHalfFloatTargetTextures) {
+		trace("supportsHalfFloatTargetTextures:"+Data.supportsHalfFloatTargetTextures);
+		#end 
+		
+		if (Data.supportsHalfFloatTargetTextures) {
 
 			brdfTexture = new h3d.mat.Texture(brdfBitmapData.width, brdfBitmapData.height, [h3d.mat.Data.TextureFlags.Target], RGBA16F);
 			brdfTexture.preventAutoDispose();
@@ -890,6 +900,8 @@ class GltfTools {
 			
 		}
 		brdfTexture.setName("EnvBRDFTexture");
+
+		@:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 
 		hxd.fmt.gltf.BaseLibrary.brdfTexture = brdfTexture;
 	}

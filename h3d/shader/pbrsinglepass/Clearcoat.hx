@@ -57,7 +57,6 @@ class Clearcoat extends h3d.shader.pbrsinglepass.PBRSinglePassLib  {
             if (rgbdDecodeEnv) {
                 environmentClearCoatRadiance.rgb = fromRGBD(environmentClearCoatRadiance);
             }
-            // environmentClearCoatRadiance.rgb = toLinearSpace_V3(environmentClearCoatRadiance.rgb);
             environmentClearCoatRadiance.rgb *= vec3(vReflectionInfos.x);
             environmentClearCoatRadiance.rgb *= vReflectionColor.rgb;
  

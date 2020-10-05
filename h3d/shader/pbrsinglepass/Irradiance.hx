@@ -41,7 +41,6 @@ class Irradiance extends PBRSinglePassLib {
             if (rgbdDecodeEnv) {
                 environmentRadiance.rgb = fromRGBD(environmentRadiance);
             }
-            // environmentRadiance.rgb = toLinearSpace_V3(environmentRadiance.rgb);
             environmentRadiance.rgb *= vec3(vReflectionInfos.x);
             environmentRadiance.rgb *= vReflectionColor.rgb;
             

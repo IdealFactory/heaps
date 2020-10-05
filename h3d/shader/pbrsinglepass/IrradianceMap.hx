@@ -28,14 +28,19 @@ class IrradianceMap extends PBRSinglePassLib {
             reflectionVector.x = -reflectionVector.x;
             
             reflectionCoords = reflectionVector; //vec3
+            
+            // Expanded sampleReflectionTexture
             var reflectionLOD = getLodFromAlphaG(vReflectionMicrosurfaceInfos.x, alphaG); //float
             reflectionLOD = reflectionLOD * vReflectionMicrosurfaceInfos.y + vReflectionMicrosurfaceInfos.z;
             environmentRadiance = #if !flash textureLod(reflectionSampler, reflectionCoords, reflectionLOD); #else texture(reflectionSampler, reflectionCoords); #end// sampleReflectionLod
-            environmentRadiance.rgb = fromRGBD(environmentRadiance);
-            var irradianceVector = vec3((reflectionMatrix * vec4(normalW, 0)).rgb).xyz; //vec3 //vec3(reflectionMatrix * vec4(normalW, 0)).xyz
-            irradianceVector.z *= -1.0;
+            if (rgbdDecodeEnv) {
+                environmentRadiance.rgb = fromRGBD(environmentRadiance);
+            }
             environmentRadiance.rgb *= vec3(vReflectionInfos.x);
             environmentRadiance.rgb *= vReflectionColor.rgb;
+            
+            var irradianceVector = vec3((reflectionMatrix * vec4(normalW, 0)).rgb).xyz; //vec3 //vec3(reflectionMatrix * vec4(normalW, 0)).xyz
+            irradianceVector.z *= -1.0;
             environmentIrradiance = computeEnvironmentIrradiance(irradianceVector);
             environmentIrradiance *= vReflectionColor.rgb;
         }
