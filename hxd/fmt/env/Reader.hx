@@ -147,7 +147,7 @@ class Reader {
         if (!imagesReady) return null;
         if (texture != null) return texture;
 
-        #if !flash
+        #if (openfl && js)
         @:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
         #end
 
@@ -209,7 +209,7 @@ class Reader {
         
         screen.dispose();
         
-        #if !flash
+        #if (openfl && js)
         @:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
         #end
 

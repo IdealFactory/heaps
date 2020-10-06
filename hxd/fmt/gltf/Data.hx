@@ -486,13 +486,14 @@ class GltfTools {
 	}
 
 	private static function processDracoAttribute( decoderModule, decoder, geometry, numPoints, id ) : FloatBuffer {
+		var buffer:FloatBuffer = null;
+		#if js
 		var dracoData = untyped __js__ ("new decoderModule.DracoFloat32Array();");
 
 		var attribute = decoder.GetAttributeByUniqueId(geometry, id);
 		decoder.GetAttributeFloatForAllPoints(geometry, attribute, dracoData);
 
-		var numComponents = attribute.num_components();
-		var buffer:FloatBuffer = null;
+		var numComponents:Null<Int> = attribute.num_components();
 		if (numComponents!=null && numComponents!=0) {
 			buffer = new FloatBuffer(numPoints * numComponents);
 			for (i in 0...buffer.length) {
@@ -500,6 +501,7 @@ class GltfTools {
 			}
 		}
 		dracoData = null;
+		#end
 		return buffer;
 	}
 
@@ -859,8 +861,10 @@ class GltfTools {
 		"rGkUS4LeSUjg8dD7+D7w/ybIfy7vlB9/HJ978zr7/45Qgajzj+4EjIK/ULHPRAOlKr/aG0AFcqCyu0GcW45Igh6JMJmhA49/U+cEssHNJhtXDC1MOya3j/sAiAGcrEtqtgjBD6wEzSDc7D8o6C8rIqAZyPk+NQoNLAZ1hR64Yl1FBY648smUYKnSg1Xwk/0DyRyArByM" +
 		"UobyByhCcPnOaPyoegREFS4jNfYAw+IHCjdC1J2WDZBke/OyN85J24WiXwDYPoJyYuCD238ulvuzwt6KgHf0shWKsqCFFGjB/w8HU8eeTED9wAAAAABJRU5ErkJggg==";
 
+		#if (openfl && js)
 		@:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
-		
+		#end
+
 		var imageBytes = haxe.crypto.Base64.decode( brdfData.substr( brdfData.indexOf(",")+1 ) );
 		var brdfBitmapData = new hxd.res.Image( new DataURIEntry( "brdf-image.png", brdfData, imageBytes ) ).toBitmap();
 		
@@ -901,8 +905,10 @@ class GltfTools {
 		}
 		brdfTexture.setName("EnvBRDFTexture");
 
+		#if (openfl && js)
 		@:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
-
+		#end 
+		
 		hxd.fmt.gltf.BaseLibrary.brdfTexture = brdfTexture;
 	}
 
