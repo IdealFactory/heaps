@@ -145,12 +145,6 @@ class PBRSinglePassLib extends hxsl.Shader  {
             return vec2(geometricRoughnessFactor, geometricAlphaGFactor);
         }
 
-        function applyImageProcessing(result:Vec4):Vec4 {
-            result.rgb = toGammaSpace_V3(result.rgb);
-            result.rgb = saturate_V3(result.rgb);    
-            return result;
-        }
-
         function computeEnvironmentIrradiance( normal:Vec3 ):Vec3 {
             return vSphericalL00 +
                 vSphericalL1_1 * (normal.y) +

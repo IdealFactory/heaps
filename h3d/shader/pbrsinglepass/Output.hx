@@ -14,6 +14,19 @@ class Output extends PBRSinglePassLib {
 			var position : Vec4;
 		};
 
+        function applyImageProcessing(result:Vec4):Vec4 {
+            result.rgb *= exposureLinear;
+            result.rgb = toGammaSpace_V3(result.rgb);
+            result.rgb = saturate_V3(result.rgb);   
+            var resultHighContrast:Vec3 = result.rgb * result.rgb * (3.0 - 2.0 * result.rgb);
+            if (contrast<1.0) {
+                result.rgb=mix(vec3(0.5,0.5,0.5),result.rgb,contrast);
+            } else {
+                result.rgb=mix(result.rgb,resultHighContrast,contrast-1.0);
+            }
+            return result;
+        }
+
         var positionW:Vec3;
         
         var alpha:Float;

@@ -419,7 +419,7 @@ class PBRSinglePass extends Material {
         vSphericalL22( value.l22.x, value.l22.y, value.l22.z ); 
         vSphericalL1_1( value.l1_1.x, value.l1_1.y, value.l1_1.z ); 
         vSphericalL2_1( value.l2_1.x, value.l2_1.y, value.l2_1.z ); 
-        vSphericalL2_2( value.l2_1.x, value.l2_1.y, value.l2_1.z );
+        vSphericalL2_2( value.l2_2.x, value.l2_2.y, value.l2_2.z );
         return value;
     }
 
