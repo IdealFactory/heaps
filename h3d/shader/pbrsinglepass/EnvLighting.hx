@@ -67,19 +67,19 @@ class EnvLighting extends PBRSinglePassLib {
 			specularBase = vec3(0., 0., 0.); //vec3
 			clearCoatBase = vec3(0., 0., 0.);
 			
-			// pLINdotL = dot(normalW, vLightData0.xyz) * 0.5 + 0.5;
-			// pLINdotL = saturateEps(pLINdotL);
-			// pLINdotLUnclamped = pLINdotL;
-			// pLIL = normalize(vLightData0.xyz);
-			// pLIH = normalize(viewDirectionW + pLIL);
-			// pLIVdotH = saturate(dot(viewDirectionW, pLIH));
+			pLINdotL = dot(normalW, vLightData0.xyz) * 0.5 + 0.5;
+			pLINdotL = saturateEps(pLINdotL);
+			pLINdotLUnclamped = pLINdotL;
+			pLIL = normalize(vLightData0.xyz);
+			pLIH = normalize(viewDirectionW + pLIL);
+			pLIVdotH = saturate(dot(viewDirectionW, pLIH));
 
-			// pLINdotV = NdotV; // preInfo.NdotV = NdotV;
-			// pLIAttenuation = 1.0; // preInfo.attenuation = 1.0;
-			// pLIRoughness = roughness; // preInfo.roughness = roughness;
+			pLINdotV = NdotV; // preInfo.NdotV = NdotV;
+			pLIAttenuation = 1.0; // preInfo.attenuation = 1.0;
+			pLIRoughness = roughness; // preInfo.roughness = roughness;
 
-			// lIDiffuse = computeHemisphericDiffuseLighting(pLINdotL, vLightDiffuse0.rgb, vLightGround0);
-			// lISpecular = computeSpecularLighting(pLIH, pLIRoughness, pLIVdotH, pLINdotL, pLINdotV, pLIAttenuation, normalW, specularEnvironmentR0, specularEnvironmentR90, AARoughnessFactors.x, vLightDiffuse0.rgb);
+			diffuseBase = computeHemisphericDiffuseLighting(pLINdotL, vLightDiffuse0.rgb, vLightGround0);
+			specularBase = computeSpecularLighting(pLIH, pLIRoughness, pLIVdotH, pLINdotL, pLINdotV, pLIAttenuation, normalW, specularEnvironmentR0, specularEnvironmentR90, AARoughnessFactors.x, vLightDiffuse0.rgb);
 			
 			// shadow = 1.; //float
 
