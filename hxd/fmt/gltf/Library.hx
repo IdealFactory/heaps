@@ -122,8 +122,10 @@ class Library extends BaseLibrary {
             for (animation in root.animations) createAnimations( animation );
 
 
-        for ( scene in scenes ) {
-            s3d.addChild(scene);
+        if (s3d != null) {
+            for ( scene in scenes ) {
+                s3d.addChild(scene);
+            }
         }
         
         #if openfl
