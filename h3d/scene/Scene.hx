@@ -3,6 +3,7 @@ package h3d.scene;
 /**
 	h3d.scene.Scene is the root class for a 3D scene. All root objects are added to it before being drawn on screen.
 **/
+#if openfl @:keep #end
 class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.InteractiveScene {
 
 	/**
