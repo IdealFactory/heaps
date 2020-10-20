@@ -872,7 +872,7 @@ class GltfTools {
 		var engine = h3d.Engine.getCurrent();
 			
 		var brdfTexture:h3d.mat.Texture;
-		Data.supportsHalfFloatTargetTextures = (hxd.System.platform != hxd.System.Platform.IOS) && engine.driver.hasFeature(FloatTextures);
+		Data.supportsHalfFloatTargetTextures = (hxd.System.platform != hxd.System.Platform.IOS) && engine.driver.hasFeature(FloatTextures) && @:privateAccess cast (@:privateAccess h3d.Engine.getCurrent().driver, h3d.impl.GlDriver).glES >= 3;
 		
 		#if debug_gltf
 		trace("hxd.System.platform:"+hxd.System.platform);
