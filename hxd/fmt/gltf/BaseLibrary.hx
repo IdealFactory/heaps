@@ -42,8 +42,6 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	public var hasDracoExt:Bool = false;
 	public var requiresDracoExt:Bool = false;
 
-	private var stateStore:Context3DState;
-	
 	public static var brdfTexture:h3d.mat.Texture;
 	
 	var s2d : h2d.Scene;
@@ -51,6 +49,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	public var baseURL:String = "";
 
 	#if openfl
+	var stateStore:Context3DState;
 	var dependencyInfo:Map<openfl.net.URLLoader,LoadInfo>;
 	var totalBytesToLoad = 0;
 	#end
@@ -274,6 +273,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	function createMaterial( materialNode ) {
 		var material = new h3d.mat.PBRSinglePass();
 		material.mainPass.culling = Front;
+		material.shadows = true;
 		// material.environmentBRDF = brdfTexture;
 		// material.output.debug = true;
 

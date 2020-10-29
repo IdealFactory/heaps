@@ -152,6 +152,10 @@ class GlDriver extends Driver {
 	var commonVA : lime.graphics.opengl.GLVertexArrayObject;
 	#end
 
+	#if openfl
+	var buffer : Framebuffer;//openfl._internal.backend.gl.GLFramebuffer;
+	#end
+
 	var commonFB : Framebuffer;
 	var curAttribs : Array<Bool> = new Array<Bool>();
 	var maxIdxCurAttribs : Int = 0;
@@ -228,6 +232,7 @@ class GlDriver extends Driver {
 		hasMultiIndirect = true;
 		maxCompressedTexturesSupport = 3;
 		#end
+		glDebug = true;
 
 		var v : String = gl.getParameter(GL.VERSION);
 		var reg = ~/ES ([0-9]+\.[0-9]+)/;
@@ -629,6 +634,7 @@ class GlDriver extends Driver {
 	}
 
 	override function selectMaterial( pass : Pass ) {
+		trace("Heaps.GLDriver: selectMaterial pass="+pass.name);
 		var bits = @:privateAccess pass.bits;
 		/*
 			When rendering to a render target, our output will be flipped in Y to match
@@ -688,14 +694,18 @@ class GlDriver extends Driver {
 		drawMode = wireframe ? GL.LINE_STRIP : GL.TRIANGLES;
 		#end
 
+		// trace("CULL:Diff & Pass.culling_mask:"+(diff & Pass.culling_mask));
 		if( diff & Pass.culling_mask != 0 ) {
 			var cull = Pass.getCulling(bits);
-			if( cull == 0 )
+			// trace("CULL: - cull bits:"+cull);
+			if( cull == 0 ) {
 				gl.disable(GL.CULL_FACE);
-			else {
-				if( curMatBits < 0 || Pass.getCulling(curMatBits) == 0 )
+			} else {
+				if( curMatBits < 0 || Pass.getCulling(curMatBits) == 0 ) {
 					gl.enable(GL.CULL_FACE);
+				}
 				gl.cullFace(FACES[cull]);
+				// trace("CULL: - face:"+FACES[cull]);
 			}
 		}
 		if( diff & (Pass.blendSrc_mask | Pass.blendDst_mask | Pass.blendAlphaSrc_mask | Pass.blendAlphaDst_mask) != 0 ) {
@@ -788,6 +798,7 @@ class GlDriver extends Driver {
 
 	override function clear( ?color : h3d.Vector, ?depth : Float, ?stencil : Int ) {
 		var bits = 0;
+		trace("GLDriver.clear(): col:"+(color != null)+" depth:"+(depth != null)+" depthbits:"+depth);
 		if( color != null ) {
 			gl.colorMask(true, true, true, true);
 			curColorMask = 15;
@@ -816,7 +827,10 @@ class GlDriver extends Driver {
 			gl.clearStencil(stencil);
 			bits |= GL.STENCIL_BUFFER_BIT;
 		}
-		if( bits != 0 ) gl.clear(bits);
+		if( bits != 0 ) {
+			trace(" - clear bits!=0:"+bits);
+			gl.clear(bits);
+		}
 		if( curTarget != null ) curTarget.flags.set(WasCleared);
 	}
 
@@ -1374,7 +1388,9 @@ class GlDriver extends Driver {
 		#if js
 		gl.bufferSubDataWEBGL(GL.ELEMENT_ARRAY_BUFFER, startIndice, sub, 0, indiceCount);
 		#else
-		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice << bits, indiceCount << bits, sub);
+		var d = buf.getNative();
+		var dataPointer = lime.utils.DataPointer.fromArrayBufferView( sub );
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice << bits, indiceCount << bits, dataPointer);
 		#end
 		#else
 		var buf = new Uint16Array(buf.getNative());
@@ -1632,14 +1648,21 @@ class GlDriver extends Driver {
 	}
 
 	override function setRenderTarget( tex : h3d.mat.Texture, layer = 0, mipLevel = 0 ) {
+		trace("Driver.setRenderTarget: tex="+tex+" curr="+curTarget+" match="+(curTarget == tex));
 		unbindTargets();
 		curTarget = tex;
+		#if openfl
+		if (tex == null && buffer != null) {
+			gl.bindFramebuffer(GL.FRAMEBUFFER, buffer);
+		}
+		#end
 		if( tex == null ) {
 			gl.bindFramebuffer(GL.FRAMEBUFFER, null);
 			gl.viewport(offsetX, offsetY, bufferWidth, bufferHeight);
 			return;
 		}
 
+		trace(" - depthBuffer="+tex.depthBuffer);
 		if( tex.depthBuffer != null && (tex.depthBuffer.width != tex.width || tex.depthBuffer.height != tex.height) )
 			throw "Invalid depth buffer size : does not match render target size";
 
@@ -1655,6 +1678,7 @@ class GlDriver extends Driver {
 			restoreBind();
 		}
 
+		trace(" - tex.hasCleared="+tex.flags.has(WasCleared));
 		tex.flags.set(WasCleared); // once we draw to, do not clear again
 		tex.lastFrame = frame;
 		curTargetLayer = layer;
@@ -1663,6 +1687,9 @@ class GlDriver extends Driver {
 		if( tex.t.driver != this )
 			throw "Invalid texture context";
 		#end
+		
+		trace(" - customFBO="+tex.customFBO);
+		trace(" - msaaBuffer="+tex.msaaBuffer);
 		if (tex.customFBO != null)
 			@:privateAccess gl.bindFramebuffer(GL.FRAMEBUFFER, tex.customFBO.f);
 		else if (tex.msaaBuffer != null)
@@ -1785,12 +1812,14 @@ class GlDriver extends Driver {
 			true;
 
 		case FloatTextures if( glES >= 3 ):
-			gl.getExtension('EXT_color_buffer_float') != null && gl.getExtension("OES_texture_float_linear") != null; // allow render to 16f/32f textures (not standard in webgl 2)
+			gl.getExtension('EXT_color_buffer_float') != null && gl.getExtension("OES_texture_float_linear") != null
+			#if (openfl && !js) && gl.getExtension('EXT_color_buffer_half_float') != null && gl.getExtension("OES_texture_half_float") != null#end; // allow render to 16f/32f textures (not standard in webgl 2)
 
 		case StandardDerivatives:
 			gl.getExtension('OES_standard_derivatives') != null;
 
 		case FloatTextures:
+			gl.getExtension('EXT_color_buffer_half_float') != null && gl.getExtension('WEBGL_color_buffer_float') != null && 
 			gl.getExtension('OES_texture_float') != null && gl.getExtension('OES_texture_float_linear') != null &&
 			gl.getExtension('OES_texture_half_float') != null && gl.getExtension('OES_texture_half_float_linear') != null;
 

@@ -78,6 +78,7 @@ class Shadows extends Default {
 	}
 
 	override function getOutputs() : Array<hxsl.Output> {
+		trace("getOutputs called:"+haxe.CallStack.callStack());
 		if(isUsingWorldDist())
 			return [Swiz(Value("output.worldDist",1),[X,X,X,X])];
 

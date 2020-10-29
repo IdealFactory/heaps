@@ -343,6 +343,10 @@ class PBRSinglePassLib extends hxsl.Shader  {
         this.rgbdDecodeBRDF = #if js !hxd.fmt.gltf.Data.supportsHalfFloatTargetTextures; #else false; #end
         this.rgbdDecodeEnv = #if js !hxd.fmt.gltf.Data.supportsHalfFloatTargetTextures || @:privateAccess cast (@:privateAccess h3d.Engine.getCurrent().driver, h3d.impl.GlDriver).glES < 3; #else false; #end
 
+        #if debug_gltf
+        trace(Type.getClassName(Type.getClass(this))+" rgbdDecodeBRDF:"+rgbdDecodeBRDF+" rgbdDecodeEnv:"+rgbdDecodeEnv);
+        #end
+
         this.vAlbedoColor.set( 1, 1, 1, 1 );
         this.vAlbedoInfos.set( 0, 1 );
         this.vAmbientInfos.set( 0, 1, 1, 0 );
