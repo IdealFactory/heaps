@@ -225,7 +225,9 @@ class GlslOut {
 				return "mat_to_34";
 			}
 		case DFdx, DFdy, Fwidth:
+			#if js
 			decl("#extension GL_OES_standard_derivatives:enable");
+			#end
 		case Pack:
 			decl("vec4 pack( float v ) { vec4 color = fract(v * vec4(1, 255, 255.*255., 255.*255.*255.)); return color - color.yzww * vec4(1. / 255., 1. / 255., 1. / 255., 0.); }");
 		case Unpack:
@@ -248,6 +250,9 @@ class GlslOut {
 				#if js
 				decl("#extension GL_EXT_shader_texture_lod : enable");
 				return "texture2DLodEXT";
+				#elseif openfl 
+				decl("#extension GL_ARB_shader_texture_lod : enable");
+				return "texture2DLod";
 				#else
 				return "textureLod";
 				#end
@@ -255,6 +260,9 @@ class GlslOut {
 				#if js
 				decl("#extension GL_EXT_shader_texture_lod : enable");
 				return "textureCubeLodEXT";
+				#elseif openfl 
+				decl("#extension GL_ARB_shader_texture_lod : enable");
+				return "textureCubeLod";
 				#else
 				return "textureLod";
 				#end

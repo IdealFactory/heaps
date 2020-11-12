@@ -634,7 +634,7 @@ class BitmapData {
 		p.flags.set(AlphaPremultiplied);
 		return p;
 		#elseif (lime && !macro)
-		return new Pixels(width, height, data.getPixels(data.rect), #if js RGBA #else BGRA #end);
+		return new Pixels(width, height, data.getPixels(data.rect), RGBA);
 		#elseif js
 		var w = width;
 		var h = height;

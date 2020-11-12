@@ -52,11 +52,11 @@ class PBRSinglePass extends Material {
         output = new h3d.shader.pbrsinglepass.Output();
         colorTransform = new h3d.shader.ColorTransform();
          
-        // var bm = mainPass.getShader( h3d.shader.BaseMesh );
-        // if (bm != null) {
-        //     mainPass.removeShader( bm );
-        //     baseMeshOffset = 0;
-        // }
+        var bm = mainPass.getShader( h3d.shader.BaseMesh );
+        if (bm != null) {
+            mainPass.removeShader( bm );
+            baseMeshOffset = 0;
+        }
 
         clearCoatIndexOfRefraction = 1.5;
 
@@ -245,7 +245,6 @@ class PBRSinglePass extends Material {
     function shaderList(sl:hxsl.ShaderList, ind:Int=0){
         if (sl!=null) {
             var txt = [ for (i in 0...ind) "  " ].join('');
-            trace(txt+" - :"+Type.getClassName(Type.getClass(sl.s)));
             if (sl.next!=null)
                 shaderList( sl.next, ind+1 );
         }

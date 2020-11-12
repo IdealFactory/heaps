@@ -176,6 +176,9 @@ class Image extends Resource {
 			if( fmt == null ) fmt = BGRA;
 			pixels = decodeJPG(bytes, inf.width, inf.height, fmt, flipY);
 			if( pixels == null ) throw "Failed to decode JPG " + entry.path;
+			#elseif openfl
+			var i = lime._internal.format.JPEG.decodeBytes(bytes);
+			pixels = new Pixels(i.width, i.height, i.data.toBytes(), BGRA);
 			#else
 			var p = try NanoJpeg.decode(bytes) catch( e : Dynamic ) throw "Failed to decode JPG " + entry.path + " (" + e+")";
 			pixels = new Pixels(p.width, p.height, p.pixels, BGRA);

@@ -18,15 +18,9 @@ class Library extends BaseLibrary {
         this.bytes = bytes;
 
         if (BaseLibrary.brdfTexture == null) {
-            #if (openfl && !flash)
-            openfl.display.HeapsContainer.addRTTFunc( function() { hxd.fmt.gltf.Data.GltfTools.createBRDFTexture( s2d ); }, continueLoad );
-            #else
             hxd.fmt.gltf.Data.GltfTools.createBRDFTexture( s2d );
-            continueLoad();
-            #end
-        } else {
-            continueLoad();
         }
+        continueLoad();
     }
 
     private function continueLoad() {
@@ -138,8 +132,10 @@ class Library extends BaseLibrary {
             for (animation in root.animations) createAnimations( animation );
 
 
-        for ( scene in scenes ) {
-            s3d.addChild(scene);
+        if (s3d != null) {
+            for ( scene in scenes ) {
+                s3d.addChild(scene);
+            }
         }
         
         #if openfl
