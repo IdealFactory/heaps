@@ -147,7 +147,7 @@ class Reader {
         if (!imagesReady) return null;
         if (texture != null) return texture;
 
-        #if (openfl && js)
+        #if (openfl && (js))
         @:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
         #end
 
@@ -159,9 +159,9 @@ class Reader {
 		var screen = new h3d.pass.ScreenFx( shader );
         var engine = h3d.Engine.getCurrent();
         
-        var supportsFramebufferMipmap = #if js @:privateAccess cast (@:privateAccess engine.driver, h3d.impl.GlDriver).glES >= 3; #else true; #end
+        var supportsFramebufferMipmap = #if js @:privateAccess cast (@:privateAccess engine.driver, h3d.impl.GlDriver).glES >= 3; #else false; #end
 
-        if (supportsFramebufferMipmap) {
+        if (supportsFramebufferMipmap && engine.driver.hasFeature(FloatTextures)) {
 
             texture = new h3d.mat.Texture(info.width, info.width, [Target,Cube,MipMapped,ManualMipMapGen], h3d.mat.Data.TextureFormat.RGBA16F);//h3d.mat.Texture.nativeFormat);
             texture.preventAutoDispose();
@@ -209,7 +209,7 @@ class Reader {
         
         screen.dispose();
         
-        #if (openfl && js)
+        #if (openfl && (js))
         @:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
         #end
 

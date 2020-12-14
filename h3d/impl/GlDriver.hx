@@ -402,6 +402,7 @@ class GlDriver extends Driver {
 			var glout = new ShaderCompiler();
 			glout.glES = glES;
 			glout.version = shaderVersion;
+			trace("SelectShader:GLSL version-1"+shaderVersion);
 			p.vertex = compileShader(glout,shader.vertex);
 			p.fragment = compileShader(glout,shader.fragment);
 
@@ -865,6 +866,7 @@ class GlDriver extends Driver {
 		#else 
 		case GL2.RGBA32F, GL2.RGBA16F, GL2.SRGB8_ALPHA8: GL.RGBA;
 		case GL2.RGBA8: GL.RGBA;
+		case 0x93A1: GL.BGRA;
 		#end
 		case GL2.SRGB, GL2.SRGB8: GL.RGB;
 		case GL.RGBA: GL.RGBA;
@@ -1042,7 +1044,7 @@ class GlDriver extends Driver {
 		var format = switch( b.format ) {
 		case Depth16: GL.DEPTH_COMPONENT16;
 		case Depth24 #if js if( glES >= 3 ) #end: GL2.DEPTH_COMPONENT24;
-		case Depth24Stencil8: GL.DEPTH_STENCIL;
+		case Depth24Stencil8: #if lime GL.DEPTH24_STENCIL8 #else GL.DEPTH_STENCIL #end;
 		default:
 			throw "Unsupported depth format "+b.format;
 		}

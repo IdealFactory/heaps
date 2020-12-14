@@ -861,14 +861,14 @@ class GltfTools {
 		"rGkUS4LeSUjg8dD7+D7w/ybIfy7vlB9/HJ978zr7/45Qgajzj+4EjIK/ULHPRAOlKr/aG0AFcqCyu0GcW45Igh6JMJmhA49/U+cEssHNJhtXDC1MOya3j/sAiAGcrEtqtgjBD6wEzSDc7D8o6C8rIqAZyPk+NQoNLAZ1hR64Yl1FBY648smUYKnSg1Xwk/0DyRyArByM" +
 		"UobyByhCcPnOaPyoegREFS4jNfYAw+IHCjdC1J2WDZBke/OyN85J24WiXwDYPoJyYuCD238ulvuzwt6KgHf0shWKsqCFFGjB/w8HU8eeTED9wAAAAABJRU5ErkJggg==";
 
-		#if (openfl && js)
+		#if (openfl && (js))
 		@:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
 		#end
 
 		var imageBytes = haxe.crypto.Base64.decode( brdfData.substr( brdfData.indexOf(",")+1 ) );
 		var brdfBitmapData = new hxd.res.Image( new DataURIEntry( "brdf-image.png", brdfData, imageBytes ) ).toBitmap();
 		
-		var sourceBRDFTexture = new h3d.mat.Texture(brdfBitmapData.width, brdfBitmapData.height, null, h3d.mat.Data.TextureFormat.RGBA);
+		var sourceBRDFTexture = new h3d.mat.Texture(brdfBitmapData.width, brdfBitmapData.height, [], h3d.mat.Data.TextureFormat.RGBA);
 		sourceBRDFTexture.setName("sourcebrdf");
 		sourceBRDFTexture.wrap = h3d.mat.Data.Wrap.Repeat;
 		sourceBRDFTexture.uploadBitmap(brdfBitmapData);
@@ -905,7 +905,7 @@ class GltfTools {
 		}
 		brdfTexture.setName("EnvBRDFTexture");
 
-		#if (openfl && js)
+		#if (openfl && (js))
 		@:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
 		#end 
 		

@@ -18,9 +18,15 @@ class Library extends BaseLibrary {
         this.bytes = bytes;
 
         if (BaseLibrary.brdfTexture == null) {
+            #if (openfl && !flash)
+            openfl.display.HeapsContainer.addRTTFunc( function() { hxd.fmt.gltf.Data.GltfTools.createBRDFTexture( s2d ); }, continueLoad );
+            #else
             hxd.fmt.gltf.Data.GltfTools.createBRDFTexture( s2d );
+            continueLoad();
+            #end
+        } else {
+            continueLoad();
         }
-        continueLoad();
     }
 
     private function continueLoad() {
@@ -43,9 +49,12 @@ class Library extends BaseLibrary {
         } 
         #end
         else {
-            var gltfFile = hxd.Res.load( fileName );
-            gltfBytes = gltfFile.entry.getBytes();
+            #if !ios 
+            gltfBytes = hxd.Res.load( fileName ).entry.getBytes(); 
             parseglTF( gltfBytes );
+            #else 
+            openfl.Assets.loadBytes( fileName ).onComplete( function(ba) { parseglTF( cast ba );} );
+            #end
         }
     }
 

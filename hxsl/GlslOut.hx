@@ -225,7 +225,7 @@ class GlslOut {
 				return "mat_to_34";
 			}
 		case DFdx, DFdy, Fwidth:
-			#if js
+			#if (js || ios)
 			decl("#extension GL_OES_standard_derivatives:enable");
 			#end
 		case Pack:
@@ -247,7 +247,7 @@ class GlslOut {
 		case TextureLod:
 			switch( args[0].t ) {
 			case TSampler2D, TSampler2DArray, TChannel(_) if( isES2 ):
-				#if js
+				#if (js || ios)
 				decl("#extension GL_EXT_shader_texture_lod : enable");
 				return "texture2DLodEXT";
 				#elseif openfl 
@@ -257,7 +257,7 @@ class GlslOut {
 				return "textureLod";
 				#end
 			case TSamplerCube if( isES2 ):
-				#if js
+				#if (js || ios)
 				decl("#extension GL_EXT_shader_texture_lod : enable");
 				return "textureCubeLodEXT";
 				#elseif openfl 
@@ -683,10 +683,12 @@ class GlslOut {
 			add("\n\n");
 		}
 
+		trace("VERS-1:"+version);
 		#if (lime && flash)
 		if (version > 120) version = 120;
 		#end
 
+		trace("VERS-2:"+version);
 		if( isES )
 			decl("#version " + (version < 100 ? 100 : version) + (version > 150 ? " es" : ""));
 		else if( version != null )
@@ -696,7 +698,9 @@ class GlslOut {
 
 		decls.push(buf.toString());
 		buf = null;
-		return decls.join("\n");
+		var s = decls.join("\n");
+		trace("GLSLOUT:\n"+s);
+		return s;
 	}
 
 	public static function compile( s : ShaderData ) {
@@ -708,6 +712,7 @@ class GlslOut {
 		out.glES = 2;
 		out.version = 120;
 		#end
+		trace("VERS-0:"+out.version);
 		return out.run(s);
 	}
 
