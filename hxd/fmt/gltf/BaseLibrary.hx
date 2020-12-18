@@ -42,8 +42,6 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	public var hasDracoExt:Bool = false;
 	public var requiresDracoExt:Bool = false;
 
-	private var stateStore:Context3DState;
-	
 	public static var brdfTexture:h3d.mat.Texture;
 	
 	var s2d : h2d.Scene;

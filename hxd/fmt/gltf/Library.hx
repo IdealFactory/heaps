@@ -6,6 +6,7 @@ import hxd.fmt.gltf.Data;
 class Library extends BaseLibrary {
 
     var gltfFileProcessed:Void->Void;
+    var bytes:Bytes;
 
     public function load( ?fileName:String = "gltffile", ?bytes:Bytes, gltfFileProcessed ) {	
 
@@ -15,6 +16,22 @@ class Library extends BaseLibrary {
 
         this.fileName = fileName;
         
+        this.bytes = bytes;
+
+        if (BaseLibrary.brdfTexture == null) {
+            #if (openfl && !flash)
+            openfl.display.HeapsContainer.addRTTFunc( function() { hxd.fmt.gltf.Data.GltfTools.createBRDFTexture( s2d ); }, continueLoad );
+            #else
+            hxd.fmt.gltf.Data.GltfTools.createBRDFTexture( s2d );
+            continueLoad();
+            #end
+        } else {
+            continueLoad();
+        }
+    }
+
+    private function continueLoad() {
+
         if (fileName.indexOf("http://")>-1 || fileName.indexOf("https://")>-1)
             baseURL = fileName.substr(0, fileName.lastIndexOf("/")+1);
 
@@ -33,9 +50,12 @@ class Library extends BaseLibrary {
         } 
         #end
         else {
-            var gltfFile = hxd.Res.load( fileName );
-            gltfBytes = gltfFile.entry.getBytes();
+            #if !ios 
+            gltfBytes = hxd.Res.load( fileName ).entry.getBytes(); 
             parseglTF( gltfBytes );
+            #else 
+            openfl.Assets.loadBytes( fileName ).onComplete( function(ba) { parseglTF( cast ba );} );
+            #end
         }
     }
 
@@ -165,7 +185,7 @@ class Library extends BaseLibrary {
 
         if (node.children != null) {
             if (mesh==null) {
-                mesh = new h3d.scene.Object( parent );
+                mesh = new h3d.scene.Object();
                 mesh.name = (node.name==null ? "Node" : node.name) + "Container";
                 mesh.setTransform( transform );
                 nodeObjects[ nodeId ] = mesh;
@@ -176,6 +196,7 @@ class Library extends BaseLibrary {
             for ( child in node.children ) {
                 traverseNodes(child, mesh);
             }
+            parent.addChild( mesh );
         }
     }
 }

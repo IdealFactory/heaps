@@ -1034,7 +1034,7 @@ class GlDriver extends Driver {
 		var format = switch( b.format ) {
 		case Depth16: GL.DEPTH_COMPONENT16;
 		case Depth24 #if js if( glES >= 3 ) #end: GL2.DEPTH_COMPONENT24;
-		case Depth24Stencil8: GL.DEPTH_STENCIL;
+		case Depth24Stencil8: #if lime GL.DEPTH24_STENCIL8 #else GL.DEPTH_STENCIL #end;
 		default:
 			throw "Unsupported depth format "+b.format;
 		}
@@ -1374,7 +1374,8 @@ class GlDriver extends Driver {
 		#if js
 		gl.bufferSubDataWEBGL(GL.ELEMENT_ARRAY_BUFFER, startIndice, sub, 0, indiceCount);
 		#else
-		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice << bits, indiceCount << bits, sub);
+		var dataPointer = lime.utils.DataPointer.fromArrayBufferView( sub );
+		gl.bufferSubData(GL.ELEMENT_ARRAY_BUFFER, startIndice << bits, indiceCount << bits, dataPointer);
 		#end
 		#else
 		var buf = new Uint16Array(buf.getNative());
@@ -1785,12 +1786,14 @@ class GlDriver extends Driver {
 			true;
 
 		case FloatTextures if( glES >= 3 ):
-			gl.getExtension('EXT_color_buffer_float') != null && gl.getExtension("OES_texture_float_linear") != null; // allow render to 16f/32f textures (not standard in webgl 2)
+			gl.getExtension('EXT_color_buffer_float') != null && gl.getExtension("OES_texture_float_linear") != null
+			#if (openfl && !js) && gl.getExtension('EXT_color_buffer_half_float') != null && gl.getExtension("OES_texture_half_float") != null#end; // allow render to 16f/32f textures (not standard in webgl 2)
 
 		case StandardDerivatives:
 			gl.getExtension('OES_standard_derivatives') != null;
 
 		case FloatTextures:
+			gl.getExtension('EXT_color_buffer_half_float') != null && gl.getExtension('WEBGL_color_buffer_float') != null && 
 			gl.getExtension('OES_texture_float') != null && gl.getExtension('OES_texture_float_linear') != null &&
 			gl.getExtension('OES_texture_half_float') != null && gl.getExtension('OES_texture_half_float_linear') != null;
 

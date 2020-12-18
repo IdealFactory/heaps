@@ -155,6 +155,16 @@ class PBRSinglePassLib extends hxsl.Shader  {
                 vSphericalL20 * ((3.0 * normal.z * normal.z) - 1.0) +
                 vSphericalL21 * (normal.z * normal.x) +
                 vSphericalL22 * (normal.x * normal.x - (normal.y * normal.y));
+            // var envIrrandiance:Vec3 = vSphericalL00;
+            // envIrrandiance += vSphericalL1_1 * (normal.y);
+            // envIrrandiance += vSphericalL10 * (normal.z);
+            // envIrrandiance += vSphericalL11 * (normal.x);
+            // envIrrandiance += vSphericalL2_2 * (normal.y * normal.x);
+            // envIrrandiance += vSphericalL2_1 * (normal.y * normal.z);
+            // envIrrandiance += vSphericalL20 * ((3.0 * normal.z * normal.z) - 1.0);
+            // envIrrandiance += vSphericalL21 * (normal.z * normal.x);
+            // envIrrandiance += vSphericalL22 * (normal.x * normal.x - (normal.y * normal.y));
+            // return envIrrandiance;
         }
 
         function getEnergyConservationFactor( specularEnvironmentR0:Vec3, environmentBrdf:Vec3):Vec3 {
@@ -334,8 +344,8 @@ class PBRSinglePassLib extends hxsl.Shader  {
     public function new() {
         super();
         
-        this.rgbdDecodeBRDF = #if js !hxd.fmt.gltf.Data.supportsHalfFloatTargetTextures; #else false; #end
-        this.rgbdDecodeEnv = #if js !hxd.fmt.gltf.Data.supportsHalfFloatTargetTextures || @:privateAccess cast (@:privateAccess h3d.Engine.getCurrent().driver, h3d.impl.GlDriver).glES < 3; #else false; #end
+        this.rgbdDecodeBRDF =!hxd.fmt.gltf.Data.supportsHalfFloatTargetTextures;
+        this.rgbdDecodeEnv = !hxd.fmt.gltf.Data.supportsHalfFloatTargetTextures;
 
         this.vAlbedoColor.set( 1, 1, 1, 1 );
         this.vAlbedoInfos.set( 0, 1 );

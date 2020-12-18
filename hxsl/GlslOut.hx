@@ -245,11 +245,25 @@ class GlslOut {
 		case TextureLod:
 			switch( args[0].t ) {
 			case TSampler2D, TSampler2DArray, TChannel(_) if( isES2 ):
+				#if (js || ios)
 				decl("#extension GL_EXT_shader_texture_lod : enable");
 				return "texture2DLodEXT";
+				#elseif openfl 
+				decl("#extension GL_ARB_shader_texture_lod : enable");
+				return "texture2DLod";
+				#else
+				return "textureLod";
+				#end
 			case TSamplerCube if( isES2 ):
+				#if (js || ios)
 				decl("#extension GL_EXT_shader_texture_lod : enable");
 				return "textureCubeLodEXT";
+				#elseif openfl 
+				decl("#extension GL_ARB_shader_texture_lod : enable");
+				return "textureCubeLod";
+				#else
+				return "textureLod";
+				#end
 			default:
 			}
 		case Texel, TexelLod:

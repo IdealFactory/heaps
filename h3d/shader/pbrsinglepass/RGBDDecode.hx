@@ -26,7 +26,7 @@ class RGBDDecode extends h3d.shader.ScreenShader {
 
         function fromRGBD(rgbd:Vec4):Vec3 {
         
-            rgbd.rgb = toLinearSpace3(rgbd.bgr);
+            rgbd.rgb = toLinearSpace3(rgbd.rgb);
         
             return rgbd.rgb/rgbd.a;
         }
