@@ -14,7 +14,7 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	**/
 	@:s public var priority : Int;
 
-	public var cursor(default,set) : hxd.Cursor;
+	public var cursor(default,set) : Null<hxd.Cursor>;
 	/**
 		Set the default `cancel` mode (see `hxd.Event`), default to false.
 	**/
@@ -77,6 +77,7 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 			if( enableRightButton || e.button == 0 ) {
 				mouseDownButton = e.button;
 				onPush(e);
+				if( e.cancel ) mouseDownButton = -1;
 			}
 		case ERelease:
 			if( enableRightButton || e.button == 0 ) {

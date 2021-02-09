@@ -409,7 +409,7 @@ typedef BytePointer = {
 class Data {
 	public static var supportsHalfFloatTargetTextures(get, null):Bool;
 	static function get_supportsHalfFloatTargetTextures():Bool {
-		return  h3d.Engine.getCurrent().driver.hasFeature(FloatTextures) && 
+		return  h3d.Engine.getCurrent().driver.hasFeature(FloatTextures) &&  false &&
 				#if lime @:privateAccess cast (@:privateAccess h3d.Engine.getCurrent().driver, h3d.impl.GlDriver).glES >= 3 #else false #end;
 	}
 

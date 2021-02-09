@@ -64,7 +64,7 @@ class System {
 
 	public static function setNativeCursor( c : Cursor ) : Void {
 		#if !lime
-        if( currentNativeCursor != null && c.equals(currentNativeCursor) )
+		if( currentNativeCursor != null && c.equals(currentNativeCursor) )
 			return;
 		currentNativeCursor = c;
 		currentCustomCursor = null;
@@ -113,6 +113,10 @@ class System {
 	}
 
 	public static function exit() : Void {
+	}
+
+	public static function openURL( url : String ) : Void {
+		js.Browser.window.open(url, '_blank');
 	}
 
 	#if !lime

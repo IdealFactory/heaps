@@ -142,7 +142,11 @@ class System {
 	}
 	#else
 	static function runMainLoop() {
+		#if (haxe_ver >= 4.1)
+		var reportError = function(e:Dynamic) reportError(Std.isOfType(e,haxe.Exception)?e:new haxe.Exception(Std.string(e),null,e));
+		#else
 		var reportError = function(e) reportError(e);
+		#end
 		#if hxtelemetry
 		var hxt = new hxtelemetry.HxTelemetry();
 		#end
@@ -172,12 +176,22 @@ class System {
 	#end
 
 	public dynamic static function reportError( e : Dynamic ) {
+		#if (haxe_ver >= 4.1)
+		var exc = Std.downcast(e, haxe.Exception);
+		var stack = haxe.CallStack.toString(exc != null ? exc.stack : haxe.CallStack.exceptionStack());
+		#else
 		var stack = haxe.CallStack.toString(haxe.CallStack.exceptionStack());
+		#end
+
 		var err = try Std.string(e) catch( _ : Dynamic ) "????";
 		#if usesys
 		haxe.System.reportError(err + stack);
 		#else
-		Sys.println(err + stack);
+		Sys.stderr().writeString(err + stack + "\n");
+
+		if ( Sys.systemName() != 'Windows' )
+			return;
+
 		if( dismissErrors )
 			return;
 
@@ -314,6 +328,16 @@ class System {
 		}
 	}
 
+	public static function openURL( url : String ) : Void {
+		switch Sys.systemName() {
+			case 'Windows': Sys.command('start ${url}');
+			case 'Linux': Sys.command('xdg-open ${url}');
+			case 'Mac': Sys.command('open ${url}');
+			case 'Android' | 'iOS' | 'tvOS':
+			default:
+		}
+	}
+
 	@:hlNative("std","sys_locale") static function sys_locale() : hl.Bytes { return null; }
 
 	static var _lang : String;
@@ -397,9 +421,10 @@ class System {
 		sentinel = new hl.UI.Sentinel(30, function() throw "Program timeout (infinite loop?)");
 		haxe.MainLoop.add(timeoutTick, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
 		#end
-		#if (hlsdl || hldx)
-		haxe.MainLoop.add(updateCursor, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
-		#end
 	}
+	
+	#if (hlsdl || hldx)
+	static var _ = haxe.MainLoop.add(updateCursor, -1) #if (haxe_ver >= 4) .isBlocking = false #end;
+	#end
 
 }

@@ -5,7 +5,8 @@ dist: trusty
 
 haxe:
   - development
-  - "4.0.0-rc.5"
+  - "4.0.5"
+  - "4.1.4"
 
 install:
   - yes | haxelib install all

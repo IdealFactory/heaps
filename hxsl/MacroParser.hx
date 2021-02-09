@@ -26,6 +26,26 @@ class MacroParser {
 		case [ { expr : EConst(CInt(a)) } ] if( m.name == "perInstance" ):
 			v.qualifiers.push(PerInstance(Std.parseInt(a)));
 			return;
+		case [ { expr: EConst(CString(s)), pos: pos } ] if (m.name == "doc"):
+			v.qualifiers.push(Doc(s));
+			return;
+		case [ { expr: EConst(CString(s)) } ] if (m.name == "sampler"):
+			v.qualifiers.push(Sampler(s));
+			return;
+		case [ e ] if (m.name == "borrow"):
+			var path = [];
+			function loop( e : Expr ) {
+				switch( e.expr ) {
+				case EConst(CIdent(s)): path.push(s);
+				case EConst(CString(s)): path.push(s);
+				case EField(e, f): loop(e); path.push(f);
+				default:
+					error("Should be a shader type path", e.pos);
+				}
+			}
+			loop(e);
+			v.qualifiers.push(Borrow(path.join(".")));
+			return;
 		default:
 			error("Invalid meta parameter for "+m.name, m.pos);
 		}
@@ -82,6 +102,7 @@ class MacroParser {
 			case "Mat4": return TMat4;
 			case "Mat3": return TMat3;
 			case "Mat3x4": return TMat3x4;
+			case "Mat2": return TMat2;
 			case "String": return TString;
 			case "Sampler2D": return TSampler2D;
 			case "Sampler2DArray": return TSampler2DArray;

@@ -151,16 +151,16 @@ class Reader {
         @:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 0);
         #end
 
-        var sourceTexture = new h3d.mat.Texture(info.width, info.width, [NoAlloc], h3d.mat.Data.TextureFormat.RGBA);
-		sourceTexture.setName("sourceTex");
-		sourceTexture.wrap = h3d.mat.Data.Wrap.Repeat;
-        
-		var shader = new h3d.shader.pbrsinglepass.RGBDDecode();
-		var screen = new h3d.pass.ScreenFx( shader );
-        var engine = h3d.Engine.getCurrent();
-        
         if (hxd.fmt.gltf.Data.supportsFrameBufferMipMap) {
 
+            var sourceTexture = new h3d.mat.Texture(info.width, info.width, [NoAlloc], h3d.mat.Data.TextureFormat.RGBA);
+            sourceTexture.setName("sourceTex");
+            sourceTexture.wrap = h3d.mat.Data.Wrap.Repeat;
+            
+            var shader = new h3d.shader.pbrsinglepass.RGBDDecode();
+            var screen = new h3d.pass.ScreenFx( shader );
+            var engine = h3d.Engine.getCurrent();
+            
             texture = new h3d.mat.Texture(info.width, info.width, [Target,Cube,MipMapped,ManualMipMapGen], h3d.mat.Data.TextureFormat.RGBA16F);//h3d.mat.Texture.nativeFormat);
             texture.preventAutoDispose();
             texture.mipMap = Linear;
@@ -185,9 +185,12 @@ class Reader {
                 }
                 size = size >> 1;
             }
+
+            screen.dispose();
+ 
         } else {
 
-            texture = new h3d.mat.Texture(info.width, info.width, [Target,Cube,MipMapped,ManualMipMapGen], h3d.mat.Texture.nativeFormat);
+            texture = new h3d.mat.Texture(info.width, info.width, [Target,Cube,MipMapped,ManualMipMapGen], h3d.mat.TextureFormat.RGBA);
             texture.preventAutoDispose();
             texture.mipMap = Linear;
             texture.filter = Linear;
@@ -204,9 +207,7 @@ class Reader {
                 size = size >> 1;
             }    
         }
-        
-        screen.dispose();
-        
+       
         #if (openfl && (js))
         @:privateAccess openfl.Lib.current.stage.context3D.gl.pixelStorei(lime.graphics.opengl.GL.UNPACK_PREMULTIPLY_ALPHA_WEBGL, 1);
         #end

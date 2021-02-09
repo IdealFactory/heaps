@@ -84,8 +84,6 @@ class Flatten {
 			.concat(packTextures(prefix+"TexturesArray", allVars, TSampler2DArray));
 		packBuffers(allVars);
 		var funs = [for( f in s.funs ) mapFun(f, mapExpr)];
-		for( t in textures )
-			t.pos >>= 2;
 		return {
 			name : s.name,
 			vars : outVars,
@@ -117,13 +115,15 @@ class Flatten {
 				e
 			else {
 				switch( v.type ) {
+				case TArray(t, _) if( t.isSampler() ):
+					eindex = toInt(mapExpr(eindex));
+					access(a, t, vp, AOffset(a,1,eindex));
 				case TArray(t, _):
 					var stride = varSize(t, a.t);
 					if( stride == 0 || stride & 3 != 0 ) throw new Error("Dynamic access to an Array which size is not 4 components-aligned is not allowed", e.p);
 					stride >>= 2;
-					eindex = mapExpr(eindex);
-					var toInt = { e : TCall( { e : TGlobal(ToInt), t : TFun([]), p : vp }, [eindex]), t : TInt, p : vp };
-					access(a, t, vp, AOffset(a,stride, stride == 1 ? toInt : { e : TBinop(OpMult,toInt,mkInt(stride,vp)), t : TInt, p : vp }));
+					eindex = toInt(mapExpr(eindex));
+					access(a, t, vp, AOffset(a,stride, stride == 1 ? eindex : { e : TBinop(OpMult,eindex,mkInt(stride,vp)), t : TInt, p : vp }));
 				default:
 					throw "assert";
 				}
@@ -252,11 +252,12 @@ class Flatten {
 	}
 
 	inline function readIndex( a : Alloc, index : Int, pos ) : TExpr {
-		return { e : TArray({ e : TVar(a.g), t : a.g.type, p : pos },mkInt((a.pos>>2)+index,pos)), t : TVec(4,a.t), p : pos }
+		var offs = a.t == null ? a.pos : a.pos >> 2;
+		return { e : TArray({ e : TVar(a.g), t : a.g.type, p : pos },mkInt(offs+index,pos)), t : TVec(4,a.t), p : pos }
 	}
 
 	inline function readOffset( a : Alloc, stride : Int, delta : TExpr, index : Int, pos ) : TExpr {
-		var index = (a.pos >> 2) + index;
+		var index = (a.t == null ? a.pos : a.pos >> 2) + index;
 		var offset : TExpr = index == 0 ? delta : { e : TBinop(OpAdd, delta, mkInt(index, pos)), t : TInt, p : pos };
 		return { e : TArray({ e : TVar(a.g), t : a.g.type, p : pos }, offset), t : TVec(4,a.t), p:pos };
 	}
@@ -309,7 +310,7 @@ class Flatten {
 			switch( t ) {
 			case TInt:
 				e.t = TFloat;
-				e = { e : TCall({ e : TGlobal(ToInt), t : TFun([]), p : pos }, [e]), t : t, p : pos };
+				e = toInt(e);
 			case TVec(size,VInt):
 				e.t = TVec(size,VFloat);
 				e = { e : TCall({ e : TGlobal([IVec2,IVec3,IVec4][size-2]), t : TFun([]), p : pos }, [e]), t : t, p : pos };
@@ -319,6 +320,10 @@ class Flatten {
 		}
 	}
 
+	function toInt( e : TExpr ) {
+		if( e.t == TInt ) return e;
+		return { e : TCall({ e : TGlobal(ToInt), t : TFun([]), p : e.p }, [e]), t : TInt, p : e.p };
+	}
 
 	function optimize( e : TExpr ) {
 		switch( e.e ) {
@@ -353,20 +358,42 @@ class Flatten {
 			type : t,
 			kind : Param,
 		};
+		var pos = 0;
+		var samplers = [];
 		for( v in vars ) {
+			var count = 1;
 			if( v.type != t ) {
-				if( t == TSampler2D && v.type.match(TChannel(_)) ) {
-					// ok
-				} else
+				switch( v.type ) {
+				case TChannel(_) if( t == TSampler2D ):
+				case TArray(t2,SConst(n)) if( t2 == t ):
+					count = n;
+				default:
 					continue;
+				}
 			}
-			// use << 2 for readAccess purposes, then we will fix it before returning
-			var a = new Alloc(g, null, alloc.length << 2, 1);
+			var a = new Alloc(g, null, pos, count);
 			a.v = v;
+			if( v.qualifiers != null )
+				for( q in v.qualifiers )
+					switch( q ) {
+					case Sampler(name):
+						for( i in 0...count )
+							samplers[pos+i] = name;
+					default:
+					}
 			varMap.set(v, a);
 			alloc.push(a);
+			pos += count;
 		}
-		g.type = TArray(t, SConst(alloc.length));
+		g.type = TArray(t, SConst(pos));
+		if( samplers.length > 0 ) {
+			for( i in 0...pos )
+				if( samplers[i] == null )
+					samplers[i] = "";
+			if( g.qualifiers == null )
+				g.qualifiers = [];
+			g.qualifiers.push(Sampler(samplers.join(",")));
+		}
 		if( alloc.length > 0 ) {
 			outVars.push(g);
 			allocData.set(g, alloc);
@@ -404,6 +431,10 @@ class Flatten {
 		for( v in vars ) {
 			if( v.type.isSampler() || v.type.match(TBuffer(_)) )
 				continue;
+			switch( v.type ) {
+			case TArray(t,_) if( t.isSampler() ): continue;
+			default:
+			}
 			var size = varSize(v.type, t);
 			var best : Alloc = null;
 			for( a in alloc )

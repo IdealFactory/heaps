@@ -2,6 +2,9 @@ package h2d;
 
 import h2d.Text;
 
+/**
+	The `HtmlText` line height calculation rules.
+**/
 enum LineHeightMode {
 	/**
 		Accurate line height calculations. Each line will adjust it's height according to it's contents.
@@ -12,11 +15,34 @@ enum LineHeightMode {
 	**/
 	TextOnly;
 	/**
-		Legacy line height mode. When used, line heights are remain constant based on `HtmlText.font` variable.
+		Legacy line height mode. When used, line heights remain constant based on `Text.font` variable.
 	**/
 	Constant;
 }
 
+/**
+	`HtmlText` img tag vertical alignment rules.
+**/
+enum ImageVerticalAlign {
+	/**
+		Align images along the top of the text line.
+	**/
+	Top;
+	/**
+		Align images to sit on the base line of the text.
+	**/
+	Bottom;
+	/**
+		Align images to the middle between the top of the text line its base line.
+	**/
+	Middle;
+}
+
+/**
+	A simple HTML text renderer.
+
+	See the [Text](https://github.com/HeapsIO/heaps/wiki/Text) section of the manual for more details and a list of the supported HTML tags.
+**/
 class HtmlText extends Text {
 
 	/**
@@ -33,24 +59,46 @@ class HtmlText extends Text {
 		return null;
 	}
 
-	public var condenseWhite(default,set) : Bool = true;
+	/**
+		A default method HtmlText uses to format assigned text. See `HtmlText.formatText` for details.
+	**/
+	public static dynamic function defaultFormatText( text : String ) : String {
+		return text;
+	}
 
 	/**
-		Line height calculation mode controls how much space lines take up vertically. ( default : Accurate )  
-		Changing mode to `Constant` restores legacy behavior of HtmlText.
+		When enabled, condenses extra spaces (carriage-return, line-feed, tabulation and space character) to one space.
+		If not set, uncondensed whitespace is left as is, as well as line-breaks.
+	**/
+	public var condenseWhite(default,set) : Bool = true;
+	/**
+		The spacing after `<img>` tags in pixels.
+	**/
+	public var imageSpacing(default,set):Float = 1;
+
+	/**
+		Line height calculation mode controls how much space lines take up vertically.
+		Changing mode to `Constant` restores the legacy behavior of HtmlText.
 	**/
 	public var lineHeightMode(default,set) : LineHeightMode = Accurate;
+
+	/**
+		Vertical alignment of the images in `<img>` tag relative to the text.
+	**/
+	public var imageVerticalAlign(default,set) : ImageVerticalAlign = Bottom;
 
 	var elements : Array<Object> = [];
 	var xPos : Float;
 	var yPos : Float;
 	var xMax : Float;
 	var xMin : Float;
-	var imageCache : Map<String, Tile>;
+	var textXml : Xml;
 	var sizePos : Int;
 	var dropMatrix : h3d.shader.ColorMatrix;
 	var prevChar : Int;
 	var newLine : Bool;
+	var aHrefs : Array<String>;
+	var aInteractive : Interactive;
 
 	override function draw(ctx:RenderContext) {
 		if( dropShadow != null ) {
@@ -76,8 +124,10 @@ class HtmlText extends Text {
 	}
 
 	/**
-		Method that should return `h2d.Tile` instance for `<img>` tags. By default calls `HtmlText.defaultLoadImage` method.  
-		Loaded Tiles are temporary cached internally and if text contains multiple same images - this method will be called only once. Cache is invalidated whenever text changes.
+		Method that should return an `h2d.Tile` instance for `<img>` tags. By default calls `HtmlText.defaultLoadImage` method.
+
+		HtmlText does not cache tile instances.
+		Due to internal structure, method should be deterministic and always return same Tile on consequent calls with same `url` input.
 		@param url A value contained in `src` attribute.
 	**/
 	public dynamic function loadImage( url : String ) : Tile {
@@ -85,8 +135,10 @@ class HtmlText extends Text {
 	}
 
 	/**
-		Method that should return `h2d.Font` instance for `<font>` tags with `face` attribute. By default calls `HtmlText.defaultLoadFont` method.  
+		Method that should return an `h2d.Font` instance for `<font>` tags with `face` attribute. By default calls `HtmlText.defaultLoadFont` method.
+
 		HtmlText does not cache font instances and it's recommended to perform said caching from outside.
+		Due to internal structure, method should be deterministic and always return same Font instance on consequent calls with same `name` input.
 		@param name A value contained in `face` attribute.
 		@returns Method should return loaded font instance or `null`. If `null` is returned - currently active font is used.
 	**/
@@ -94,6 +146,24 @@ class HtmlText extends Text {
 		var f = defaultLoadFont(name);
 		if (f == null) return this.font;
 		else return f;
+	}
+
+	/**
+		Called on a <a> tag click
+	**/
+	public dynamic function onHyperlink(url:String) : Void {
+	}
+
+	/**
+		Called when text is assigned, allowing to process arbitrary text to a valid XHTML.
+	**/
+	public dynamic function formatText( text : String ) : String {
+		return defaultFormatText(text);
+	}
+
+	override function set_text(t : String) {
+		super.set_text(formatText(t));
+		return t;
 	}
 
 	function parseText( text : String ) {
@@ -104,6 +174,34 @@ class HtmlText extends Text {
 		return { width: width, height: height, baseLine: baseLine };
 	}
 
+	override function validateText()
+	{
+		textXml = parseText(text);
+		validateNodes(textXml);
+	}
+
+	function validateNodes( xml : Xml ) {
+		if ( xml.nodeType == Element ) {
+
+			var nodeName = xml.nodeName.toLowerCase();
+			switch ( nodeName ) {
+				case "img":
+					loadImage(xml.get("src"));
+				case "font":
+					if (xml.exists("face")) {
+						loadFont(xml.get("face"));
+					}
+				case "b", "bold":
+					loadFont("bold");
+				case "i", "italic":
+					loadFont("italic");
+			}
+
+			for ( child in xml )
+				validateNodes(xml);
+		}
+	}
+
 	override function initGlyphs( text : String, rebuild = true ) {
 		if( rebuild ) {
 			glyphs.clear();
@@ -112,8 +210,12 @@ class HtmlText extends Text {
 		}
 		glyphs.setDefaultColor(textColor);
 
-		var doc = parseText(text);
-		imageCache = new Map();
+		var doc : Xml;
+		if (textXml == null) {
+			doc = parseText(text);
+		} else {
+			doc = textXml;
+		}
 
 		yPos = 0;
 		xMax = 0;
@@ -124,7 +226,7 @@ class HtmlText extends Text {
 		var metrics : Array<LineInfo> = [ makeLineInfo(0, font.lineHeight, font.baseLine) ];
 		prevChar = -1;
 		newLine = true;
-		var splitNode : SplitNode = { 
+		var splitNode : SplitNode = {
 			node: null, pos: 0, font: font, prevChar: -1,
 			width: 0, height: 0, baseLine: 0
 		};
@@ -142,16 +244,18 @@ class HtmlText extends Text {
 		nextLine(textAlign, metrics[0].width);
 		for ( e in doc )
 			addNode(e, font, textAlign, rebuild, metrics);
-		
+
 		if( xPos > xMax ) xMax = xPos;
 
-		imageCache = null;
+		textXml = null;
+
 		var y = yPos;
 		calcXMin = xMin;
 		calcWidth = xMax - xMin;
 		calcHeight = y + metrics[sizePos].height;
 		calcSizeHeight = y + metrics[sizePos].baseLine;//(font.baseLine > 0 ? font.baseLine : font.lineHeight);
 		calcDone = true;
+		if ( rebuild ) needsRebuild = false;
 	}
 
 	function buildSizes( e : Xml, font : Font, metrics : Array<LineInfo>, splitNode:SplitNode ) {
@@ -203,18 +307,13 @@ class HtmlText extends Text {
 				// TODO: Support width/height attributes
 				// Support max-width/max-height attributes (downscale)
 				// Support min-width/min-height attributes (upscale)
-				var src = e.get("src");
-				var i : Tile = imageCache.get(src);
-				if ( i == null ) {
-					i = loadImage(src);
-					if( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
-					imageCache.set(src, i);
-				}
+				var i : Tile = loadImage(e.get("src"));
+				if ( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
 
-				var size = metrics[metrics.length - 1].width + i.width + letterSpacing;
+				var size = metrics[metrics.length - 1].width + i.width + imageSpacing;
 				if (realMaxWidth >= 0 && size > realMaxWidth && metrics[metrics.length - 1].width > 0) {
 					if ( splitNode.node != null ) {
-						size = wordSplit() + i.width + letterSpacing;
+						size = wordSplit() + i.width + imageSpacing;
 						var info = metrics[metrics.length - 1];
 						// Bug: height/baseLine may be innacurate in case of sizeA sizeB<split>sizeA where sizeB is larger.
 						switch ( lineHeightMode ) {
@@ -236,9 +335,17 @@ class HtmlText extends Text {
 					info.width = size;
 					if ( lineHeightMode == Accurate ) {
 						var grow = i.height - i.dy - info.baseLine;
-						if ( grow > 0 ) {
-							info.baseLine += grow;
-							info.height += grow;
+						if(grow > 0) {
+							switch(imageVerticalAlign) {
+								case Top:
+									info.height += grow;
+								case Bottom:
+									info.baseLine += grow;
+									info.height += grow;
+								case Middle:
+									info.height += grow;
+									info.baseLine += Std.int(grow/2);
+							}
 						}
 						grow = info.baseLine + i.dy;
 						if ( info.height < grow ) info.height = grow;
@@ -269,7 +376,7 @@ class HtmlText extends Text {
 				}
 			default:
 			}
-		} else {
+		} else if (e.nodeValue.length != 0) {
 			newLine = false;
 			var text = htmlToText(e.nodeValue);
 			var fontInfo = lineFont();
@@ -284,7 +391,8 @@ class HtmlText extends Text {
 				var g = font.getChar(cc);
 				var newline = cc == '\n'.code;
 				var esize = g.width + g.getKerningOffset(prevChar);
-				if ( font.charset.isBreakChar(cc) ) {
+				var nc = text.charCodeAt(i+1);
+				if ( font.charset.isBreakChar(cc) && (nc == null || !font.charset.isComplementChar(nc) )) {
 					// Case: Very first word in text makes the line too long hence we want to start it off on a new line.
 					if (x > maxWidth && textSplit.length == 0 && splitNode.node != null) {
 						metrics.push(makeLineInfo(x, info.height, info.baseLine));
@@ -300,7 +408,8 @@ class HtmlText extends Text {
 						var e = font.getChar(cc);
 						size += e.width + letterSpacing + e.getKerningOffset(prevChar);
 						prevChar = cc;
-						if ( font.charset.isBreakChar(cc) ) break;
+						var nc = text.charCodeAt(k+1);
+						if ( font.charset.isBreakChar(cc) && (nc == null || !font.charset.isComplementChar(nc)) ) break;
 					}
 					// Avoid empty line when last char causes line-break while being CJK
 					if ( size > maxWidth && i != max - 1 ) {
@@ -339,7 +448,7 @@ class HtmlText extends Text {
 					newLine = false;
 				}
 			}
-			
+
 			if ( restPos < text.length ) {
 				if (x > maxWidth) {
 					if ( splitNode.node != null && splitNode.node != e ) {
@@ -398,7 +507,7 @@ class HtmlText extends Text {
 		*/
 
 		var splitNode : SplitNode = { node: null, font: font, width: 0, height: 0, baseLine: 0, pos: 0, prevChar: -1 };
-		var metrics = new Array<LineInfo>();
+		var metrics = [makeLineInfo(0, font.lineHeight, font.baseLine)];
 		prevChar = -1;
 		newLine = true;
 
@@ -415,7 +524,7 @@ class HtmlText extends Text {
 				var index = Lambda.indexOf(e.parent, e);
 				for (i in 0...text.length) {
 					if (text.charCodeAt(i) == '\n'.code) {
-						var pre = text.substring(startI, i - 1);
+						var pre = text.substring(startI, i);
 						if (pre != "") e.parent.insertChild(Xml.createPCData(pre), index++);
 						e.parent.insertChild(Xml.createElement("br"),index++);
 						startI = i+1;
@@ -447,11 +556,12 @@ class HtmlText extends Text {
 					progressRec(x);
 			} else {
 				var text = htmlToText(e.nodeValue);
-				if( text.length > progress ) {
+				var len = text.length;
+				if( len > progress ) {
 					text = text.substr(0, Std.int(progress));
 					e.nodeValue = text;
 				}
-				progress -= text.length;
+				progress -= len;
 			}
 		}
 		for( x in [for( x in doc ) x] )
@@ -460,11 +570,33 @@ class HtmlText extends Text {
 	}
 
 	function addNode( e : Xml, font : Font, align : Align, rebuild : Bool, metrics : Array<LineInfo> ) {
+		inline function createInteractive() {
+			if(aHrefs == null || aHrefs.length == 0)
+				return;
+			aInteractive = new Interactive(0, metrics[sizePos].height, this);
+			var href = aHrefs[aHrefs.length-1];
+			aInteractive.onClick = function(event) {
+				onHyperlink(href);
+			}
+			aInteractive.x = xPos;
+			aInteractive.y = yPos;
+			elements.push(aInteractive);
+		}
+
+		inline function finalizeInteractive() {
+			if(aInteractive != null) {
+				aInteractive.width = xPos - aInteractive.x;
+				aInteractive = null;
+			}
+		}
+
 		inline function makeLineBreak()
 		{
+			finalizeInteractive();
 			if( xPos > xMax ) xMax = xPos;
 			yPos += metrics[sizePos].height + lineSpacing;
 			nextLine(align, metrics[++sizePos].width);
+			createInteractive();
 		}
 		if( e.nodeType == Xml.Element ) {
 			var prevColor = null, prevGlyphs = null;
@@ -546,8 +678,16 @@ class HtmlText extends Text {
 				newLine = true;
 				prevChar = -1;
 			case "img":
-				var i : Tile = imageCache.get(e.get("src"));
-				var py = yPos + metrics[sizePos].baseLine - i.height;
+				var i : Tile = loadImage(e.get("src"));
+				if ( i == null ) i = Tile.fromColor(0xFF00FF, 8, 8);
+				var py = yPos;
+				switch(imageVerticalAlign) {
+					case Bottom:
+						py += metrics[sizePos].baseLine - i.height;
+					case Middle:
+						py += metrics[sizePos].baseLine - i.height/2;
+					case Top:
+				}
 				if( py + i.dy < calcYMin )
 					calcYMin = py + i.dy;
 				if( rebuild ) {
@@ -558,7 +698,15 @@ class HtmlText extends Text {
 				}
 				newLine = false;
 				prevChar = -1;
-				xPos += i.width + letterSpacing;
+				xPos += i.width + imageSpacing;
+			case "a":
+				if( e.exists("href") ) {
+					finalizeInteractive();
+					if( aHrefs == null )
+						aHrefs = [];
+					aHrefs.push(e.get("href"));
+					createInteractive();
+				}
 			default:
 			}
 			for( child in e )
@@ -574,13 +722,19 @@ class HtmlText extends Text {
 					newLine = true;
 					prevChar = -1;
 				}
+			case "a":
+				if( aHrefs.length > 0 ) {
+					finalizeInteractive();
+					aHrefs.pop();
+					createInteractive();
+				}
 			default:
 			}
 			if( prevGlyphs != null )
 				glyphs = prevGlyphs;
 			if( prevColor != null )
 				@:privateAccess glyphs.curColor.load(prevColor);
-		} else {
+		} else if (e.nodeValue.length != 0) {
 			newLine = false;
 			var t = e.nodeValue;
 			var dy = metrics[sizePos].baseLine - font.baseLine;
@@ -606,6 +760,13 @@ class HtmlText extends Text {
 		}
 	}
 
+	function set_imageSpacing(s) {
+		if (imageSpacing == s) return s;
+		imageSpacing = s;
+		rebuild();
+		return s;
+	}
+
 	override function set_textColor(c) {
 		if( this.textColor == c ) return c;
 		this.textColor = c;
@@ -621,6 +782,14 @@ class HtmlText extends Text {
 		return value;
 	}
 
+	function set_imageVerticalAlign(align) {
+		if ( this.imageVerticalAlign != align ) {
+			this.imageVerticalAlign = align;
+			rebuild();
+		}
+		return align;
+	}
+
 	function set_lineHeightMode(v) {
 		if ( this.lineHeightMode != v ) {
 			this.lineHeightMode = v;
@@ -632,7 +801,7 @@ class HtmlText extends Text {
 	override function getBoundsRec( relativeTo : Object, out : h2d.col.Bounds, forSize : Bool ) {
 		if( forSize )
 			for( i in elements )
-				if( Std.is(i,h2d.Bitmap) )
+				if( hxd.impl.Api.isOfType(i,h2d.Bitmap) )
 					i.visible = false;
 		super.getBoundsRec(relativeTo, out, forSize);
 		if( forSize )

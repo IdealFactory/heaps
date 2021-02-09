@@ -17,10 +17,6 @@ package h3d.scene.pbr;
 		Debug slides
 	*/
 	var Debug = "Debug";
-	/*
-		Distortion
-	*/
-	var Distortion = "Distortion";
 }
 
 @:enum abstract SkyMode(String) {
@@ -38,13 +34,10 @@ package h3d.scene.pbr;
 
 typedef RenderProps = {
 	var mode : DisplayMode;
-	var colorGradingLUT : String;
-	var colorGradingLUTSize : Int;
-	var enableColorGrading : Bool;
 	var exposure : Float;
 	var sky : SkyMode;
 	var tone : TonemapMap;
-	var emissive : h3d.Vector;
+	var emissive : Float;
 	var occlusion : Float;
 	var shadows : Bool;
 }
@@ -72,12 +65,19 @@ class Renderer extends h3d.scene.Renderer {
 	var pbrProps = new h3d.shader.pbr.PropsImport();
 	var hasDebugEvent = false;
 	var enableFXAA = true;
+	var currentStep : h3d.impl.RendererFX.Step;
+
+	var textures = {
+		albedo : null,
+		normal : null,
+		pbr : null,
+		other : null,
+		hdr : null,
+		ldr : null,
+	};
 
 	public var skyMode : SkyMode = Hide;
 	public var toneMode : TonemapMap = Reinhard;
-	public var colorGradingLUT : h3d.mat.Texture;
-	public var colorGradingLUTSize : Int;
-	public var enableColorGrading : Bool;
 	public var displayMode : DisplayMode = Pbr;
 	public var env : Environment;
 	public var exposure(get,set) : Float;
@@ -89,15 +89,13 @@ class Renderer extends h3d.scene.Renderer {
 		Value("output.color"),
 		Vec4([Value("output.normal",3),ALPHA]),
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), ALPHA]),
-		Vec4([Value("output.emissive",3),ALPHA]),
-		Vec4([Value("output.depth"),Const(0),Const(0),ALPHA /* ? */])
+		Vec4([Value("output.emissive"),Value("output.depth"),Const(0), ALPHA /* ? */])
 	]);
 	var decalsOutput = new h3d.pass.Output("decals",[
 		Vec4([Swiz(Value("output.color"),[X,Y,Z]), Value("output.albedoStrength",1)]),
 		Vec4([Value("output.normal",3), Value("output.normalStrength",1)]),
 		Vec4([Value("output.metalness"), Value("output.roughness"), Value("output.occlusion"), Value("output.pbrStrength")])
 	]);
-
 
 	public function new(?env) {
 		super();
@@ -121,6 +119,10 @@ class Renderer extends h3d.scene.Renderer {
 		super.dispose();
 	}
 
+	override function addShader(s:hxsl.Shader) {
+		tonemap.addShader(s);
+	}
+
 	inline function get_exposure() return tonemap.shader.exposure;
 	inline function set_exposure(v:Float) return tonemap.shader.exposure = v;
 
@@ -131,10 +133,12 @@ class Renderer extends h3d.scene.Renderer {
 
 	override function getPassByName(name:String):h3d.pass.Base {
 		switch( name ) {
-		case "overlay", "beforeTonemapping", "albedo", "distortion", "afterTonemapping":
+		case "overlay", "beforeTonemapping", "albedo", "afterTonemapping", "forward":
 			return defaultPass;
-		case "alpha", "additive":
+		case "default", "alpha", "additive":
 			return output;
+		case "decal":
+			return decalsOutput;
 		}
 		return super.getPassByName(name);
 	}
@@ -186,194 +190,16 @@ class Renderer extends h3d.scene.Renderer {
 		passes.reset();
 	}
 
-	function mainDraw() {
-		mark("MainDraw");
-		renderPass(output, get("default"), frontToBack);
-		renderPass(output, get("terrain"));
-		renderPass(output, get("alpha"), backToFront);
-		renderPass(output, get("additive"));
-	}
+	function lighting() {
 
-	function drawBeforeTonemapping() {
-		mark("BeforeTonemapping");
-		draw("beforeTonemappingDecal");
-		draw("beforeTonemapping");
-	}
-
-	function drawAfterTonemapping() {
-		mark("AfterTonemapping");
-		draw("afterTonemappingDecal");
-		draw("afterTonemapping");
-	}
-
-	function applyTonemapping() {
-		mark("ToneMapping");
-		// Bloom Params
-		var bloom = ctx.getGlobal("bloom");
-		tonemap.shader.bloom = bloom;
-		tonemap.shader.hasBloom = bloom != null;
-		// Distortion Params
-		var distortion = ctx.getGlobal("distortion");
-		tonemap.shader.distortion = distortion;
-		tonemap.shader.hasDistortion = distortion != null;
-		// Color Grading Params
-		tonemap.shader.pixelSize = new Vector(1.0/ctx.engine.width, 1.0/ctx.engine.height);
-		tonemap.shader.hasColorGrading = enableColorGrading && colorGradingLUT != null;
-		if( colorGradingLUT != null ) {
-			tonemap.shader.colorGradingLUT = colorGradingLUT;
-			tonemap.shader.lutSize = colorGradingLUTSize;
-		}
-		tonemap.shader.mode =	switch( toneMode ) {
-									case Linear: 0;
-									case Reinhard: 1;
-									default: 0;
-								};
-		var hdr = ctx.getGlobal("hdr");
-		tonemap.shader.hdrTexture = hdr;
-		tonemap.render();
-	}
-
-	function postDraw() {
-		mark("PostDraw");
-		draw("overlay");
-	}
-
-	function drawShadows( ls : LightSystem ) {
-		var light = @:privateAccess ctx.lights;
-		var passes = get("shadow");
-		if( !shadows )
-			passes.clear();
-		while( light != null ) {
-			var plight = hxd.impl.Api.downcast(light, h3d.scene.pbr.Light);
-			if( plight != null ) ls.drawLight(plight, passes);
-			light = light.next;
-		}
-	}
-
-	function apply( step : h3d.impl.RendererFX.Step ) {
-		for( f in effects )
-			if( f.enabled )
-				f.apply(this, step);
-	}
-
-	override function computeStatic() {
-		var light = @:privateAccess ctx.lights;
-		var passes = get("shadow");
-		while( light != null ) {
-			var plight = hxd.impl.Api.downcast(light, h3d.scene.pbr.Light);
-			if( plight != null ) {
-				plight.shadows.setContext(ctx);
-				plight.shadows.computeStatic(passes);
-				passes.reset();
-			}
-			light = light.next;
-		}
-	}
-
-	override function render() {
-		var props : RenderProps = props;
-
-		var albedo = allocTarget("albedo", true, 1.);
-		var normal = allocTarget("normal", true, 1., RGBA16F);
-		var pbr = allocTarget("pbr", true, 1.);
-        var emissive = allocTarget("emissive", true, 1., RGBA32F);
-		var other = allocTarget("other", true, 1., RGBA32F);
-
-		ctx.setGlobal("albedoMap", { texture : albedo, channel : hxsl.Channel.R });
-		ctx.setGlobal("depthMap", { texture : other, channel : hxsl.Channel.G });
-		ctx.setGlobal("normalMap", { texture : normal, channel : hxsl.Channel.R });
-		ctx.setGlobal("occlusionMap", { texture : pbr, channel : hxsl.Channel.B });
-		ctx.setGlobal("bloom", null);
-
-		var ls = hxd.impl.Api.downcast(getLightSystem(), LightSystem);
+		begin(Shadows);
+		var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
 		var count = ctx.engine.drawCalls;
 		if( ls != null ) drawShadows(ls);
 		if( ctx.lightSystem != null ) ctx.lightSystem.drawPasses = ctx.engine.drawCalls - count;
+		end();
 
-		setTargets([albedo,normal,pbr,emissive,other]);
-		clear(0, 1, 0);
-		mainDraw();
-
-		mark("Decal");
-		setTargets([albedo,normal,pbr]);
-		renderPass(decalsOutput, get("decal"));
-
-		if(renderMode == Default) {
-			if( displayMode == Env )
-				clear(0xFF404040);
-
-			if( displayMode == MatCap ) {
-				clear(0xFF808080);
-				setTarget(pbr);
-				clear(0x00FF80FF);
-			}
-		}
-		apply(BeforeLighting);
-
-		var hdr = allocTarget("hdrOutput", true, 1, RGBA16F);
-		ctx.setGlobal("hdr", hdr);
-		setTarget(hdr);
-		clear(0);
-
-		pbrProps.albedoTex = albedo;
-		pbrProps.normalTex = normal;
-		pbrProps.pbrTex = pbr;
-		pbrProps.emissiveTex = emissive;
-		pbrProps.otherTex = other;
-		pbrProps.cameraInverseViewProj = ctx.camera.getInverseViewProj();
-		pbrProps.occlusionPower = props.occlusion * props.occlusion;
-
-		pbrDirect.cameraPosition.load(ctx.camera.pos);
-
-		if( env != null ) {
-			pbrIndirect.cameraPosition.load(ctx.camera.pos);
-			pbrIndirect.emissivePower = props.emissive.mult( props.emissive );
-			pbrIndirect.rot = hxd.Math.degToRad(env.rot);
-			pbrIndirect.irrPower = env.power * env.power;
-			pbrIndirect.irrLut = env.lut;
-			pbrIndirect.irrDiffuse = env.diffuse;
-			pbrIndirect.irrSpecular = env.specular;
-			pbrIndirect.irrSpecularLevels = env.specLevels;
-			pbrIndirect.cameraInvViewProj.load(ctx.camera.getInverseViewProj());
-
-			pbrDirect.doDiscard = false;
-			switch( renderMode ) {
-			case Default:
-				pbrIndirect.drawIndirectDiffuse = true;
-				pbrIndirect.drawIndirectSpecular= true;
-				pbrIndirect.showSky = skyMode != Hide;
-				pbrIndirect.skyColor = false;
-				pbrIndirect.skyMap = switch( skyMode ) {
-				case Hide: null;
-				case Env:
-					pbrIndirect.skyScale = env.scale;
-					pbrIndirect.skyThreshold = env.threshold;
-					pbrIndirect.gammaCorrect = true;
-					env.env;
-				case Specular:
-					pbrIndirect.skyScale = 1.0;
-					pbrIndirect.gammaCorrect = false;
-					env.specular;
-				case Irrad:
-					pbrIndirect.skyScale = 1.0;
-					pbrIndirect.gammaCorrect = false;
-					env.diffuse;
-				case Background:
-					pbrIndirect.skyColor = true;
-					pbrIndirect.skyColorValue.setColor(ctx.engine.backgroundColor);
-					pbrIndirect.gammaCorrect = true;
-					null;
-				};
-			case LightProbe:
-				pbrIndirect.drawIndirectDiffuse = false;
-				pbrIndirect.drawIndirectSpecular = false;
-				pbrIndirect.showSky = true;
-				pbrIndirect.skyColor = false;
-				pbrIndirect.skyMap = env.env;
-			}
-			pbrDirect.doDiscard = true;
-		}
-
+		begin(Lighting);
 		var lpass = screenLightPass;
 		if( lpass == null ) {
 			lpass = new h3d.pass.ScreenFx(new h3d.shader.ScreenShader());
@@ -395,27 +221,7 @@ class Renderer extends h3d.scene.Renderer {
 		pbrProps.isScreen = false;
 		draw(pbrLightPass.name);
 
-		if( renderMode == LightProbe ) {
-			pbrProps.isScreen = true;
-			pbrOut.render();
-			resetTarget();
-			copy(hdr, null);
-			// no warnings
-			for( p in passObjects ) if( p != null ) p.rendered = true;
-			return;
-		}
-
-		// Indirect Lighting - Diffuse with volumetricLightmap
-		mark("VolumetricLightmap");
-		pbrProps.isScreen = false;
-		pbrIndirect.drawIndirectDiffuse = false;
-		pbrIndirect.drawIndirectSpecular = env != null ? true : false;
-		ctx.extraShaders = new hxsl.ShaderList(pbrProps, new hxsl.ShaderList(pbrIndirect, null));
-		draw("volumetricLightmap");
-		ctx.extraShaders = null;
-
-		// Indirect Lighting - Diffuse and Specular
- 		if( env != null ) {
+		if( !renderLightProbes() && env != null ) {
 			mark("Indirect Lighting");
 			pbrProps.isScreen = true;
 			pbrIndirect.drawIndirectDiffuse = true;
@@ -423,33 +229,274 @@ class Renderer extends h3d.scene.Renderer {
 			pbrOut.render();
 		}
 
-		drawBeforeTonemapping();
-		apply(BeforeTonemapping);
+		end();
+	}
 
-		mark("Distortion");
-		var distortion = allocTarget("distortion", true, 1.0, RG16F);
-		ctx.setGlobal("distortion", distortion);
-		setTarget(distortion);
+	function renderLightProbes() {
+		var probePass = get("lightProbe");
+		if( probePass.isEmpty() )
+			return false;
+		function probeSort( passes : h3d.pass.PassList ) {
+			// Priority of the probe stored in _44 of AbsPos
+			passes.sort( (po1, po2) -> return Std.int(po1.obj.getAbsPos()._44 - po2.obj.getAbsPos()._44) );
+		}
+
+		// Probe Rendering & Blending
+		var probeOutput = allocTarget("probeOutput", true, 1.0, RGBA16F);
+		ctx.engine.pushTarget(probeOutput);
 		clear(0);
-		draw("distortion");
 
-		var ldr = allocTarget("ldrOutput");
-		setTarget(ldr);
-		ctx.setGlobal("ldr", ldr);
+		// Default Env & SkyBox
+		if( env != null ) {
+			mark("Indirect Lighting");
+			pbrProps.isScreen = true;
+			pbrIndirect.drawIndirectDiffuse = true;
+			pbrIndirect.drawIndirectSpecular = true;
+			pbrOut.render();
+		}
 
-		applyTonemapping();
+		// Light Probe with Alpha Blend
+		pbrProps.isScreen = false;
+		renderPass(defaultPass, get("lightProbe"), probeSort);
+		ctx.engine.popTarget();
 
-		drawAfterTonemapping();
-		apply(AfterTonemapping);
+		h3d.pass.Copy.run(probeOutput, textures.hdr, Add);
+		return true;
+	}
 
-		postDraw();
+	function drawShadows( ls : LightSystem ) {
+		var light = @:privateAccess ctx.lights;
+		var passes = get("shadow");
+		if( !shadows )
+			passes.clear();
+		while( light != null ) {
+			var plight = hxd.impl.Api.downcast(light, h3d.scene.pbr.Light);
+			if( plight != null ) ls.drawShadows(plight, passes);
+			light = light.next;
+		}
+	}
 
-		apply(AfterUI);
+	function begin( step : h3d.impl.RendererFX.Step ) {
+		mark(step.getName());
 
+		for( f in effects )
+			if( f.enabled )
+				f.begin(this, step);
+		currentStep = step;
+
+		if(step == Lighting && renderMode == Default) {
+			if( displayMode == Env ) {
+				ctx.engine.pushTarget(textures.albedo);
+				clear(0xFF404040);
+				ctx.engine.popTarget();
+			}
+			if( displayMode == MatCap ) {
+				ctx.engine.pushTarget(textures.albedo);
+				clear(0xFF808080);
+				ctx.engine.popTarget();
+				ctx.engine.pushTarget(textures.pbr);
+				clear(0x00FF80FF);
+				ctx.engine.popTarget();
+			}
+		}
+	}
+
+	function end() {
+		for( f in effects )
+			if( f.enabled )
+				f.end(this, currentStep);
+		currentStep = null;
+	}
+
+	override function computeStatic() {
+		var light = @:privateAccess ctx.lights;
+		var passes = get("shadow");
+		while( light != null ) {
+			var plight = hxd.impl.Api.downcast(light, h3d.scene.pbr.Light);
+			if( plight != null ) {
+				plight.shadows.setContext(ctx);
+				plight.shadows.computeStatic(passes);
+				passes.reset();
+			}
+			light = light.next;
+		}
+	}
+
+	function initTextures() {
+		textures.albedo = allocTarget("albedo", true, 1.);
+		textures.normal = allocTarget("normal", true, 1., RGBA16F);
+		textures.pbr = allocTarget("pbr", true, 1.);
+		textures.other = allocTarget("other", true, 1., RGBA32F);
+		textures.hdr = allocTarget("hdrOutput", true, 1, RGBA16F);
+		textures.ldr = allocTarget("ldrOutput");
+	}
+
+	function initGlobals() {
+		ctx.setGlobal("albedoMap", { texture : textures.albedo, channel : hxsl.Channel.R });
+		ctx.setGlobal("depthMap", { texture : textures.other, channel : hxsl.Channel.G });
+		ctx.setGlobal("normalMap", { texture : textures.normal, channel : hxsl.Channel.R });
+		ctx.setGlobal("occlusionMap", { texture : textures.pbr, channel : hxsl.Channel.B });
+		ctx.setGlobal("hdrMap", textures.hdr);
+		ctx.setGlobal("ldrMap", textures.ldr);
+		ctx.setGlobal("global.time", ctx.time);
+		ctx.setGlobal("camera.position", ctx.camera.pos);
+		ctx.setGlobal("camera.inverseViewProj", ctx.camera.getInverseViewProj());
+	}
+
+	function beginPbr() {
+		var props : RenderProps = props;
+
+		// reset tonemap shaders
+		var s = @:privateAccess tonemap.shaders;
+		while( s != null ) {
+			if( s.s != tonemap.shader ) tonemap.removeShader(s.s);
+			s = s.next;
+		}
+
+		initTextures();
+		initGlobals();
+
+		pbrProps.albedoTex = textures.albedo;
+		pbrProps.normalTex = textures.normal;
+		pbrProps.pbrTex = textures.pbr;
+		pbrProps.otherTex = textures.other;
+		pbrProps.cameraInverseViewProj = ctx.camera.getInverseViewProj();
+		pbrProps.occlusionPower = props.occlusion * props.occlusion;
+
+		pbrDirect.cameraPosition.load(ctx.camera.pos);
+
+		if( env != null ) {
+			pbrIndirect.cameraPosition.load(ctx.camera.pos);
+			pbrIndirect.emissivePower = props.emissive * props.emissive;
+			var rot = hxd.Math.degToRad(env.rot);
+			pbrIndirect.irrRotation.set(Math.cos(rot), Math.sin(rot));
+			pbrIndirect.irrPower = env.power * env.power;
+			pbrIndirect.irrLut = env.lut;
+			pbrIndirect.irrDiffuse = env.diffuse;
+			pbrIndirect.irrSpecular = env.specular;
+			pbrIndirect.irrSpecularLevels = env.specLevels;
+			pbrIndirect.cameraInvViewProj.load(ctx.camera.getInverseViewProj());
+			pbrIndirect.skyHdrMax = 1.0;
+			pbrIndirect.drawIndirectDiffuse = true;
+			pbrIndirect.drawIndirectSpecular = true;
+
+			pbrDirect.doDiscard = false;
+			switch( renderMode ) {
+			case Default:
+				pbrIndirect.showSky = skyMode != Hide;
+				pbrIndirect.skyColor = false;
+				pbrIndirect.skyMap = switch( skyMode ) {
+				case Hide: null;
+				case Env:
+					pbrIndirect.skyHdrMax = env.hdrMax;
+					pbrIndirect.gammaCorrect = true;
+					env.env;
+				case Specular:
+					pbrIndirect.gammaCorrect = false;
+					env.specular;
+				case Irrad:
+					pbrIndirect.gammaCorrect = false;
+					env.diffuse;
+				case Background:
+					pbrIndirect.skyColor = true;
+					pbrIndirect.skyColorValue.setColor(ctx.engine.backgroundColor);
+					pbrIndirect.gammaCorrect = true;
+					null;
+				};
+			case LightProbe:
+				pbrIndirect.showSky = true;
+				pbrIndirect.skyMap = env.env;
+				pbrIndirect.gammaCorrect = false;
+				pbrIndirect.skyHdrMax = env.hdrMax;
+				pbrIndirect.skyColor = false;
+			}
+
+			if( pbrIndirect.skyMap == null && pbrIndirect.showSky && !pbrIndirect.skyColor )
+				pbrIndirect.showSky = false;
+
+		}
+		else {
+			pbrIndirect.drawIndirectDiffuse = false;
+			pbrIndirect.drawIndirectSpecular = false;
+		}
+
+		tonemap.shader.mode = switch( toneMode ) {
+			case Linear: 0;
+			case Reinhard: 1;
+			default: 0;
+		};
+		tonemap.shader.hdrTexture = textures.hdr;
+	}
+
+	function drawPbrDecals( passName : String ) {
+		var passes = get(passName);
+		if( passes.isEmpty() ) return;
+		ctx.engine.pushTargets([textures.albedo,textures.normal,textures.pbr]);
+		renderPass(decalsOutput, passes);
+		ctx.engine.popTarget();
+	}
+
+	override function render() {
+		beginPbr();
+
+		setTargets([textures.albedo,textures.normal,textures.pbr,textures.other]);
+		clear(0, 1, 0);
+
+		begin(MainDraw);
+		renderPass(output, get("terrain"));
+		drawPbrDecals("terrainDecal");
+		renderPass(output, get("default"), frontToBack);
+		renderPass(output, get("alpha"), backToFront);
+		renderPass(output, get("additive"));
+		end();
+
+		begin(Decals);
+		drawPbrDecals("decal");
+		end();
+
+		setTarget(textures.hdr);
+		clear(0);
+		lighting();
+
+		begin(Forward);
+		var ls = hxd.impl.Api.downcast(getLightSystem(), h3d.scene.pbr.LightSystem);
+		ls.forwardMode = true;
+		draw("forward");
+		ls.forwardMode = false;
+		end();
+
+		if( renderMode == LightProbe ) {
+			resetTarget();
+			copy(textures.hdr, null);
+			// no warnings
+			for( p in passObjects ) if( p != null ) p.rendered = true;
+			return;
+		}
+
+		begin(BeforeTonemapping);
+		draw("beforeTonemappingDecal");
+		draw("beforeTonemapping");
+		end();
+
+		setTarget(textures.ldr);
+		tonemap.render();
+
+		begin(AfterTonemapping);
+		draw("afterTonemappingDecal");
+		draw("afterTonemapping");
+		end();
+
+		begin(Overlay);
+		draw("overlay");
+		end();
+
+		endPbr();
+	}
+
+	function endPbr() {
 		resetTarget();
-
+		var ldr = ctx.getGlobal("ldrMap");
 		switch( displayMode ) {
-
 		case Pbr, Env, MatCap:
 			if( enableFXAA ) {
 				mark("FXAA");
@@ -458,33 +505,31 @@ class Renderer extends h3d.scene.Renderer {
 			else {
 				copy(ldr, null);
 			}
-
-		case Distortion:
-			resetTarget();
-			copy( distortion, null);
-
 		case Debug:
-			var shadowMap = ctx.textures.getNamed("shadowMap");
+			var shadowMap = ctx.getGlobal("mainLightShadowMap");
 			if( shadowMap == null )
 				shadowMap = h3d.mat.Texture.fromColor(0);
 			slides.shader.shadowMap = shadowMap;
 			slides.shader.shadowMapChannel = R;
+			pbrProps.isScreen = true;
 			slides.render();
-
 			if( !hasDebugEvent ) {
 				hasDebugEvent = true;
 				hxd.Window.getInstance().addEventTarget(onEvent);
 			}
 		}
-
 		if( hasDebugEvent && displayMode != Debug ) {
 			hasDebugEvent = false;
 			hxd.Window.getInstance().removeEventTarget(onEvent);
 		}
+		mark("vsync");
 	}
 
+	var debugPushPos : { x : Float, y : Float }
 	function onEvent(e:hxd.Event) {
-		if( e.kind == EPush && e.button == 2 ) {
+		if( e.kind == EPush && e.button == 2 )
+			debugPushPos = { x : e.relX, y : e.relY };
+		if( e.kind == ERelease && e.button == 2 && hxd.Math.distance(e.relX-debugPushPos.x,e.relY-debugPushPos.y) < 10 ) {
 			var win = hxd.Window.getInstance();
 			var x = Std.int((e.relX / win.width) * 4);
 			var y = Std.int((e.relY / win.height) * 4);
@@ -506,10 +551,7 @@ class Renderer extends h3d.scene.Renderer {
 	override function getDefaultProps( ?kind : String ):Any {
 		var props : RenderProps = {
 			mode : Pbr,
-			colorGradingLUT : null,
-			colorGradingLUTSize : 1,
-			enableColorGrading: true,
-			emissive : new h3d.Vector(1., 1., 1.),
+			emissive : 1.,
 			exposure : 0.,
 			sky : Irrad,
 			tone : Linear,
@@ -524,21 +566,12 @@ class Renderer extends h3d.scene.Renderer {
 	}
 
 	override function refreshProps() {
-
 		var props : RenderProps = props;
-
 		displayMode = props.mode;
 		skyMode = props.sky;
 		toneMode = props.tone;
 		exposure = props.exposure;
 		shadows = props.shadows;
-
-		if( props.colorGradingLUT != null )
-			colorGradingLUT = hxd.res.Loader.currentInstance.load(props.colorGradingLUT).toTexture();
-		else
-			colorGradingLUT = null;
-		colorGradingLUTSize = props.colorGradingLUTSize;
-		enableColorGrading = props.enableColorGrading;
 	}
 
 	#if editor
@@ -567,12 +600,6 @@ class Renderer extends h3d.scene.Renderer {
 							<option value="Reinhard">Reinhard</option>
 						</select>
 					</dd>
-				</div>
-
-				<div class="group" name="Color Grading">
-					<dt>LUT</dt><dd><input type="texturepath" field="colorGradingLUT" style="width:165px"/></dd>
-					<dt>LUT Size</dt><dd><input step="1" type="range" min="0" max="32" field="colorGradingLUTSize"></dd>
-					<dt>Enable</dt><dd><input type="checkbox" field="enableColorGrading"></dd>
 				</div>
 
 				<div class="group" name="Environment">

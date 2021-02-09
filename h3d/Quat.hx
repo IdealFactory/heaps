@@ -65,8 +65,8 @@ class Quat {
 
 	public function initDirection( dir : Vector ) {
 		// inlined version of initRotationMatrix(Matrix.lookAtX(dir))
-		var ax = dir.clone().getNormalized();
-		var ay = new Vector(-ax.y, ax.x, 0).getNormalized();
+		var ax = dir.clone().normalized();
+		var ay = new Vector(-ax.y, ax.x, 0).normalized();
 		if( ay.lengthSq() < Math.EPSILON ) {
 			ay.x = ax.y;
 			ay.y = ax.z;
@@ -76,32 +76,32 @@ class Quat {
 		var tr = ax.x + ay.y + az.z;
 		if( tr > 0 ) {
 			var s = (tr + 1.0).sqrt() * 2;
-			var is = 1 / s;
-			x = (ay.z - az.y) * is;
-			y = (az.x - ax.z) * is;
-			z = (ax.y - ay.x) * is;
+			var ins = 1 / s;
+			x = (ay.z - az.y) * ins;
+			y = (az.x - ax.z) * ins;
+			z = (ax.y - ay.x) * ins;
 			w = 0.25 * s;
 		} else if( ax.x > ay.y && ax.x > az.z ) {
 			var s = (1.0 + ax.x - ay.y - az.z).sqrt() * 2;
-			var is = 1 / s;
+			var ins = 1 / s;
 			x = 0.25 * s;
-			y = (ay.x + ax.y) * is;
-			z = (az.x + ax.z) * is;
-			w = (ay.z - az.y) * is;
+			y = (ay.x + ax.y) * ins;
+			z = (az.x + ax.z) * ins;
+			w = (ay.z - az.y) * ins;
 		} else if( ay.y > az.z ) {
 			var s = (1.0 + ay.y - ax.x - az.z).sqrt() * 2;
-			var is = 1 / s;
-			x = (ay.x + ax.y) * is;
+			var ins = 1 / s;
+			x = (ay.x + ax.y) * ins;
 			y = 0.25 * s;
-			z = (az.y + ay.z) * is;
-			w = (az.x - ax.z) * is;
+			z = (az.y + ay.z) * ins;
+			w = (az.x - ax.z) * ins;
 		} else {
 			var s = (1.0 + az.z - ax.x - ay.y).sqrt() * 2;
-			var is = 1 / s;
-			x = (az.x + ax.z) * is;
-			y = (az.y + ay.z) * is;
+			var ins = 1 / s;
+			x = (az.x + ax.z) * ins;
+			y = (az.y + ay.z) * ins;
 			z = 0.25 * s;
-			w = (ax.y - ay.x) * is;
+			w = (ax.y - ay.x) * ins;
 		}
 	}
 
@@ -119,32 +119,32 @@ class Quat {
 		var tr = m._11 + m._22 + m._33;
 		if( tr > 0 ) {
 			var s = (tr + 1.0).sqrt() * 2;
-			var is = 1 / s;
-			x = (m._23 - m._32) * is;
-			y = (m._31 - m._13) * is;
-			z = (m._12 - m._21) * is;
+			var ins = 1 / s;
+			x = (m._23 - m._32) * ins;
+			y = (m._31 - m._13) * ins;
+			z = (m._12 - m._21) * ins;
 			w = 0.25 * s;
 		} else if( m._11 > m._22 && m._11 > m._33 ) {
 			var s = (1.0 + m._11 - m._22 - m._33).sqrt() * 2;
-			var is = 1 / s;
+			var ins = 1 / s;
 			x = 0.25 * s;
-			y = (m._21 + m._12) * is;
-			z = (m._31 + m._13) * is;
-			w = (m._23 - m._32) * is;
+			y = (m._21 + m._12) * ins;
+			z = (m._31 + m._13) * ins;
+			w = (m._23 - m._32) * ins;
 		} else if( m._22 > m._33 ) {
 			var s = (1.0 + m._22 - m._11 - m._33).sqrt() * 2;
-			var is = 1 / s;
-			x = (m._21 + m._12) * is;
+			var ins = 1 / s;
+			x = (m._21 + m._12) * ins;
 			y = 0.25 * s;
-			z = (m._32 + m._23) * is;
-			w = (m._31 - m._13) * is;
+			z = (m._32 + m._23) * ins;
+			w = (m._31 - m._13) * ins;
 		} else {
 			var s = (1.0 + m._33 - m._11 - m._22).sqrt() * 2;
-			var is = 1 / s;
-			x = (m._31 + m._13) * is;
-			y = (m._32 + m._23) * is;
+			var ins = 1 / s;
+			x = (m._31 + m._13) * ins;
+			y = (m._32 + m._23) * ins;
 			z = 0.25 * s;
-			w = (m._12 - m._21) * is;
+			w = (m._12 - m._21) * ins;
 		}
 	}
 
@@ -193,15 +193,13 @@ class Quat {
 	}
 
 	public inline function lerp( q1 : Quat, q2 : Quat, v : Float, nearest = false ) {
-		var v2;
+		var v2 = 1 - v;
 		if( nearest && q1.dot(q2) < 0 )
-			v2 = v - 1;
-		else
-			v2 = 1 - v;
-		var x = q1.x * v + q2.x * v2;
-		var y = q1.y * v + q2.y * v2;
-		var z = q1.z * v + q2.z * v2;
-		var w = q1.w * v + q2.w * v2;
+			v = -v;
+		var x = q1.x * v2 + q2.x * v;
+		var y = q1.y * v2 + q2.y * v;
+		var z = q1.z * v2 + q2.z * v;
+		var w = q1.w * v2 + q2.w * v;
 		this.x = x;
 		this.y = y;
 		this.z = z;
@@ -252,7 +250,7 @@ class Quat {
 	}
 
 	public inline function getDirection() {
-		return new h3d.Vector(1 - 2 * ( y * y + z * z ), 2 * ( x * y - z * w ), 2 * ( x * z + y * w ));
+		return new h3d.Vector(1 - 2 * ( y * y + z * z ), 2 * ( x * y + z * w ), 2 * ( x * z - y * w ));
 	}
 
 	/**

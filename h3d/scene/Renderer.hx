@@ -47,6 +47,14 @@ class Renderer extends hxd.impl.AnyProps {
 		backToFront = depthSort.bind(false);
 	}
 
+	public function getEffect<T:h3d.impl.RendererFX>( cl : Class<T> ) : T {
+		for( f in effects ) {
+			var f = Std.downcast(f, cl);
+			if( f != null ) return f;
+		}
+		return null;
+	}
+
 	public function dispose() {
 		for( p in allPasses )
 			p.dispose();
@@ -58,9 +66,15 @@ class Renderer extends hxd.impl.AnyProps {
 	function mark(id: String) {
 	}
 
+	/**
+		Inject a post process shader for the current frame. Shaders are reset after each render.
+	**/
+	public function addShader( s : hxsl.Shader ) {
+	}
+
 	public function getPass<T:h3d.pass.Base>( c : Class<T> ) : T {
 		for( p in allPasses )
-			if( Std.is(p, c) )
+			if( hxd.impl.Api.isOfType(p, c) )
 				return cast p;
 		return null;
 	}
@@ -89,9 +103,6 @@ class Renderer extends hxd.impl.AnyProps {
 
 	function getLightSystem() : h3d.scene.LightSystem {
 		return ctx.scene.lightSystem;
-	}
-
-	function time( name : String ) {
 	}
 
 	@:access(h3d.scene.Object)

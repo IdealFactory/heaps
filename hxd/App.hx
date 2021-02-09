@@ -154,9 +154,9 @@ class App implements h3d.IDrawable {
 		engine.onResized = staticHandler;
 		engine.onContextLost = staticHandler;
 		isDisposed = true;
-		s2d.dispose();
-		s3d.dispose();
-		sevents.dispose();
+		if( s2d != null ) s2d.dispose();
+		if( s3d != null ) s3d.dispose();
+		if( sevents != null ) sevents.dispose();
 	}
 
 	/**
@@ -190,8 +190,8 @@ class App implements h3d.IDrawable {
 		update(hxd.Timer.dt);
 		if( isDisposed ) return;
 		var dt = hxd.Timer.dt; // fetch again in case it's been modified in update()
-		s2d.setElapsedTime(dt);
-		s3d.setElapsedTime(dt);
+		if( s2d != null ) s2d.setElapsedTime(dt);
+		if( s3d != null ) s3d.setElapsedTime(dt);
 		#if !openfl
 		engine.render(this);
 		#end

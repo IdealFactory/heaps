@@ -11,7 +11,7 @@ class Texture {
 		The default texture color format
 	**/
 	public static var nativeFormat(default,never) : TextureFormat =
-		#if flash
+		#if (flash || android)
 			BGRA
 		#elseif (usesys && !hldx && !hlsdl && !usegl && !macro)
 			haxe.GraphicsDriver.nativeFormat
@@ -24,8 +24,8 @@ class Texture {
 
 	var t : h3d.impl.Driver.Texture;
 	var mem : h3d.impl.MemoryManager;
-	#if debug
-	var allocPos : h3d.impl.AllocPos;
+	#if track_alloc
+	var allocPos : hxd.impl.AllocPos;
 	#end
 	public var id(default, null) : Int;
 	public var name(default, null) : String;
@@ -42,6 +42,8 @@ class Texture {
 	public var anisotropy(default,set) : Int;
 	public var wrap(default, set) : Wrap;
 	public var layerCount(get, never) : Int;
+	public var lodBias : Float = 0.;
+	public var mipLevels(get, never) : Int;
 
 	/**
 		If this callback is set, the texture can be re-allocated when the 3D context has been lost or when
@@ -75,7 +77,17 @@ class Texture {
 		return _lastFrame;
 	}
 
-	public function new(w, h, ?flags : Array<TextureFlags>, ?format : TextureFormat, ?allocPos : h3d.impl.AllocPos ) {
+	function get_mipLevels() {
+		if( !flags.has(MipMapped) )
+			return 1;
+		/* atm we don't allow textures with mipmaps < max levels */
+		var lv = 1;
+		var w = width, h = height;
+		while( (w >> lv) >= 1 || (h >> lv) >= 1 ) lv++;
+		return lv;
+	}
+
+	public function new(w, h, ?flags : Array<TextureFlags>, ?format : TextureFormat ) {
 		#if !noEngine
 		var engine = h3d.Engine.getCurrent();
 		this.mem = engine.mem;
@@ -105,9 +117,10 @@ class Texture {
 		this.anisotropy = this.mipMap != None ? 1 : 0;
 		this.wrap = Clamp;
 		bits &= 0x7FFF;
-		#if debug
-		this.allocPos = allocPos;
+		#if track_alloc
+		this.allocPos = new hxd.impl.AllocPos();
 		#end
+		trace("NewTexture: wh:"+w+"/"+h+" format="+format+" mip="+this.mipMap+" aniso="+this.anisotropy);
 		if( !this.flags.has(NoAlloc) ) alloc();
 	}
 
@@ -131,7 +144,7 @@ class Texture {
 		}
 	}
 
-	public function clone( ?allocPos : h3d.impl.AllocPos ) {
+	public function clone() {
 		checkAlloc();
 		if( t == null ) throw "Can't clone disposed texture";
 		var old = lastFrame;
@@ -140,7 +153,7 @@ class Texture {
 		for( f in [Target,Cube,MipMapped,IsArray] )
 			if( this.flags.has(f) )
 				flags.push(f);
-		var t = new Texture(width, height, flags, format, allocPos);
+		var t = new Texture(width, height, flags, format);
 		t.name = this.name;
 		#if !macro
 		if(this.flags.has(Cube))
@@ -178,8 +191,8 @@ class Texture {
 		var str = name;
 		if( name == null ) {
 			str = "Texture_" + id;
-			#if debug
-			if( allocPos != null ) str += "(" + allocPos.className+":" + allocPos.lineNumber + ")";
+			#if track_alloc
+			if( allocPos != null ) str += "(" + allocPos.position + ")";
 			#end
 		}
 		return str+"("+width+"x"+height+")";
@@ -251,6 +264,7 @@ class Texture {
 
 	public function clear( color : Int, alpha = 1., ?layer = -1 ) {
 		alloc();
+		if( width == 0 || height == 0 ) return;
 		if( #if (usegl || hlsdl || js) true #else flags.has(Target) #end && (width != 1 || height != 1) ) {
 			var engine = h3d.Engine.getCurrent();
 			color |= Std.int(hxd.Math.clamp(alpha)*255) << 24;
@@ -295,9 +309,11 @@ class Texture {
 		}
 	}
 
-	inline function checkSize(width, height, mip) {
-		if( width != this.width >> mip || height != this.height >> mip )
-			throw "Invalid upload size : " + width + "x" + height + " should be " + (this.width >> mip) + "x" + (this.height >> mip);
+	function checkSize(width, height, mip) {
+		var mw = this.width >> mip; if( mw == 0 ) mw = 1;
+		var mh = this.height >> mip; if( mh == 0 ) mh = 1;
+		if( width != mw || height != mh )
+			throw "Invalid upload size : " + width + "x" + height + " should be " + mw + "x" + mh;
 	}
 
 	function checkMipMapGen(mipLevel,layer) {
@@ -322,13 +338,8 @@ class Texture {
 	}
 
 	public function dispose() {
-		if( t != null ) {
+		if( t != null )
 			mem.deleteTexture(this);
-			#if debug
-			if(this.allocPos != null)
-				this.allocPos.customParams = ["#DISPOSED"];
-			#end
-		}
 	}
 
 	/**
@@ -414,14 +425,14 @@ class Texture {
 	}
 	#end
 
-	public static function fromBitmap( bmp : hxd.BitmapData, ?allocPos : h3d.impl.AllocPos ) {
-		var t = new Texture(bmp.width, bmp.height, allocPos);
+	public static function fromBitmap( bmp : hxd.BitmapData ) {
+		var t = new Texture(bmp.width, bmp.height);
 		t.uploadBitmap(bmp);
 		return t;
 	}
 
-	public static function fromPixels( pixels : hxd.Pixels, ?allocPos : h3d.impl.AllocPos ) {
-		var t = new Texture(pixels.width, pixels.height, allocPos);
+	public static function fromPixels( pixels : hxd.Pixels ) {
+		var t = new Texture(pixels.width, pixels.height);
 		t.uploadPixels(pixels);
 		return t;
 	}
@@ -429,7 +440,7 @@ class Texture {
 	/**
 		Creates a 1x1 texture using the RGB color passed as parameter.
 	**/
-	public static function fromColor( color : Int, ?alpha = 1., ?allocPos : h3d.impl.AllocPos ) {
+	public static function fromColor( color : Int, ?alpha = 1. ) {
 		var engine = h3d.Engine.getCurrent();
 		var aval = Std.int(alpha * 255);
 		if( aval < 0 ) aval = 0 else if( aval > 255 ) aval = 255;
@@ -437,12 +448,51 @@ class Texture {
 		var t = @:privateAccess engine.textureColorCache.get(key);
 		if( t != null )
 			return t;
-		var t = new Texture(1, 1, null, allocPos);
+		var t = new Texture(1, 1, null);
 		t.clear(color, alpha);
 		t.realloc = function() t.clear(color, alpha);
 		@:privateAccess engine.textureColorCache.set(key, t);
 		return t;
 	}
+
+	#if !macro
+
+	public static function genDisc( size : Int, color : Int, ?alpha = 1. ) {
+		return genTexture(0,size,color,alpha);
+	}
+
+	static function genTexture( mode : Int, size : Int, color : Int, alpha : Float ) {
+		var engine = h3d.Engine.getCurrent();
+		var aval = Std.int(alpha * 255);
+		if( aval < 0 ) aval = 0 else if( aval > 255 ) aval = 255;
+		color = (color&0xFFFFFF)|(aval<<24);
+		var key = ((size << 16) | mode) + "," + color;
+		var k = genTextureKeys.get(key);
+		var t : Texture = k == null ? null : @:privateAccess engine.resCache.get(k);
+		if( t != null )
+			return t;
+		if( k == null ) {
+			k = {};
+			genTextureKeys.set(key, k);
+		}
+		t = new Texture(size,size,[Target]);
+		t.realloc = function() drawGenTexture(t,color,mode);
+		drawGenTexture(t,color,mode);
+		@:privateAccess engine.resCache.set(k, t);
+		return t;
+	}
+
+	static function drawGenTexture( t : h3d.mat.Texture, color : Int, mode : Int ) {
+		var s = new h3d.pass.ScreenFx(new h3d.shader.GenTexture());
+		var engine = h3d.Engine.getCurrent();
+		s.shader.mode = mode;
+		s.shader.color.setColor(color);
+		engine.pushTarget(t);
+		s.render();
+		engine.popTarget();
+	}
+
+	#end
 
 	/**
 		Returns a default dummy 1x1 black cube texture
@@ -480,6 +530,7 @@ class Texture {
 
 	static var checkerTextureKeys = new Map<Int,{}>();
 	static var noiseTextureKeys = new Map<Int,{}>();
+	static var genTextureKeys= new Map<String,{}>();
 
 	public static function genNoise(size) {
 		var engine = h3d.Engine.getCurrent();
