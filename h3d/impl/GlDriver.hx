@@ -933,7 +933,7 @@ class GlDriver extends Driver {
 		case RGBA: true;
 		case RGBA16F, RGBA32F: hasFeature(FloatTextures);
 		case SRGB, SRGB_ALPHA: hasFeature(SRGBTextures);
-		case R8, RG8, RGB8, R16F, RG16F, RGB16F, R32F, RG32F, RGB32F, RG11B10UF, RGB10A2: #if js glES >= 3 #else true #end;
+		case R8, RG8, RGB8, R16F, RG16F, RGB16F, R32F, RG32F, RGB32F, RG11B10UF, RGB10A2: #if js glES >= 3 #elseif android hasFeature(FloatTextures) #else true #end;
 		case S3TC(n): n <= maxCompressedTexturesSupport;
 		default: false;
 		}
@@ -1740,7 +1740,7 @@ class GlDriver extends Driver {
 		else if (tex.msaaBuffer != null)
 			@:privateAccess gl.bindFramebuffer(GL.FRAMEBUFFER, tex.msaaBuffer.f);
 		else
-		gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
+			gl.bindFramebuffer(GL.FRAMEBUFFER, commonFB);
 
 		if ( tex.msaaBuffer == null ) {
             if( tex.flags.has(IsArray) )
@@ -1796,7 +1796,7 @@ class GlDriver extends Driver {
 			GL.COLOR_BUFFER_BIT, // buffer mask
 			GL.LINEAR); // scale filter
 		gl.bindFramebuffer(GL.FRAMEBUFFER, null);
-		gl.viewport(0, 0, w, h);
+		tex.flags.set(WasCleared);
 		#end
 	}
 
@@ -1850,7 +1850,10 @@ class GlDriver extends Driver {
 	override function hasFeature( f : Feature ) : Bool {
 		#if (js)
 		return features.get(f);
-		#else
+		#elseif android
+		if (f == FloatTextures) return false;
+		else return true;
+		#else 
 		return true;
 		#end
 	}

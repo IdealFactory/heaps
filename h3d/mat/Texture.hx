@@ -120,7 +120,6 @@ class Texture {
 		#if track_alloc
 		this.allocPos = new hxd.impl.AllocPos();
 		#end
-		trace("NewTexture: wh:"+w+"/"+h+" format="+format+" mip="+this.mipMap+" aniso="+this.anisotropy);
 		if( !this.flags.has(NoAlloc) ) alloc();
 	}
 
