@@ -555,7 +555,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		trace("GLTF.getTexture: node="+node+" src:"+node.source);
 		#end 
 
-		var format = h3d.mat.Texture.nativeFormat;
+		var format = h3d.mat.TextureFormat.RGBA;
 		var tex = new h3d.mat.Texture(img.width, img.height, [NoAlloc], format);
 
 		tex.setName(node.name==null ? "texture-"+index : node.name);
