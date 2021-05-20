@@ -113,17 +113,17 @@ class TriPlane implements Collider {
 	inline public function rayIntersection( r : Ray, bestMatch : Bool ) @:privateAccess {
 		var dr = r.lx * nx + r.ly * ny + r.lz * nz;
 		if( dr >= 0 ) // backface culling
-			return -1.;
+			return new HitPoint(-1.);
 		var nd = d - (r.px * nx + r.py * ny + r.pz * nz);
 		var k = nd / dr;
 		if( k < 0 )
-			return -1;
+			return new HitPoint(-1);
 		var px = r.px + r.lx * k;
 		var py = r.py + r.ly * k;
 		var pz = r.pz + r.lz * k;
 		if( !isPointInTriangle(px, py, pz) )
-			return -1;
-		return k;
+			return new HitPoint(-1);
+		return new HitPoint(k);
 	}
 
 	inline function isPointInTriangle( x : Float, y : Float, z : Float ) {
@@ -240,7 +240,7 @@ class Polygon implements Collider {
 
 	public function rayIntersection( r : Ray, bestMatch : Bool ) {
 		var t = triPlanes;
-		var best = -1.;
+		var best = new HitPoint(-1.);
 		while( t != null ) {
 			var d = t.rayIntersection(r, bestMatch);
 			if( d >= 0 ) {

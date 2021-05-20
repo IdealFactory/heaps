@@ -152,13 +152,14 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 					continue;
 				}
 
-				var hitPoint = r.getPoint(hit);
+				var hitPoint = r.getPoint(hit.hit);
 				r.load(saveR);
 
 				i.hitPoint.x = hitPoint.x;
 				i.hitPoint.y = hitPoint.y;
 				i.hitPoint.z = hitPoint.z;
-				i.hitPoint.w = hit;
+				i.hitPoint.w = hit.hit;
+				i.hitInfo = hit;
 
 				if( i.priority > priority ) {
 					while( hitInteractives.length > 0 ) hitInteractives.pop();
@@ -182,11 +183,12 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 						r.transform(m);
 						var hit = i.preciseShape.rayIntersection(r, i.bestMatch);
 						if( hit > 0 ) {
-							var hitPoint = r.getPoint(hit);
+							var hitPoint = r.getPoint(hit.hit);
 							i.hitPoint.x = hitPoint.x;
 							i.hitPoint.y = hitPoint.y;
 							i.hitPoint.z = hitPoint.z;
-							i.hitPoint.w = hit;
+							i.hitPoint.w = hit.hit;
+							i.hitInfo = hit;
 						} else
 							wfactor = 1.;
 						r.load(saveR);
@@ -213,6 +215,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			event.relX = i.hitPoint.x;
 			event.relY = i.hitPoint.y;
 			event.relZ = i.hitPoint.z;
+			event.hitInfo = i.hitInfo;
 			i.handleEvent(event);
 
 			if( event.cancel ) {

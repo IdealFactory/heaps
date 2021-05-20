@@ -15,7 +15,7 @@ class SkinCollider implements hxd.impl.Serializable implements Collider {
 		this.obj = obj;
 		this.col = col;
 		this.transform = new PolygonBuffer();
-		this.transform.setData(col.buffer.copy(), col.indexes, col.startIndex, col.triCount);
+		this.transform.setData(col.buffer.copy(), col.indexes, col.uvs.copy(), col.startIndex, col.triCount);
 		currentBounds = new h3d.col.Bounds();
 	}
 
@@ -49,7 +49,7 @@ class SkinCollider implements hxd.impl.Serializable implements Collider {
 	public function rayIntersection(r, bestMatch) {
 		checkBounds();
 		if( currentBounds.rayIntersection(r, false) < 0 )
-			return -1.;
+			return new HitPoint(-1.);
 		applyTransform();
 		return transform.rayIntersection(r, bestMatch);
 	}

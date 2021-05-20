@@ -6,7 +6,7 @@ interface Collider extends hxd.impl.Serializable.StructSerializable {
 		Returns the distance of intersection between the ray and the collider, or negative if no collision.
 		If bestMatch is false, only negative/positive value needs to be returned, with no additional precision.
 	**/
-	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float;
+	public function rayIntersection( r : Ray, bestMatch : Bool ) : HitPoint;
 	public function contains( p : Point ) : Bool;
 	public function inFrustum( f : Frustum, ?localMatrix : h3d.Matrix ) : Bool;
 	public function inSphere( s : Sphere ) : Bool;
@@ -23,9 +23,9 @@ class OptimizedCollider implements hxd.impl.Serializable implements Collider {
 		this.b = b;
 	}
 
-	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
+	public function rayIntersection( r : Ray, bestMatch : Bool ) : HitPoint {
 		if( a.rayIntersection(r, bestMatch) == Math.NEGATIVE_INFINITY )
-			return Math.NEGATIVE_INFINITY;
+			return new HitPoint(Math.NEGATIVE_INFINITY);
 		return b.rayIntersection(r, bestMatch);
 	}
 
@@ -58,8 +58,8 @@ class GroupCollider implements Collider {
 		this.colliders = colliders;
 	}
 
-	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
-		var best = -1.;
+	public function rayIntersection( r : Ray, bestMatch : Bool ) : HitPoint {
+		var best = new HitPoint(-1.);
 		for( c in colliders ) {
 			var d = c.rayIntersection(r, bestMatch);
 			if( d >= 0 ) {

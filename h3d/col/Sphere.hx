@@ -29,7 +29,7 @@ class Sphere implements Collider {
 		return dx * dx + dy * dy + dz * dz < r * r;
 	}
 
-	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
+	public function rayIntersection( r : Ray, bestMatch : Bool ) : HitPoint {
 		var r2 = this.r * this.r;
 		var px = r.px + r.lx;
 		var py = r.py + r.ly;
@@ -40,11 +40,11 @@ class Sphere implements Collider {
 		var c = (x * x + y * y + z * z) + (px * px + py * py + pz * pz) - 2 * (x * px + y * py + z * pz) - r2;
 
 		var d = b * b - 4 * a * c;
-		if( d < 0 )	return -1;
+		if( d < 0 )	return new HitPoint(-1);
 
 		d = Math.sqrt(d);
 		var t = ( -b + d) / (2 * a);
-		return 1 - t;
+		return new HitPoint(1 - t);
 	}
 
 	public inline function inFrustum( f : Frustum, ?m : h3d.Matrix ) {

@@ -323,9 +323,10 @@ class GltfModel extends MeshPrimitive {
 		#else
 		var verts = haxe.ds.Vector.fromData(geom.getVertices().getNative());
 		var inds = haxe.ds.Vector.fromData(geom.getIndices().getNative());
+		var uvs = haxe.ds.Vector.fromData(geom.getUVs().getNative());
 		#end
 
-		poly.setData(verts, inds);
+		poly.setData(verts, inds, uvs);
 		if( collider == null ) {
 			collider = new h3d.col.Collider.OptimizedCollider(getBounds(), poly);
 		}

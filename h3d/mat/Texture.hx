@@ -320,12 +320,16 @@ class Texture {
 			mem.driver.generateMipMaps(this);
 	}
 
+	public var bitmap:hxd.BitmapData;
+	public var pixelImage:hxd.Pixels;
+
 	public function uploadBitmap( bmp : hxd.BitmapData, mipLevel = 0, layer = 0 ) {
 		alloc();
 		checkSize(bmp.width, bmp.height, mipLevel);
 		mem.driver.uploadTextureBitmap(this, bmp, mipLevel, layer);
 		flags.set(WasCleared);
 		checkMipMapGen(mipLevel, layer);
+		bitmap = bmp;
 	}
 
 	public function uploadPixels( pixels : hxd.Pixels, mipLevel = 0, layer = 0 ) {
@@ -334,6 +338,7 @@ class Texture {
 		mem.driver.uploadTexturePixels(this, pixels, mipLevel, layer);
 		flags.set(WasCleared);
 		checkMipMapGen(mipLevel, layer);
+		pixelImage = pixels;
 	}
 
 	public function dispose() {

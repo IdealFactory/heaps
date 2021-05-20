@@ -190,11 +190,15 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		imgElement.onload = function() { 
 			for (img in images)
 				@:privateAccess if (img!=null && img.data.buffer.__srcImage == imgElement) {
+				@:privateAccess img.data = lime.graphics.Image.fromImageElement( imgElement );
+				@:privateAccess lime._internal.graphics.ImageCanvasUtil.convertToCanvas(b.data);
+			
 				@:privateAccess 	img.data.width = imgElement.width; 
 				@:privateAccess 	img.data.height = imgElement.height; 
 								}
 			imageLoaded();
 		};
+
 		@:privateAccess b.data.buffer.__srcImage = imgElement;
 		return b;
 	}

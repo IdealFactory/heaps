@@ -12,7 +12,7 @@ class ObjectCollider implements Collider implements hxd.impl.Serializable {
 		this.collider = collider;
 	}
 
-	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
+	public function rayIntersection( r : Ray, bestMatch : Bool ) : HitPoint {
 		var tmpRay = TMP_RAY;
 		TMP_RAY = null;
 		tmpRay.load(r);
@@ -23,11 +23,11 @@ class ObjectCollider implements Collider implements hxd.impl.Serializable {
 			TMP_RAY = tmpRay;
 			return hit;
 		}
-		var pt = r.getPoint(hit);
+		var pt = r.getPoint(hit.hit);
 		pt.transform(@:privateAccess obj.absPos);
 		r.load(tmpRay);
 		TMP_RAY = tmpRay;
-		return hxd.Math.distance(pt.x - r.px, pt.y - r.py, pt.z - r.pz);
+		return hit.updateHit(hxd.Math.distance(pt.x - r.px, pt.y - r.py, pt.z - r.pz));
 	}
 
 	public function contains( p : Point ) {
