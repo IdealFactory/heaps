@@ -53,9 +53,9 @@ abstract HitPoint(HitInfo) from HitInfo to HitInfo {
         };
     }
 
-    public function clone() : HitPoint {
+    public function clone( dest:HitPoint = null) : HitPoint {
         if (this==null) return null;
-        var h = new HitPoint(hit);
+        var h = (dest == null ? new HitPoint(hit) : dest);
         h.i0 = i0;
         h.i1 = i1;
         h.i2 = i2;
