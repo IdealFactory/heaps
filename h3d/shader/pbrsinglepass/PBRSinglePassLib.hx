@@ -146,25 +146,25 @@ class PBRSinglePassLib extends hxsl.Shader  {
         }
 
         function computeEnvironmentIrradiance( normal:Vec3 ):Vec3 {
-            return vSphericalL00 +
-                vSphericalL1_1 * (normal.y) +
-                vSphericalL10 * (normal.z) +
-                vSphericalL11 * (normal.x) +
-                vSphericalL2_2 * (normal.y * normal.x) +
-                vSphericalL2_1 * (normal.y * normal.z) +
-                vSphericalL20 * ((3.0 * normal.z * normal.z) - 1.0) +
-                vSphericalL21 * (normal.z * normal.x) +
-                vSphericalL22 * (normal.x * normal.x - (normal.y * normal.y));
-            // var envIrrandiance:Vec3 = vSphericalL00;
-            // envIrrandiance += vSphericalL1_1 * (normal.y);
-            // envIrrandiance += vSphericalL10 * (normal.z);
-            // envIrrandiance += vSphericalL11 * (normal.x);
-            // envIrrandiance += vSphericalL2_2 * (normal.y * normal.x);
-            // envIrrandiance += vSphericalL2_1 * (normal.y * normal.z);
-            // envIrrandiance += vSphericalL20 * ((3.0 * normal.z * normal.z) - 1.0);
-            // envIrrandiance += vSphericalL21 * (normal.z * normal.x);
-            // envIrrandiance += vSphericalL22 * (normal.x * normal.x - (normal.y * normal.y));
-            // return envIrrandiance;
+            // return vSphericalL00 +
+            //     vSphericalL1_1 * (normal.y) +
+            //     vSphericalL10 * (normal.z) +
+            //     vSphericalL11 * (normal.x) +
+            //     vSphericalL2_2 * (normal.y * normal.x) +
+            //     vSphericalL2_1 * (normal.y * normal.z) +
+            //     vSphericalL20 * ((3.0 * normal.z * normal.z) - 1.0) +
+            //     vSphericalL21 * (normal.z * normal.x) +
+            //     vSphericalL22 * (normal.x * normal.x - (normal.y * normal.y));
+            var envIrrandiance:Vec3 = vSphericalL00;
+            envIrrandiance += vSphericalL1_1 * (normal.y);
+            envIrrandiance += vSphericalL10 * (normal.z);
+            envIrrandiance += vSphericalL11 * (normal.x);
+            envIrrandiance += vSphericalL2_2 * (normal.y * normal.x);
+            envIrrandiance += vSphericalL2_1 * (normal.y * normal.z);
+            envIrrandiance += vSphericalL20 * ((3.0 * normal.z * normal.z) - 1.0);
+            envIrrandiance += vSphericalL21 * (normal.z * normal.x);
+            envIrrandiance += vSphericalL22 * (normal.x * normal.x - (normal.y * normal.y));
+            return envIrrandiance;
         }
 
         function getEnergyConservationFactor( specularEnvironmentR0:Vec3, environmentBrdf:Vec3):Vec3 {
