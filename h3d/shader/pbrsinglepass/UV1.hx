@@ -28,18 +28,17 @@ class UV1 extends PBRSinglePassLib {
             alpha = vAlbedoColor.a; //float
 
             var albedoTexture = albedoSampler.get(vMainUV1 + uvOffset); //vec4 // vAlbedoUV -> vMainUV1
-            if (hasAlpha==1) {
-                // if (alphaCutoff>0) {
-                //     if (albedoTexture.a < alphaCutoff) 
-                //         discard;
-                // } else {
-                //     alpha *= 0.5;
-                // }
-                alpha *= albedoTexture.a;
-            }
-            surfaceAlbedo *= toLinearSpace_V3(albedoTexture.rgb);
+            alpha *= albedoTexture.a;
+            surfaceAlbedo *= albedoTexture.rgb;
             surfaceAlbedo *= vAlbedoInfos.y;
-       }
+            if (hasAlpha==1) {
+                if (alphaCutoff>0) {
+                    alpha = 1;
+                    if (albedoTexture.a < alphaCutoff) 
+                        discard;
+                }
+            } 
+        }
     };
 
     public function new() {

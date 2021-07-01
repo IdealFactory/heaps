@@ -40,6 +40,7 @@ class FinalCombination extends PBRSinglePassLib {
 
         var ambientColor:Vec3;
         var lightingIntensity:Vec4;
+        var alpha:Float;
 
         function fragment() {
             var sA:Vec3 = vec3(sheenOutSheenAlbedoScaling) * surfaceAlbedo.rgb;
@@ -57,6 +58,9 @@ class FinalCombination extends PBRSinglePassLib {
             finalRadianceScaled = finalRadiance * vec3(lightingIntensity.z); //vec3
             finalRadianceScaled *= energyConservationFactor;
             finalRadianceScaled *= vec3(sheenOutSheenAlbedoScaling);
+            var luminanceOverAlpha:Float = 0.0;
+            luminanceOverAlpha += getLuminance(finalRadianceScaled);
+            alpha = saturate(alpha+luminanceOverAlpha*luminanceOverAlpha);
             finalSheen = sheenBase * sheenOutSheenColor;
             finalSheen = max(finalSheen, 0.0);
             finalSheenScaled = finalSheen * vec3(lightingIntensity.x) * vec3(lightingIntensity.w);

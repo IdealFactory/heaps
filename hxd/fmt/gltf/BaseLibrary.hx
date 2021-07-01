@@ -299,8 +299,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				//TODO: Alpha mode is still not quite working
 				if ( materialNode.alphaMode == MaterialAlphaMode.Blend || materialNode.alphaMode == MaterialAlphaMode.Mask) {
 					material.uv1.hasAlpha = 1;
-					material.mainPass.depthWrite = true;
-					material.mainPass.setBlendMode( h3d.mat.BlendMode.Alpha ); //h3d.mat.BlendMode.Alpha;
+					material.blendMode = Alpha;
 					if (materialNode.alphaMode == MaterialAlphaMode.Mask)
 						material.uv1.alphaCutoff = Reflect.hasField(materialNode, "alphaCutoff") ? materialNode.alphaCutoff : 0.5;
 				}
