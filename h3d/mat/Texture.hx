@@ -11,7 +11,7 @@ class Texture {
 		The default texture color format
 	**/
 	public static var nativeFormat(default,never) : TextureFormat =
-		#if (flash || android)
+		#if (flash || android || ios)
 			BGRA
 		#elseif (usesys && !hldx && !hlsdl && !usegl && !macro)
 			haxe.GraphicsDriver.nativeFormat

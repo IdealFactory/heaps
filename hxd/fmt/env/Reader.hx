@@ -190,7 +190,7 @@ class Reader {
  
         } else {
 
-            texture = new h3d.mat.Texture(info.width, info.width, [Target,Cube,MipMapped,ManualMipMapGen], h3d.mat.TextureFormat.RGBA);
+            texture = new h3d.mat.Texture(info.width, info.width, [Target,Cube,MipMapped,ManualMipMapGen], h3d.mat.Texture.nativeFormat ); 
             texture.preventAutoDispose();
             texture.mipMap = Linear;
             texture.filter = Linear;

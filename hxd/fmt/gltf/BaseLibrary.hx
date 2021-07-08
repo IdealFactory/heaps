@@ -558,7 +558,8 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		trace("GLTF.getTexture: node="+node+" src:"+node.source);
 		#end 
 
-		var format = h3d.mat.TextureFormat.RGBA;
+		// var format = h3d.mat.TextureFormat.RGBA;
+		var format = h3d.mat.Texture.nativeFormat;
 		var tex = new h3d.mat.Texture(img.width, img.height, [NoAlloc], format);
 
 		tex.setName(node.name==null ? "texture-"+index : node.name);
@@ -572,25 +573,11 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 
 
 		#if debug_gltf
-		trace("GLTF.applySampler: mipmap:"+tex.mipMap+" filter:"+tex.filter+" wrap:"+tex.wrap);
+		@:privateAccess trace("GLTF.applySampler: mipmap:"+tex.mipMap+" filter:"+tex.filter+" wrap:"+tex.wrap+" fmt=0x"+StringTools.hex(cast(img.data, lime.graphics.Image).format));
 		#end 
 
-		#if js
 		tex.uploadBitmap( img );
-		// var tile = h2d.Tile.fromBitmap(img);
-		// var bmp = new h2d.Bitmap( tile, s2d );
-		// bmp.scaleX = bmp.scaleY = 0.2;
-		// bmp.x = pos;
-		// pos += Std.int(tile.width * 0.2);
-		// trace("BMP:pos="+pos);
-		#else 
-		var pixels = img.getPixels();
-		if( pixels.width != tex.width || pixels.height != tex.height )
-			pixels.makeSquare();
-
-		tex.uploadPixels(pixels);
-		pixels.dispose();
-		#end
+		// openfl.display.HeapsContainer.addBmd(img); // Debugging
 
 		return tex;
 	}

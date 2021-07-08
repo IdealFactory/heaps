@@ -634,7 +634,7 @@ class BitmapData {
 		p.flags.set(AlphaPremultiplied);
 		return p;
 		#elseif (lime && !macro)
-		return new Pixels(width, height, data.getPixels(data.rect), RGBA);
+		return new Pixels(width, height, data.getPixels(data.rect), h3d.mat.Texture.nativeFormat);
 		#elseif js
 		var w = width;
 		var h = height;
@@ -668,6 +668,7 @@ class BitmapData {
 		bmp.setPixels(bmp.rect, bytes);
 		#elseif (lime && !macro)
 		// TODO format
+		#if ios pixels.convert(h3d.mat.Texture.nativeFormat); #end
 		data.setPixels(data.rect, pixels.bytes);
 		#elseif js
 		var img = ctx.createImageData(pixels.width, pixels.height);

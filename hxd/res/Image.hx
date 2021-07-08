@@ -264,7 +264,7 @@ class Image extends Resource {
 			var png = new format.png.Reader(new haxe.io.BytesInput(bytes));
 			png.checkCRC = false;
 			// we only support BGRA decoding here
-			pixels = Pixels.alloc(inf.width, inf.height, BGRA);
+			pixels = Pixels.alloc(inf.width, inf.height, #if ios RGBA #else BGRA #end);
 			var pdata = png.read();
 			format.png.Tools.extract32(pdata, pixels.bytes, flipY);
 			if( flipY ) pixels.flags.set(FlipY);
