@@ -132,9 +132,19 @@ class PBRSinglePass extends h3d.shader.pbrsinglepass.PBRSinglePassLib {
             finalClearCoatScaled = vec3(0.);
 		}
 
+		function __init__fragment() {
+			transformedNormal = transformedNormal.normalize();
+			// same as __init__, but will force calculus inside fragment shader, which limits varyings
+			screenUV = screenToUv(projectedPosition.xy / projectedPosition.w);
+			depth = projectedPosition.z / projectedPosition.w; // in case it's used in vertex : we don't want to interpolate in screen space
+			specPower = specularPower;
+			specColor = specularColor * specularAmount;
+		}
+
         function vertex() {
             output.position = projectedPosition * vec4(1, camera.projFlip, 1, 1);
             // rgbdMaxRange = 255.0;
+            pixelTransformedPosition = transformedPosition;
     
             var positionUpdated = input.position; //vec3
             normalUpdated = vec3(input.normal.x, input.normal.y, input.normal.z); //vec3
@@ -151,6 +161,8 @@ class PBRSinglePass extends h3d.shader.pbrsinglepass.PBRSinglePassLib {
         }
 
         function fragment() {
+            output.depth = depth;
+
             // debugVar = vec4(0.3, 0.3, 0.3, 1);
             positionW = vPositionW;
             rawVNormalW = vNormalW;

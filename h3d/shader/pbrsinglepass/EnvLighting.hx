@@ -25,7 +25,6 @@ class EnvLighting extends PBRSinglePassLib {
 		var roughness:Float;
 		var surfaceReflectivityColor:Vec3;
 		var energyConservationFactor:Vec3;
-		var shadow:Float;
 		var specularEnvironmentReflectance:Vec3;
 		var diffuseBase:Vec3;
 		var specularBase:Vec3;
