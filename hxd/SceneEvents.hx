@@ -310,6 +310,8 @@ class SceneEvents {
 		var old = pendingEvents;
 		var checkMoved = !mouseCheckMove;
 		var checkFocused = currentFocus == null;
+		mouseX = -1.;
+		mouseY = -1.;
 		if( old.length > 0 ) {
 			pendingEvents = [];
 			for( e in old ) {

@@ -115,7 +115,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	@:dox(hide) @:noCompletion
 	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) {
-		if( interactives.length == 0 )
+		if( interactives.length == 0 || event.relX < 0 || event.relY < 0 || event.relX > window.width || event.relY > window.height)
 			return null;
 
 		if( hitInteractives.length == 0 ) {
