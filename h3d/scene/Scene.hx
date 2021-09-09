@@ -21,6 +21,11 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	**/
 	public var renderer(default,set) : Renderer;
 
+	/**
+		Quick method to disable interactive 3D object
+	**/
+	public var disableInteractives:Bool = false;
+
 	var ctx : RenderContext;
 	var interactives : Array<Interactive>;
 	@:allow(h3d.scene.Interactive)
@@ -115,7 +120,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 	@:dox(hide) @:noCompletion
 	public function handleEvent( event : hxd.Event, last : hxd.SceneEvents.Interactive ) {
-		if( interactives.length == 0 || event.relX < 0 || event.relY < 0 || event.relX > window.width || event.relY > window.height)
+		if( interactives.length == 0 || event.relX < 0 || event.relY < 0 || event.relX > window.width || event.relY > window.height || disableInteractives)
 			return null;
 
 		if( hitInteractives.length == 0 ) {
