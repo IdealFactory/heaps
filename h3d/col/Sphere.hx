@@ -22,11 +22,20 @@ class Sphere implements Collider {
 		return new Point(x, y, z);
 	}
 
-	public inline function contains( p : Point ) {
+	public inline function distance( p : Point ) {
+		var d = distanceSq(p);
+		return d < 0 ? -Math.sqrt(-d) : Math.sqrt(d);
+	}
+
+	public inline function distanceSq( p : Point ) {
 		var dx = p.x - x;
 		var dy = p.y - y;
 		var dz = p.z - z;
-		return dx * dx + dy * dy + dz * dz < r * r;
+		return dx * dx + dy * dy + dz * dz - r * r;
+	}
+
+	public inline function contains( p : Point ) {
+		return distanceSq(p) < 0;
 	}
 
 	public function rayIntersection( r : Ray, bestMatch : Bool ) : HitPoint {
@@ -77,18 +86,12 @@ class Sphere implements Collider {
 		return "Sphere{" + getCenter()+","+ hxd.Math.fmt(r) + "}";
 	}
 
-	#if (hxbit && !macro)
-	function customSerialize( ctx : hxbit.Serializer ) {
-		ctx.addFloat(x);
-		ctx.addFloat(y);
-		ctx.addFloat(z);
-		ctx.addFloat(r);
-	}
-	function customUnserialize( ctx : hxbit.Serializer ) {
-		x = ctx.getFloat();
-		y = ctx.getFloat();
-		z = ctx.getFloat();
-		r = ctx.getFloat();
+	#if !macro
+	public function makeDebugObj() : h3d.scene.Object {
+		var prim = new h3d.prim.Sphere(r, 20, 15);
+		prim.translate(x, y, z);
+		prim.addNormals();
+		return new h3d.scene.Mesh(prim);
 	}
 	#end
 

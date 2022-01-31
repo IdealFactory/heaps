@@ -7,7 +7,7 @@ import hxd.Math;
 	Serves as a virtual container that does not display anything but can contain other objects
 	so the various transforms are inherited to its children.
 
-	Private events `Object.onAdd`, `Object.onRemove` and `Object.onHierarchyChanged` can be used
+	Private events `Object.onAdd`, `Object.onRemove` and `Object.onHierarchyMoved` can be used
 	to capture when Object is added/removed from the currently active scene as well as being moved withing the object tree.
 
 	Object exposes a number of properties to control position, scale and rotation of the Object relative to its parent,
@@ -163,7 +163,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		the full glyphs size whereas `getSize` will ignore the pixels under the baseline.
 		@param out An optional bounds instance to fill. Allocates new Bounds instance and returns it if not set.
 	**/
-	public function getSize( ?out : h2d.col.Bounds ) : h2d.col.Bounds {
+	public final function getSize( ?out : h2d.col.Bounds ) : h2d.col.Bounds {
 		if( out == null ) out = new h2d.col.Bounds() else out.empty();
 		syncPos();
 		getBoundsRec(parent, out, true);
@@ -190,6 +190,17 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		m.x = absX;
 		m.y = absY;
 		return m;
+	}
+
+	/**
+		Tells if the object is contained into this object children, recursively.
+	**/
+	public function contains( o : Object ) {
+		while( o != null ) {
+			o = o.parent;
+			if( o == this ) return true;
+		}
+		return false;
 	}
 
 	/**
@@ -477,8 +488,11 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		allocated = false;
 		if( filter != null )
 			filter.unbind(this);
-		for( c in children )
-			c.onRemove();
+		var i = children.length - 1;
+		while( i >= 0 ) {
+			var c = children[i--];
+			if( c != null ) c.onRemove();
+		}
 	}
 
 	/**
@@ -511,7 +525,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 	}
 
 	/**
-		Sets the parent container for this Object and it's children. 
+		Sets the parent container for this Object and it's children.
 		See `Object.contentChanged` for more details.
 	**/
 	@:dox(show)
@@ -747,11 +761,14 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 
 	/**
 		<span class="label">Internal usage</span>
-		Clip a local bounds with our global viewport.
+		Clip the local bounds with our global viewport.
 		Used during filter rendering in order to clip out areas that are off-screen and should not be rendered.
+
+		`h2d.Scene` note: `clipBounds` will always output bounds equivalent to entire window.
+		This is done in order for scene to never clip out cameras as they may render virtually any area of the Scene.
 	**/
 	@:dox(show)
-	function clipBounds( ctx : RenderContext, bounds : h2d.col.Bounds ) {
+	function clipBounds( ctx : RenderContext, bounds : h2d.col.Bounds, scaleX = 1., scaleY = 1. ) {
 		var view = ctx.tmpBounds;
 		var matA, matB, matC, matD, absX, absY;
 		@:privateAccess if( ctx.inFilter != null ) {
@@ -763,19 +780,19 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 			var tmpD = this.matC * f2.x + this.matD * f2.y;
 			var tmpX = this.absX * f1.x + this.absY * f1.y + f1.z;
 			var tmpY = this.absX * f2.x + this.absY * f2.y + f2.z;
-			matA = tmpA * ctx.viewA + tmpB * ctx.viewC;
-			matB = tmpA * ctx.viewB + tmpB * ctx.viewD;
-			matC = tmpC * ctx.viewA + tmpD * ctx.viewC;
-			matD = tmpC * ctx.viewB + tmpD * ctx.viewD;
-			absX = tmpX * ctx.viewA + tmpY * ctx.viewC + ctx.viewX;
-			absY = tmpX * ctx.viewB + tmpY * ctx.viewD + ctx.viewY;
+			matA = (tmpA * ctx.viewA + tmpB * ctx.viewC) / scaleX;
+			matB = (tmpA * ctx.viewB + tmpB * ctx.viewD) / scaleY;
+			matC = (tmpC * ctx.viewA + tmpD * ctx.viewC) / scaleX;
+			matD = (tmpC * ctx.viewB + tmpD * ctx.viewD) / scaleY;
+			absX = (tmpX * ctx.viewA + tmpY * ctx.viewC + ctx.viewX);
+			absY = (tmpX * ctx.viewB + tmpY * ctx.viewD + ctx.viewY);
 		} else {
-			matA = this.matA * ctx.viewA + this.matB * ctx.viewC;
-			matB = this.matA * ctx.viewB + this.matB * ctx.viewD;
-			matC = this.matC * ctx.viewA + this.matD * ctx.viewC;
-			matD = this.matC * ctx.viewB + this.matD * ctx.viewD;
-			absX = this.absX * ctx.viewA + this.absY * ctx.viewC + ctx.viewX;
-			absY = this.absX * ctx.viewB + this.absY * ctx.viewD + ctx.viewY;
+			matA = (this.matA * ctx.viewA + this.matB * ctx.viewC) / scaleX;
+			matB = (this.matA * ctx.viewB + this.matB * ctx.viewD) / scaleY;
+			matC = (this.matC * ctx.viewA + this.matD * ctx.viewC) / scaleX;
+			matD = (this.matC * ctx.viewB + this.matD * ctx.viewD) / scaleY;
+			absX = (this.absX * ctx.viewA + this.absY * ctx.viewC + ctx.viewX);
+			absY = (this.absX * ctx.viewB + this.absY * ctx.viewD + ctx.viewY);
 		}
 
 		// intersect our transformed local view with our viewport in global space
@@ -819,29 +836,46 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		bounds.doIntersect(view);
 	}
 
+	static var tmpPoint = new h2d.col.Point();
 	function drawFilters( ctx : RenderContext ) {
 		if( !ctx.pushFilter(this) ) return;
 
 		var bounds = ctx.tmpBounds;
 		var total = new h2d.col.Bounds();
-		var maxExtent = -1.;
 		filter.sync(ctx, this);
-		if( filter.autoBounds ) {
-			maxExtent = filter.boundsExtend;
+
+		var scaleX, scaleY;
+		if ( filter.useScreenResolution ) {
+			var s = ctx.scene;
+			scaleX = s.viewportScaleX * filter.resolutionScale;
+			scaleY = s.viewportScaleY * filter.resolutionScale;
 		} else {
-			filter.getBounds(this, bounds);
-			total.addBounds(bounds);
-		}
-		if( maxExtent >= 0 ) {
-			getBounds(this, bounds);
-			bounds.xMin -= maxExtent;
-			bounds.yMin -= maxExtent;
-			bounds.xMax += maxExtent;
-			bounds.yMax += maxExtent;
-			total.addBounds(bounds);
+			scaleX = filter.resolutionScale;
+			scaleY = filter.resolutionScale;
 		}
 
-		clipBounds(ctx, total);
+		if( filter.autoBounds ) {
+			var maxExtent = filter.boundsExtend;
+			if (maxExtent >= 0) {
+				getBounds(this, bounds);
+				bounds.xMin = bounds.xMin * scaleX - maxExtent;
+				bounds.yMin = bounds.yMin * scaleY - maxExtent;
+				bounds.xMax = bounds.xMax * scaleX + maxExtent;
+				bounds.yMax = bounds.yMax * scaleY + maxExtent;
+				total.addBounds(bounds);
+			}
+		} else {
+			var scale = tmpPoint;
+			scale.set(scaleX, scaleY);
+			filter.getBounds(this, bounds, scale);
+			total.addBounds(bounds);
+			scaleX = scale.x;
+			scaleY = scale.y;
+		}
+
+		ctx.setFilterScale(scaleX, scaleY);
+
+		clipBounds(ctx, total, scaleX, scaleY);
 
 		var xMin = Math.floor(total.xMin + 1e-10);
 		var yMin = Math.floor(total.yMin + 1e-10);
@@ -865,10 +899,10 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 
 		// 2x3 inverse matrix
 		var invDet = 1 / (matA * matD - matB * matC);
-		var invA = matD * invDet;
-		var invB = -matB * invDet;
-		var invC = -matC * invDet;
-		var invD = matA * invDet;
+		var invA = matD * invDet * scaleX;
+		var invB = -matB * invDet * scaleY;
+		var invC = -matC * invDet * scaleX;
+		var invD = matA * invDet * scaleY;
 		var invX = -(absX * invA + absY * invC);
 		var invY = -(absX * invB + absY * invD);
 
@@ -879,14 +913,18 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 		ctx.flush();
 
 		var finalTile = h2d.Tile.fromTexture(t);
-		finalTile.dx = xMin;
-		finalTile.dy = yMin;
+		finalTile.dx = xMin / scaleX;
+		finalTile.dy = yMin / scaleY;
 
 		var prev = finalTile;
 		finalTile = filter.draw(ctx, finalTile);
-		if( finalTile != prev && finalTile != null ) {
-			finalTile.dx += xMin;
-			finalTile.dy += yMin;
+		if (finalTile != null) {
+			if( finalTile != prev ) {
+				finalTile.dx = (finalTile.dx + xMin) / scaleX;
+				finalTile.dy = (finalTile.dy + yMin) / scaleY;
+			}
+			finalTile.width  = finalTile.width / scaleX;
+			finalTile.height = finalTile.height / scaleY;
 		}
 
 		shader.filterMatrixA.load(oldA);
@@ -1015,7 +1053,7 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 	/**
 		Return the `n`th element among the immediate children list of this object, or `null` if there is no Object at this position.
 	**/
-	public inline function getChildAt( n ) {
+	public function getChildAt( n ) {
 		return children[n];
 	}
 
@@ -1062,17 +1100,17 @@ class Object #if (domkit && !domkit_heaps) implements domkit.Model<h2d.Object> #
 	// ---- additional methods for containers (h2d.Flow)
 
 	/**
-		<span class="label">Advanced usage</span>  
+		<span class="label">Advanced usage</span>
 		Called by the children of a container object if they have `parentContainer` defined in them.
 		Primary use-case is when the child size got changed, requiring content to reevaluate positioning such as `Flow` layouts,
-		but also can be used for other purposes. 
+		but also can be used for other purposes.
 	**/
 	@:dox(show)
 	function contentChanged( s : Object ) {
 	}
 
 	/**
-		<span class="label">Advanced usage</span>  
+		<span class="label">Advanced usage</span>
 		This can be called by a parent container to constraint the size of its children.
 		Negative value mean that constraint is to be disabled.
 

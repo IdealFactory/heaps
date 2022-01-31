@@ -74,10 +74,19 @@ class Engine {
 		window.addResizeEvent(onWindowResize);
 		#if macro
 		driver = new h3d.impl.NullDriver();
+		#elseif (js || hlsdl || usegl)
+		#if (hlsdl && heaps_vulkan)
+		if( hxd.Window.USE_VULKAN )
+			driver = new h3d.impl.VulkanDriver();
+		else
+		#end
+		#if js
+		driver = js.Browser.supported ? new h3d.impl.GlDriver(antiAlias) : new h3d.impl.NullDriver();
+		#else
+		driver = new h3d.impl.GlDriver(antiAlias);
+		#end
 		#elseif flash
 		driver = new h3d.impl.Stage3dDriver(antiAlias);
-		#elseif (js || lime || hlsdl || usegl)
-		driver = new h3d.impl.GlDriver(antiAlias);
 		#elseif hldx
 		driver = new h3d.impl.DirectXDriver();
 		#elseif usesys
@@ -282,13 +291,13 @@ class Engine {
 	public dynamic function onResized() {
 	}
 
-	#if openfl 
+	#if openfl
 	public function offset(x, y) {
 		this.x = x;
 		this.y = y;
 		driver.offset(x, y);
 	}
-	#end 
+	#end
 
 	public function resize(width, height) {
 		// minimum 32x32 size
@@ -327,7 +336,7 @@ class Engine {
 	}
 
 	public function getCurrentTarget() {
-		return targetStack == null ? null : targetStack.t;
+		return targetStack == null ? null : targetStack.t == nullTexture ? targetStack.textures[0] : targetStack.t;
 	}
 
 	public function pushTarget( tex : h3d.mat.Texture, layer = 0, mipLevel = 0 ) {

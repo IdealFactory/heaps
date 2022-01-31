@@ -73,24 +73,11 @@ class Mesh extends Object {
 		return super.getMaterialByName(name);
 	}
 
-	override function getMaterials( ?a : Array<h3d.mat.Material> ) {
+	override function getMaterials( ?a : Array<h3d.mat.Material>, recursive = true ) {
 		if( a == null ) a = [];
 		if( material != null && a.indexOf(material) < 0 ) a.push(material);
-		return super.getMaterials(a);
+		return super.getMaterials(a, recursive);
 	}
-
-	#if (hxbit && !macro && heaps_enable_serialize)
-	override function customSerialize(ctx:hxbit.Serializer) {
-		super.customSerialize(ctx);
-		ctx.addKnownRef(primitive);
-		ctx.addKnownRef(material);
-	}
-	override function customUnserialize(ctx:hxbit.Serializer) {
-		super.customUnserialize(ctx);
-		primitive = ctx.getKnownRef(h3d.prim.Primitive);
-		material = ctx.getKnownRef(h3d.mat.Material);
-	}
-	#end
 
 	override private function onAdd()
 	{

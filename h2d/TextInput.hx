@@ -88,7 +88,8 @@ class TextInput extends Text {
 
 				var pt = new h2d.col.Point();
 				var scene = getScene();
-				scene.startDrag(function(e) {
+				if( scene == null ) return; // was removed
+				scene.startCapture(function(e) {
 					pt.x = e.relX;
 					pt.y = e.relY;
 					globalToLocal(pt);
@@ -102,7 +103,7 @@ class TextInput extends Text {
 					selectionSize = 0;
 					cursorIndex = index;
 					if( e.kind == ERelease || getScene() != scene )
-						scene.stopDrag();
+						scene.stopCapture();
 				});
 			}
 		};
@@ -222,6 +223,30 @@ class TextInput extends Text {
 				selectionSize = 0;
 			}
 			return;
+		case K.C if (K.isDown(K.CTRL)):
+			if( text != "" && selectionRange != null ) {
+				hxd.System.setClipboardText(text.substr(selectionRange.start, selectionRange.length));
+			}
+		case K.X if (K.isDown(K.CTRL)):
+			if( text != "" && selectionRange != null ) {
+				if(hxd.System.setClipboardText(text.substr(selectionRange.start, selectionRange.length))) {
+					if( !canEdit ) return;
+					beforeChange();
+					cutSelection();
+					onChange();
+				}
+			}
+		case K.V if (K.isDown(K.CTRL)):
+			if( !canEdit ) return;
+			var t = hxd.System.getClipboardText();
+			if( t != null && t.length > 0 ) {
+				beforeChange();
+				if( selectionRange != null )
+					cutSelection();
+				text = text.substr(0, cursorIndex) + t + text.substr(cursorIndex);
+				cursorIndex += t.length;
+				onChange();
+			}
 		default:
 			if( e.kind == EKeyDown )
 				return;

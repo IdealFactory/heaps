@@ -44,7 +44,7 @@ typedef Framebuffer = { f : haxe.GLTypes.Framebuffer, r : haxe.GLTypes.Renderbuf
 typedef Query = { q : haxe.GLTypes.Query, kind : QueryKind };
 #elseif hldx
 typedef IndexBuffer = { res : dx.Resource, count : Int, bits : Int };
-typedef VertexBuffer = { res : dx.Resource, count : Int, stride : Int };
+typedef VertexBuffer = { res : dx.Resource, count : Int, stride : Int, uniform : Bool };
 typedef Texture = { res : dx.Resource, view : dx.Driver.ShaderResourceView, rt : Array<dx.Driver.RenderTargetView>, mips : Int };
 typedef DepthBuffer = { res : dx.Resource, view : dx.Driver.DepthStencilView };
 typedef Framebuffer = {};

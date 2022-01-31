@@ -2,7 +2,14 @@ package h2d.domkit;
 import domkit.Property;
 import domkit.CssValue;
 
+typedef FlowBg = { tile : #if macro Bool #else h2d.Tile #end, borderL : Int, borderT : Int, borderR : Int, borderB : Int, ?color : Int }
+
 class CustomParser extends CssValue.ValueParser {
+
+	public function new() {
+		super();
+		defaultColor = -1;
+	}
 
 	function parseScale( value ) {
 		switch( value ) {
@@ -37,6 +44,12 @@ class CustomParser extends CssValue.ValueParser {
 		}
 	}
 
+
+	function transitionColorF( v1 : h3d.Vector, v2 : h3d.Vector, t : Float ) : h3d.Vector {
+		var v = new h3d.Vector();
+		v.lerp(v1,v2,t);
+		return v;
+	}
 
 	function parseColorF( v : CssValue ) : h3d.Vector {
 		var f = new h3d.Vector();
@@ -199,7 +212,19 @@ class CustomParser extends CssValue.ValueParser {
 		}
 	}
 
-	public function parseFlowBackground(value) {
+	function transitionFlowBackground( bg1 : FlowBg, bg2 : FlowBg, v : Float ) : FlowBg {
+		var color = transitionColor(bg1.color, bg2.color, v);
+		return {
+			tile : #if macro true #else h2d.Tile.fromColor(color&0xFFFFFF,(color>>>24)/255) #end,
+			borderL : Std.int(hxd.Math.lerp(bg1.borderL, bg2.borderL, v)),
+			borderR : Std.int(hxd.Math.lerp(bg1.borderR, bg2.borderR, v)),
+			borderT : Std.int(hxd.Math.lerp(bg1.borderT, bg2.borderT, v)),
+			borderB : Std.int(hxd.Math.lerp(bg1.borderB, bg2.borderB, v)),
+			color : color,
+		};
+	}
+
+	public function parseFlowBackground(value) : FlowBg {
 		return switch( value ) {
 		case VIdent("transparent"): null;
 		case VGroup([tile,VInt(w),VInt(h)]):
@@ -209,13 +234,13 @@ class CustomParser extends CssValue.ValueParser {
 		case VGroup([color,alpha]):
 			var c = parseColor(color);
 			var a = parseFloat(alpha);
-			return { tile : #if macro true #else h2d.Tile.fromColor(c,a) #end, borderL : 0, borderT : 0, borderR : 0, borderB : 0 };
+			return { tile : #if macro true #else h2d.Tile.fromColor(c,a) #end, borderL : 0, borderT : 0, borderR : 0, borderB : 0, color : c | (Std.int(hxd.Math.clamp(a)*255)<<24) };
 		case VCall("disc",args) if( args.length == 1 || args.length == 2 ):
 			var c = parseColor(args[0]);
 			var a = args[1] == null ? 1. : parseFloat(args[1]);
 			return { tile : #if macro true #else h2d.Tile.fromTexture(h3d.mat.Texture.genDisc(256,c,a)) #end, borderL : 0, borderT : 0, borderR : 0, borderB : 0 };
 		default:
-			{ tile : parseTile(value), borderL : 0, borderT : 0, borderR : 0, borderB : 0 };
+			{ tile : parseTile(value), borderL : 0, borderT : 0, borderR : 0, borderB : 0, color : try parseColor(value) catch( e : Dynamic ) null };
 		}
 	}
 
@@ -367,7 +392,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 	@:p var offsetY : Int;
 	@:p(none) var minWidth : Null<Int>;
 	@:p(none) var minHeight : Null<Int>;
-	@:p var lineBreak : Bool;
+	@:p var forceLineBreak : Bool;
 
 	static function set_rotation(o:h2d.Object, v:Float) {
 		o.rotation = v * Math.PI / 180;
@@ -485,7 +510,7 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 		if( p != null ) p.minHeight = v;
 	}
 
-	static function set_lineBreak(o:h2d.Object,v) {
+	static function set_forceLineBreak(o:h2d.Object,v) {
 		var p = getFlowProps(o);
 		if( p != null ) p.lineBreak = v;
 	}
@@ -501,12 +526,12 @@ class ObjectComp implements h2d.domkit.Object implements domkit.Component.Compon
 @:uiComp("drawable") @:domkitDecl
 class DrawableComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.Drawable> {
 
-	@:p(colorF) var color : h3d.Vector;
+	@:p(colorF) @:t(colorF) #if domkit_drawable_color var color #else var tint #end : h3d.Vector;
 	@:p(auto) var smooth : Null<Bool>;
 	@:p(colorAdjust) var colorAdjust : Null<h3d.Matrix.ColorAdjust>;
 	@:p var tileWrap : Bool;
 
-	static function set_color( o : h2d.Drawable, v ) {
+	static function #if domkit_drawable_color set_color #else set_tint #end( o : h2d.Drawable, v ) {
 		if(v != null)
 			o.color.load(v);
 		else
@@ -601,10 +626,11 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 	@:p(font) var font : h2d.Font;
 	@:p var letterSpacing = 0;
 	@:p var lineSpacing = 0;
+	@:p var lineBreak : Bool;
 	@:p(none) var maxWidth : Null<Int>;
 	@:p var textAlign : h2d.Text.Align = Left;
 	@:p(textShadow) var textShadow : { dx : Float, dy : Float, color : Int, alpha : Float };
-	@:p(color) var textColor: Int;
+	@:p(color) @:t(color) var #if domkit_drawable_color textColor #else color #end : Null<Int>;
 
 	static function create( parent : h2d.Object ) {
 		return new h2d.Text(hxd.res.DefaultFont.get(),parent);
@@ -617,6 +643,16 @@ class TextComp extends DrawableComp implements domkit.Component.ComponentDecl<h2
 	static function set_textShadow( t : h2d.Text, v ) {
 		t.dropShadow = v;
 	}
+
+	static function set_lineBreak( t : h2d.Text, v ) {
+		t.lineBreak = v;
+	}
+
+	#if !domkit_drawable_color
+	static function set_color( t : h2d.Text, v : Null<Int> ) {
+		t.textColor = v == null ? -1 : v;
+	}
+	#end
 }
 
 @:uiComp("html-text") @:domkitDecl
@@ -656,13 +692,13 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p var maxWidth : Null<Int>;
 	@:p var maxHeight : Null<Int>;
 	@:p var backgroundId : Bool;
-	@:p(flowBackground) var background : { tile : h2d.Tile, borderL : Int, borderT : Int, borderR : Int, borderB : Int };
+	@:p(flowBackground) @:t(flowBackground) var background : FlowBg;
 	@:p(tile) var backgroundTile : h2d.Tile;
 	@:p(tilePos) var backgroundTilePos : { p : Int, y : Int };
 	@:p var backgroundTilePosX : Null<Int>;
 	@:p var backgroundTilePosY : Null<Int>;
-	@:p var backgroundAlpha : Float;
-	@:p var backgroundSmooth : Bool;
+	@:p var backgroundAlpha : Float = 1;
+	@:p(auto) var backgroundSmooth : Null<Bool>;
 	@:p var debug : Bool;
 	@:p var layout : h2d.Flow.FlowLayout;
 	@:p var vertical : Bool;
@@ -687,6 +723,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 	@:p(hAlign) var contentHalign : h2d.Flow.FlowAlign;
 	@:p(cursor) var cursor : hxd.Cursor;
 	@:p var propagate : Bool;
+	@:p var inlineBlock : Bool;
 
 	static function set_minWidth( o : h2d.Flow, v ) {
 		o.minWidth = v;
@@ -767,7 +804,7 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 		bg.alpha = v;
 	}
 
-	static function set_backgroundSmooth( o : h2d.Flow, v ) {
+	static function set_backgroundSmooth( o : h2d.Flow, v : Null<Bool> ) {
 		var bg = @:privateAccess o.background;
 		if(bg == null)
 			return;
@@ -798,6 +835,10 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 
 	static function set_layout( o : h2d.Flow, v ) {
 		o.layout = v;
+	}
+
+	static function set_inlineBlock( o : h2d.Flow, v ) {
+		o.isInline = !v;
 	}
 
 	static function set_vertical( o : h2d.Flow, v ) {
@@ -840,6 +881,16 @@ class FlowComp extends ObjectComp implements domkit.Component.ComponentDecl<h2d.
 
 	static function set_overflow( o : h2d.Flow, v ) {
 		o.overflow = v;
+		if( v == Scroll ) @:privateAccess {
+			if( o.scrollBar.dom == null ) {
+				o.scrollBar.dom = domkit.Properties.create("flow", o.scrollBar);
+				o.scrollBar.dom.addClass("scrollbar");
+			}
+			if( o.scrollBarCursor.dom == null ) {
+				o.scrollBarCursor.dom = domkit.Properties.create("flow", o.scrollBarCursor);
+				o.scrollBarCursor.dom.addClass("cursor");
+			}
+		}
 	}
 
 	static function set_reverse( o : h2d.Flow, v ) {
@@ -855,7 +906,7 @@ class InputComp extends TextComp implements domkit.Component.ComponentDecl<h2d.T
 	@:p(tile) var cursor : h2d.Tile;
 	@:p(tile) var selection : h2d.Tile;
 	@:p var edit : Bool;
-	@:p(color) var backgroundColor : Null<Int>;
+	@:p(color) @:t(color) var backgroundColor : Null<Int>;
 
 	static function create( parent : h2d.Object ) {
 		return new h2d.TextInput(hxd.res.DefaultFont.get(),parent);
