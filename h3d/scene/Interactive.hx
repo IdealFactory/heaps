@@ -2,36 +2,48 @@ package h3d.scene;
 
 class Interactive extends Object implements hxd.SceneEvents.Interactive {
 
-	@:s public var shape : h3d.col.Collider;
+	public var shape : h3d.col.Collider;
 
 	/**
 		If several interactive conflicts, the preciseShape (if defined) can be used to distinguish between the two.
 	**/
-	@:s public var preciseShape : Null<h3d.col.Collider>;
+	public var preciseShape : Null<h3d.col.Collider>;
 
 	/**
 		In case of conflicting shapes, usually the one in front of the camera is prioritized, unless you set an higher priority.
 	**/
-	@:s public var priority : Int;
+	public var priority : Int;
 
 	public var cursor(default,set) : Null<hxd.Cursor>;
 	/**
 		Set the default `cancel` mode (see `hxd.Event`), default to false.
 	**/
-	@:s public var cancelEvents : Bool = false;
+	public var cancelEvents : Bool = false;
 	/**
 		Set the default `propagate` mode (see `hxd.Event`), default to false.
 	**/
-	@:s public var propagateEvents : Bool = false;
-	@:s public var enableRightButton : Bool;
+	public var propagateEvents : Bool = false;
+
+	/**
+		When enabled, interacting with secondary mouse buttons (right button/wheel) will cause `onPush`, `onClick`, `onRelease` and `onReleaseOutside` callbacks.
+		Otherwise those callbacks will only be triggered with primary mouse button (left button).
+	**/
+	public var enableRightButton : Bool = false;
+
+	/**
+	 	When enabled, allows to receive several onClick events the same frame.
+	**/
+	public var allowMultiClick : Bool = false;
 
 	/**
 		Is it required to find the best hit point in a complex mesh or any hit possible point will be enough (default = false, faster).
 	**/
-	@:s public var bestMatch : Bool;
+	public var bestMatch : Bool;
+
 
 	var scene : Scene;
 	var mouseDownButton : Int = -1;
+	var lastClickFrame : Int = -1;
 
 	@:allow(h3d.scene.Scene)
 	var hitPoint = new h3d.Vector();
@@ -74,46 +86,49 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 		if( propagateEvents ) e.propagate = true;
 		if( cancelEvents ) e.cancel = true;
 		switch( e.kind ) {
-		case EMove:
-			onMove(e);
-		case EPush:
-			if( enableRightButton || e.button == 0 ) {
-				mouseDownButton = e.button;
-				onPush(e);
-				if( e.cancel ) mouseDownButton = -1;
-			}
-		case ERelease:
-			if( enableRightButton || e.button == 0 ) {
-				onRelease(e);
-				if( mouseDownButton == e.button )
-					onClick(e);
-			}
-			mouseDownButton = -1;
-		case EReleaseOutside:
-			if( enableRightButton || e.button == 0 ) {
-				onRelease(e);
-				if ( mouseDownButton == e.button )
-					onReleaseOutside(e);
-			}
-			mouseDownButton = -1;
-		case EOver:
-			onOver(e);
-		case EOut:
-			onOut(e);
-		case EWheel:
-			onWheel(e);
-		case EFocusLost:
-			onFocusLost(e);
-		case EFocus:
-			onFocus(e);
-		case EKeyUp:
-			onKeyUp(e);
-		case EKeyDown:
-			onKeyDown(e);
-		case ECheck:
-			onCheck(e);
-		case ETextInput:
-			onTextInput(e);
+			case EMove:
+				onMove(e);
+			case EPush:
+				if( enableRightButton || e.button == 0 ) {
+					mouseDownButton = e.button;
+					onPush(e);
+					if( e.cancel ) mouseDownButton = -1;
+				}
+			case ERelease:
+				if( enableRightButton || e.button == 0 ) {
+					onRelease(e);
+					var frame = hxd.Timer.frameCount;
+					if( mouseDownButton == e.button && (lastClickFrame != frame || allowMultiClick) ) {
+						onClick(e);
+						lastClickFrame = frame;
+					}
+				}
+				mouseDownButton = -1;
+			case EReleaseOutside:
+				if( enableRightButton || e.button == 0 ) {
+					onRelease(e);
+					if ( mouseDownButton == e.button )
+						onReleaseOutside(e);
+				}
+				mouseDownButton = -1;
+			case EOver:
+				onOver(e);
+			case EOut:
+				onOut(e);
+			case EWheel:
+				onWheel(e);
+			case EFocusLost:
+				onFocusLost(e);
+			case EFocus:
+				onFocus(e);
+			case EKeyUp:
+				onKeyUp(e);
+			case EKeyDown:
+				onKeyDown(e);
+			case ECheck:
+				onCheck(e);
+			case ETextInput:
+				onTextInput(e);
 		}
 	}
 
