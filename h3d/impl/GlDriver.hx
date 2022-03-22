@@ -880,9 +880,12 @@ class GlDriver extends Driver {
 	function getChannels( t : Texture ) {
 		return switch( t.internalFmt ) {
 		case GL.RGBA32F, GL.RGBA16F: GL.RGBA;
-		#if (!lime && !js)
-		case GL.SRGB_ALPHA, GL.SRGB8_ALPHA: GL.RGBA;
-		case GL.RGBA8: GL.BGRA;
+		#if (!lime)
+		case GL.SRGB_ALPHA: GL.RGBA;
+		case GL.RGBA8: GL2.BGRA;
+		#else 
+		case GL.SRGB8_ALPHA8: GL.RGBA;
+		case GL.RGBA8: GL.RGBA;
 		#end
 		case GL.SRGB, GL.SRGB8: GL.RGB;
 		case GL.RGBA: GL.RGBA;
@@ -2099,9 +2102,6 @@ class GlDriver extends Driver {
 		GL2.FUNC_MIN,
 		GL2.FUNC_MAX
 		#end
-		//TODO end before merge
-		#if js GL.MIN #else GL.FUNC_MIN #end,
-		#if js GL.MAX #else GL.FUNC_MAX #end,
 	];
 
 	static var CUBE_FACES = [

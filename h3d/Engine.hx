@@ -74,7 +74,7 @@ class Engine {
 		window.addResizeEvent(onWindowResize);
 		#if macro
 		driver = new h3d.impl.NullDriver();
-		#elseif (js || hlsdl || usegl)
+		#elseif (js || lime || hlsdl || usegl)
 		#if (hlsdl && heaps_vulkan)
 		if( hxd.Window.USE_VULKAN )
 			driver = new h3d.impl.VulkanDriver();

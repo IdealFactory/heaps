@@ -51,7 +51,7 @@ class BinaryLoader {
 			#if (haxe_ver >= 4)
 			onProgress(Std.int(js.Syntax.code("{0}.loaded || {0}.position", e)), Std.int(js.Syntax.code("{0}.total || {0}.totalSize", e)));
 			#else
-			onProgress(Std.int(untyped __js__("{0}.loaded || {0}.position", e)), Std.int(untyped __js__("{0}.total || {0}.totalSize", e)));
+			onProgress(Std.int(untyped #if haxe4 js.Syntax.code #else __js__ #end("{0}.loaded || {0}.position", e)), Std.int(untyped #if haxe4 js.Syntax.code #else __js__ #end("{0}.total || {0}.totalSize", e)));
 			#end
 		}
 		xhr.send();

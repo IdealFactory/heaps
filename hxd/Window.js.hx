@@ -29,6 +29,7 @@ class Window {
 	var limeApp : lime.app.Application;
 	var windowWidth = 800;
 	var windowHeight = 600;
+	var timer : haxe.Timer;
 	#end
 
 	#if openfl

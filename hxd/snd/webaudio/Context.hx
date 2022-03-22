@@ -27,7 +27,7 @@ class Context {
 				#if (haxe_ver >= 4)
 				ctx = js.Syntax.code('new window.webkitAudioContext()');
 				#else
-				ctx = untyped __js__('new window.webkitAudioContext()');
+				ctx = untyped #if haxe4 js.Syntax.code #else __js__ #end('new window.webkitAudioContext()');
 				#end
 			} catch( e : Dynamic ) {
 				ctx = null;

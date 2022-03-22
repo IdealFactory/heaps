@@ -30,29 +30,9 @@ class DataURIEntry extends hxd.fs.FileEntry {
 		#end
 	}
 
-	override function skip( nbytes : Int ) {
-		#if flash
-		bytes.position += nbytes;
-		#else
-		readPos += nbytes;
-		#end
-	}
-
-	override function readByte() : Int {
-		#if flash
-		return bytes.readUnsignedByte();
-		#else
-		return bytes.get(readPos++);
-		#end
-	}
-
-	override function read( out : haxe.io.Bytes, pos : Int, size : Int ) : Void {
-		#if flash
-		bytes.readBytes(out.getData(), pos, size);
-		#else
-		out.blit(pos, bytes, readPos, size);
-		readPos += size;
-		#end
+	override function readBytes( out : haxe.io.Bytes, outPos : Int, pos : Int, len : Int ) : Int {
+		out.blit( outPos, bytes, pos, bytes.length < len ? bytes.length : len);
+		return len;
 	}
 
 	override function get_path() : String { return "path-"+name; };
