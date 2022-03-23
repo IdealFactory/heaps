@@ -4,7 +4,7 @@ import hxsl.Ast;
 class GlslOut {
 
 	static var KWD_LIST = [
-		"input", "output", "discard",
+		"input", "output", "discard", #if js "sample", #end
 		"dvec2", "dvec3", "dvec4", "hvec2", "hvec3", "hvec4", "fvec2", "fvec3", "fvec4",
 		"int", "float", "bool", "long", "short", "double", "half", "fixed", "unsigned", "superp",
 		"lowp", "mediump", "highp", "precision", "invariant", "discard",
@@ -287,9 +287,15 @@ class GlslOut {
 			// else
 				return "texelFetch";
 		case TextureSize:
-			decl("vec2 _textureSize(sampler2D sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
-			decl("vec3 _textureSize(sampler2DArray sampler, int lod) { return vec3(textureSize(sampler, lod)); }");
-			decl("vec2 _textureSize(samplerCube sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
+			switch( args[0].t ) {
+			case TSampler2D, TChannel(_):
+				decl("vec2 _textureSize(sampler2D sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
+			case TSamplerCube:
+				decl("vec2 _textureSize(samplerCube sampler, int lod) { return vec2(textureSize(sampler, lod)); }");
+			case TSampler2DArray:
+				decl("vec3 _textureSize(sampler2DArray sampler, int lod) { return vec3(textureSize(sampler, lod)); }");
+			default:
+			}
 			return "_textureSize";
 		case Mod if( rt == TInt && isES ):
 			decl("int _imod( int x, int y ) { return int(mod(float(x),float(y))); }");
@@ -670,13 +676,12 @@ class GlslOut {
 		if( s.funs.length != 1 ) throw "assert";
 		var f = s.funs[0];
 		isVertex = f.kind == Vertex;
-		
+
 		#if (!desktop)
-		if (isVertex) {
+        if (isVertex)
 			decl("precision highp float;");
-		} else {
+		else
 			decl("precision mediump float;");
-		}
 		#end
 
 		initVars(s);
