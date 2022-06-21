@@ -87,6 +87,13 @@ class System {
 		#end
 	}
 
+	public static function getClipboardText() : String {
+		return null;
+	}
+
+	public static function setClipboardText(text:String) : Bool {
+		return false;
+	}
 
 	public static function setNativeCursor( c : Cursor ) : Void {
 	}

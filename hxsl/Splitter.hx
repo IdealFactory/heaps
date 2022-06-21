@@ -55,13 +55,14 @@ class Splitter {
 			var v = inf.v;
 			switch( v.kind ) {
 			case Var, Local:
-				v.kind = fvars.exists(v.id) ? Var : Local;
+				v.kind = (fvars.exists(v.id) || (v.qualifiers!=null && (v.qualifiers.indexOf(Keep)>-1 || v.qualifiers.indexOf(KeepV)>-1))) ? Var : Local;
 			default:
 			}
 			switch( v.kind ) {
 			case Var, Output:
 				// alloc a new var if read or multiple writes
-				if( inf.read > 0 || inf.write > 1 ) {
+				trace("INF: n="+inf.v.name+" r="+inf.read+" w="+inf.write+" Keep/KeepV="+(inf.v.qualifiers!=null && (v.qualifiers.indexOf(Keep)>-1 || v.qualifiers.indexOf(KeepV)>-1)));
+				if( (inf.read > 0 || inf.write > 1) && !(inf.v.qualifiers!=null && (v.qualifiers.indexOf(Keep)>-1 || v.qualifiers.indexOf(KeepV)>-1))) {
 					var nv : TVar = {
 						id : Tools.allocVarId(),
 						name : v.name,
@@ -77,6 +78,10 @@ class Splitter {
 					checkExpr(e);
 					if( nv.kind == Var ) {
 						var old = fvars.get(v.id);
+						trace("Split1VarOutput:"+v.name);
+						if (v.name=="relativePosition") {
+							trace("RelativePosition - read attirbute missing?");
+						}
 						varMap.set(v, nv);
 						fvars.remove(v.id);
 						var np = new VarProps(nv);
@@ -115,6 +120,7 @@ class Splitter {
 				fp.read = 1;
 				todo.push(fp);
 				addExpr(vfun, { e : TBinop(OpAssign, { e : TVar(nv), t : v.type, p : vfun.expr.p }, { e : TVar(v), t : v.type, p : vfun.expr.p } ), t : v.type, p : vfun.expr.p } );
+				// trace("Split2Input:"+v.name);
 				varMap.set(v, nv);
 				inf.local = true;
 			case Var if( inf.write > 0 ):
@@ -126,12 +132,75 @@ class Splitter {
 				};
 				uniqueName(nv);
 				finits.push( { e : TVarDecl(nv, { e : TVar(v), t : v.type, p : ffun.expr.p } ), t:TVoid, p:ffun.expr.p } );
+				// trace("Split3Var:"+v.name);
 				varMap.set(v, nv);
 			default:
 			}
 		}
 		for( v in todo )
 			fvars.set(v.v.id, v);
+
+		for( v in s.vars )
+			if (v.qualifiers!=null) {
+				if (v.name=="albedoSampler" || v.name=="texture") {
+					trace("VAR GOT albedoSampler or texture");
+				}
+				if (v.qualifiers.indexOf(KeepV)>-1) {
+					trace("Splitter-KeepV: v="+v.name);
+					var add = true;
+					for( vv in vvars ) {
+						if (vv.v.name == v.name)
+							add = false;
+					}
+					if (add) {
+						var nv : TVar = {
+							id : v.id,
+							name : v.name,
+							kind : v.kind,
+							type : v.type,
+							qualifiers : [ KeepV ]
+						};
+						// uniqueName(nv);
+						var vp = new VarProps(nv);
+						vp.read = 1;
+						vp.requireInit = false;
+						vvars.set(vp.v.id, vp);
+					}
+				}
+				if (v.qualifiers.indexOf(Keep)>-1) {
+					trace("Splitter-Keep: v="+v.name+" id="+v.id);
+					var add = true;
+					for( fv in fvars ) {
+						if (fv.v.name == v.name)
+							add = false;
+					}
+					if (add) {
+						var vvar = null;
+						for( vv in vvars ) {
+							if (vv.v.name == v.name) {
+								vvar = vv;
+							}
+						}
+						if (vvar == null) {
+							var nv : TVar = {
+								id : v.id,
+								name : v.name,
+								kind : v.kind,
+								type : v.type,
+								qualifiers : [ Keep ]
+							};
+							// uniqueName(nv);
+							var fp = new VarProps(nv);
+							fp.read = 1;
+							fp.requireInit = false;
+							fvars.set(fp.v.id, fp);
+						} else {
+							vvar.v.qualifiers.push( Keep );
+							fvars.set(vvar.v.id, vvar);
+						}
+					}
+				}
+			}
 
 		// final check
 		for( v in vvars )
@@ -142,8 +211,10 @@ class Splitter {
 		// support for double mapping v -> v1 -> v2
 		for( v in varMap.keys() ) {
 			var v2 = varMap.get(varMap.get(v));
-			if( v2 != null )
+			if( v2 != null ) {
+				// trace("Split4:"+v.name);
 				varMap.set(v, v2);
+			}
 		}
 		ffun = {
 			ret : ffun.ret,
@@ -172,13 +243,24 @@ class Splitter {
 				name : "vertex",
 				vars : vvars,
 				funs : [vfun],
+				glvfuncs : s.glvfuncs.slice(0),
+				glffuncs : []
 			},
 			fragment : {
 				name : "fragment",
 				vars : fvars,
 				funs : [ffun],
+				glvfuncs : [],
+				glffuncs : s.glffuncs.slice(0)
 			},
 		};
+	}
+
+	function copyFuncs(funcs:Map<String, TGLSLFunc>) {
+		var newFuncs = new Map<String, TGLSLFunc>();
+		for (f in funcs.keys()) 
+			newFuncs.set(f, funcs[f]);
+		return newFuncs;
 	}
 
 	function addExpr( f : TFunction, e : TExpr ) {
@@ -191,13 +273,17 @@ class Splitter {
 	}
 
 	function checkVar( v : VarProps, vertex : Bool, vvars : Map<Int,VarProps>, p ) {
+		if (v.v.name=="finalColor") {
+			trace("checkVar - finalColor :v="+v+" requireInit="+(v.requireInit));
+		}
 		switch( v.v.kind ) {
 		case Local if( v.requireInit ):
 			throw new Error("Variable " + v.v.name + " is used without being initialized", p);
 		case Var:
 			if( !vertex ) {
 				var i = vvars.get(v.v.id);
-				if( i == null || i.write == 0 ) throw new Error("Varying " + v.v.name + " is not written by vertex shader",p);
+				if( i == null || i.write == 0 && !(v.v.qualifiers != null && v.v.qualifiers.indexOf(KeepV)>-1) ) 
+					throw new Error("Varying " + v.v.name + " is not written by vertex shader",p);
 			}
 		default:
 		}
@@ -206,12 +292,15 @@ class Splitter {
 	function mapVars( e : TExpr ) {
 		return switch( e.e ) {
 		case TVar(v):
+			// trace("MapVars:TVar="+v.name);
 			var v2 = varMap.get(v);
 			v2 == null ? e : { e : TVar(v2), t : e.t, p : e.p };
 		case TVarDecl(v, init):
+			// trace("MapVars:TVarDecl="+v.name);
 			var v2 = varMap.get(v);
 			v2 == null ? e.map(mapVars) : { e : TVarDecl(v2,mapVars(init)), t : e.t, p : e.p };
 		case TFor(v, it, loop):
+			// trace("MapVars:TFor="+v.name);
 			var v2 = varMap.get(v);
 			v2 == null ? e.map(mapVars) : { e : TFor(v2,mapVars(it),mapVars(loop)), t : e.t, p : e.p };
 		default:
@@ -235,6 +324,7 @@ class Splitter {
 					kind : v.kind,
 					type : v.type,
 				};
+				// trace("Split5:"+v.name);
 				varMap.set(v,nv);
 				v.name = oldName;
 				v = nv;
@@ -266,19 +356,26 @@ class Splitter {
 		switch( e.e ) {
 		case TVar(v):
 			var inf = get(v);
-			if( inf.write == 0 ) inf.requireInit = true;
+			if( inf.write == 0 && (v.qualifiers!=null && v.qualifiers.indexOf(Keep)==-1 && v.qualifiers.indexOf(KeepV)==-1)) inf.requireInit = false;
+			// trace("CheckExpr:TVar="+v.name+" inf="+inf);
+			if (v.name=="finalColor") {
+				trace(" - finalColor");
+			}
 			inf.read++;
 		case TBinop(OpAssign, { e : (TVar(v) | TSwiz( { e : TVar(v) }, _)) }, e):
+			// trace("CheckExpr:TBinop="+v.name);
 			var inf = get(v);
 			inf.write++;
 			checkExpr(e);
 		case TBinop(OpAssignOp(_), { e : (TVar(v) | TSwiz( { e : TVar(v) }, _)) }, e):
+			// trace("CheckExpr:TBinop="+v);
 			var inf = get(v);
-			if( inf.write == 0 ) inf.requireInit = true;
+			if( inf.write == 0 && (v.qualifiers!=null && v.qualifiers.indexOf(Keep)==-1 && v.qualifiers.indexOf(KeepV)==-1)) inf.requireInit = false;
 			inf.read++;
 			inf.write++;
 			checkExpr(e);
 		case TVarDecl(v, init):
+			// trace("CheckExpr:TVarDecl="+v.name);
 			var inf = get(v);
 			inf.local = true;
 			if( init != null ) {
@@ -286,6 +383,7 @@ class Splitter {
 				inf.write++;
 			}
 		case TFor(v, it, loop):
+			// trace("CheckExpr:TFor="+v.name);
 			checkExpr(it);
 			var inf = get(v);
 			inf.local = true;

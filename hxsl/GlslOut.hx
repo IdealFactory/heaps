@@ -46,6 +46,8 @@ class GlslOut {
 	var exprValues : Array<String>;
 	var locals : Map<Int,TVar>;
 	var decls : Array<String>;
+	var customfuncs : Array<String>;
+	var sources : Array<String>;
 	var isVertex : Bool;
 	var allNames : Map<String, Int>;
 	var outIndexes : Map<Int, Int>;
@@ -76,7 +78,10 @@ class GlslOut {
 	inline function get_isES() return glES != null;
 	inline function get_isES2() return glES != null && glES <= 2;
 
-	inline function add( v : Dynamic ) {
+	function add( v : Dynamic ) {
+		if (Std.is(v, String) && cast(v, String).indexOf("// Tangent")>-1) {
+			trace("Adding // Tangent: "+v);
+		}
 		buf.add(v);
 	}
 
@@ -91,6 +96,18 @@ class GlslOut {
 			decls.unshift(s);
 		else
 			decls.push(s);
+	}
+
+	function customfunc( s : String ) {
+		for( f in customfuncs )
+			if( f == s ) return;
+		customfuncs.push(s);
+	}
+
+	function addSrc( s : String ) {
+		for( code in sources )
+			if( code == s ) return;
+		sources.push(s);
 	}
 
 	function addType( t : Type ) {
@@ -158,10 +175,12 @@ class GlslOut {
 			throw "assert";
 		case TChannel(n):
 			add("channel" + n);
+		case TCallable, TSource:
 		}
 	}
 
 	function addVar( v : TVar ) {
+		//trace("AddVar:"+v.name);
 		switch( v.type ) {
 		case TArray(t, size):
 			var old = v.type;
@@ -308,9 +327,283 @@ class GlslOut {
 			decl("vec2 screenToUv( vec2 v ) { return v * vec2(0.5,-0.5) + vec2(0.5,0.5); }");
 		case UvToScreen:
 			decl("vec2 uvToScreen( vec2 v ) { return v * vec2(2.,-2.) + vec2(-1., 1.); }");
+
+		// PBR Single Pass
+		case Saturate:
+			saturate();
+		case AbsEps:
+			epsilon();
+			decl("#define absEps(x) abs(x)+Epsilon");
+		case MaxEps:
+			epsilon();
+			decl("#define maxEps(x) max(x, Epsilon)");
+		case SaturateEps:
+			epsilon();
+			decl("#define saturateEps(x) clamp(x, Epsilon, 1.0)");
+/*		case ToLinearSpace:
+			toLinearSpace(args);
+		// case ToLinearSpace3:
+		// 	toLinearSpace3();
+		// case ToLinearSpace4:
+		// 	linearEncodePowerApprox();
+		// 	decl("vec4 toLinearSpace4(vec4 color) {
+		// 		return vec4(pow(color.rgb, vec3(LinearEncodePowerApprox)), color.a);
+		// 	}");
+		case ToGammaSpace:
+			toGammaSpace(args);
+// 		case ToGammaSpace3:
+// 			gammaEncodePowerApprox();
+// 			decl("vec3 toGammaSpace3(vec3 color) {
+// 	return pow(color, vec3(GammaEncodePowerApprox));
+// }");
+// 		case ToGammaSpace4:
+// 			gammaEncodePowerApprox();
+// 			decl("vec4 toGammaSpace4(vec4 color) {
+// 	return vec4(pow(color.rgb, vec3(GammaEncodePowerApprox)), color.a);
+// }");
+		case Square:
+			square(args);
+		case Pow5:
+			customfunc("float pow5(float value) {
+	float sq = value*value;
+	return sq*sq*value;
+}");
+		case GetLuminance:
+			luminanceEncodeApprox();
+			customfunc("float getLuminance(vec3 color) {
+	return clamp(dot(color, LuminanceEncodeApprox), 0., 1.);
+}");
+		case GetRand:
+			customfunc("float getRand(vec2 seed) {
+	return fract(sin(dot(seed.xy, vec2(12.9898, 78.233)))*43758.5453);
+}");
+		case Dither:
+			customfunc("float dither(vec2 seed, float varianceAmount) {
+	float rand = getRand(seed);
+	float dither = mix(-varianceAmount/255.0, varianceAmount/255.0, rand);
+	return dither;
+}");
+		case ToRGBD:
+			rgbdMaxRange();
+			customfunc("vec4 toRGBD(vec3 color) {
+	float maxRGB = maxEps(max(color.r, max(color.g, color.b)));
+	float D = max(rgbdMaxRange/maxRGB, 1.);
+	D = clamp(floor(D)/255.0, 0., 1.);
+	vec3 rgb = color.rgb*D;
+	rgb = toGammaSpace(rgb);
+	return vec4(clamp(rgb, 0., 1.), D);
+}");
+// 		case FromRGBD:
+// 			toLinearSpace(args);
+// 			customfunc("vec3 fromRGBD(vec4 rgbd) {
+// 	rgbd.rgb = toLinearSpace(rgbd.bgr);
+// 	return rgbd.rgb/rgbd.a;
+// }");
+		case ConvertRoughnessToAverageSlope:
+			minimumVariance();
+			square(args);
+			customfunc("float convertRoughnessToAverageSlope(float roughness) {
+	return square(roughness)+MINIMUMVARIANCE;
+}");
+		case FresnelGrazingReflectance:
+			saturate();
+			customfunc("float fresnelGrazingReflectance(float reflectance0) {
+	float reflectance90 = saturate(reflectance0*25.0);
+	return reflectance90;
+}");
+		case GetAARoughnessFactors:
+			saturate();
+			customfunc("vec2 getAARoughnessFactors(vec3 normalVector) {
+	vec3 nDfdx = dFdx(normalVector.xyz);
+	vec3 nDfdy = dFdy(normalVector.xyz);
+	float slopeSquare = max(dot(nDfdx, nDfdx), dot(nDfdy, nDfdy));
+	float geometricRoughnessFactor = pow(saturate(slopeSquare), 0.333);
+	float geometricAlphaGFactor = sqrt(slopeSquare);
+	geometricAlphaGFactor *= 0.75;
+	return vec2(geometricRoughnessFactor, geometricAlphaGFactor);
+}");
+
+		case ApplyImageProcessing:
+			toGammaSpace(args);
+			saturate();
+			customfunc("vec4 applyImageProcessing(vec4 result) {
+	result.rgb = toGammaSpace(result.rgb);
+	result.rgb = saturate(result.rgb);
+	return result;
+}");
+
+		case ComputeEnvironmentIrradiance:
+			customfunc("vec3 computeEnvironmentIrradiance(vec3 normal) {
+	return vSphericalL00
+	+ vSphericalL1_1*(normal.y)
+	+ vSphericalL10*(normal.z)
+	+ vSphericalL11*(normal.x)
+	+ vSphericalL2_2*(normal.y*normal.x)
+	+ vSphericalL2_1*(normal.y*normal.z)
+	+ vSphericalL20*((3.0*normal.z*normal.z)-1.0)
+	+ vSphericalL21*(normal.z*normal.x)
+	+ vSphericalL22*(normal.x*normal.x-(normal.y*normal.y));
+}");
+
+		case GetEnergyConservationFactor:
+			customfunc("vec3 getEnergyConservationFactor(const vec3 specularEnvironmentR0, const vec3 environmentBrdf) {
+	return 1.0+specularEnvironmentR0*(1.0/environmentBrdf.y-1.0);
+}");
+
+		case GetBRDFLookup:
+			#if js
+			customfunc("vec3 getBRDFLookup(float NdotV, float perceptualRoughness, sampler2D brdf) {
+	vec2 UV = vec2(NdotV, perceptualRoughness);
+	vec4 brdfLookup = texture(brdf, UV);
+	return brdfLookup.rgb;
+}");
+			#else
+			customfunc("vec3 getBRDFLookup(float NdotV, float perceptualRoughness, sampler2D brdf) {
+				vec2 UV = vec2(NdotV, perceptualRoughness);
+				vec4 brdfLookup = texture2D(brdf, UV);
+				return brdfLookup.rgb;
+			}");
+			#end
+		case GetReflectanceFromBRDFLookup:
+			switch( args.length ) {
+				case 2: customfunc("vec3 getReflectanceFromBRDFLookup(const vec3 specularEnvironmentR0, const vec3 environmentBrdf) {
+	vec3 reflectance = mix(environmentBrdf.xxx, environmentBrdf.yyy, specularEnvironmentR0);
+	return reflectance;
+}");
+				case 3: customfunc("vec3 getReflectanceFromBRDFLookup(const vec3 specularEnvironmentR0, const vec3 specularEnvironmentR90, const vec3 environmentBrdf) {
+	vec3 reflectance = (specularEnvironmentR90-specularEnvironmentR0)*environmentBrdf.x+specularEnvironmentR0*environmentBrdf.y;
+	return reflectance;
+}");
+			}
+
+		case GetLodFromAlphaG:
+			customfunc("float getLodFromAlphaG(float cubeMapDimensionPixels, float microsurfaceAverageSlope) {
+	float microsurfaceAverageSlopeTexels = cubeMapDimensionPixels*microsurfaceAverageSlope;
+	float lod = log2(microsurfaceAverageSlopeTexels);
+	return lod;
+}");
+
+		case EnvironmentRadianceOcclusion:
+			customfunc("float environmentRadianceOcclusion(float ambientOcclusion, float NdotVUnclamped) {
+	float temp = NdotVUnclamped+ambientOcclusion;
+	return saturate(square(temp)-1.0+ambientOcclusion);
+}");
+	
+		case EnvironmentHorizonOcclusion:
+			customfunc("float environmentHorizonOcclusion(vec3 view, vec3 normal, vec3 geometricNormal) {
+	vec3 reflection = reflect(view, normal);
+	float temp = saturate(1.0+1.1*dot(reflection, geometricNormal));
+	return square(temp);
+}");
+	
+		// case ComputeCubicCoords:
+		// 	computeCubicCoords();
+
+// 		case ComputeReflectionCoords:
+// 			computeCubicCoords();
+// 			customfunc("vec3 computeReflectionCoords(vec4 worldPos, vec3 worldNormal) {
+// 	return computeCubicCoords(worldPos, worldNormal, vEyePosition.xyz, reflectionMatrix);
+// }");
+
+		// case GetSheenReflectanceFromBRDFLookup:
+		// 	customfunc("");
+
+		case Source:
+			customfunc("vec3 DO_NOTHING(vec4 worldPos, vec3 worldNormal) {
+				return computeCubicCoords(worldPos, worldNormal, vEyePosition.xyz, reflectionMatrix);
+			}");
+			trace("Wibble:");
+*/
 		default:
 		}
 		return GLOBALS.get(g);
+	}
+
+	function saturate() {
+		decl("#define saturate(x) clamp(x, 0.0, 1.0)");
+	}
+
+	function epsilon() {
+		decl("const float Epsilon = 0.0000001;");
+	}
+
+	function linearEncodePowerApprox() {
+		decl("const float LinearEncodePowerApprox = 2.2;");
+	}
+
+	function gammaEncodePowerApprox() {
+		linearEncodePowerApprox();
+		decl("const float GammaEncodePowerApprox = 1.0/LinearEncodePowerApprox;");
+	}
+
+	function luminanceEncodeApprox() {
+		decl("const vec3 LuminanceEncodeApprox = vec3(0.2126, 0.7152, 0.0722);");
+	}
+
+	function rgbdMaxRange() {
+		decl("const float rgbdMaxRange = 255.0;");
+	}
+
+	function toLinearSpace(args : Array<TExpr>) {
+		linearEncodePowerApprox();
+		switch( args[0].t ) {
+			case TFloat: customfunc("float toLinearSpace(float color) { 
+	return pow(color, LinearEncodePowerApprox);
+}");
+			// case vec2: decl("vec2 toLinearSpace(float color) { return pow(color, LinearEncodePowerApprox); }");
+			case vec3: customfunc("vec3 toLinearSpace(vec3 color) {
+	return pow(color, vec3(LinearEncodePowerApprox));
+}");
+			case vec4: customfunc("vec4 toLinearSpace(vec4 color) {
+	return vec4(pow(color.rgb, vec3(LinearEncodePowerApprox)), color.a);
+}");
+		}
+	}
+
+	function toGammaSpace(args : Array<TExpr>) {
+		gammaEncodePowerApprox();
+		switch( args[0].t ) {
+			case TFloat: customfunc("float toGammaSpace(float color) {
+return pow(color, GammaEncodePowerApprox);
+}");
+			// case vec2: 
+			case vec3: customfunc("vec3 toGammaSpace(vec3 color) {
+	return pow(color, vec3(GammaEncodePowerApprox));
+}");
+			case vec4: customfunc("vec4 toGammaSpace(vec4 color) {
+	return vec4(pow(color.rgb, vec3(GammaEncodePowerApprox)), color.a);
+}");
+		}
+	}
+
+	function minimumVariance() {
+		decl("#define MINIMUMVARIANCE 0.0005");
+	}
+
+	function reciprocalPi() {
+		decl("#define RECIPROCAL_PI 0.31830988618");
+	}
+
+	function reciprocalPi2() {
+		decl("#define RECIPROCAL_PI2 0.15915494");
+	}
+
+	function computeCubicCoords() {
+		customfunc("vec3 computeCubicCoords(vec4 worldPos, vec3 worldNormal, vec3 eyePosition, mat4 reflectionMatrix) {
+	vec3 viewDir = normalize(worldPos.xyz-eyePosition);
+	vec3 coords = reflect(viewDir, worldNormal);
+	coords = vec3(reflectionMatrix*vec4(coords, 0));
+	return coords;
+}");
+	}
+
+	function square(args) {
+		switch( args[0].t ) {
+			case TFloat: customfunc("float square(float value) { return value*value; }");
+			case vec2: customfunc("vec2 square(vec2 value) { return value*value; }");
+			case vec3: customfunc("vec3 square(vec3 value) { return value*value; }");
+			case vec4: customfunc("vec4 square(vec4 value) { return value*value; }");
+		}
 	}
 
 	function addExpr( e : TExpr, tabs : String ) {
@@ -414,10 +707,10 @@ class GlslOut {
 			} else {
 				add("/*var*/");
 			}
-		case TCall( { e : TGlobal(Saturate) }, [e]):
-			add("clamp(");
-			addValue(e, tabs);
-			add(", 0., 1.)");
+		// case TCall( { e : TGlobal(Saturate) }, [e]):
+		// 	add("clamp(");
+		// 	addValue(e, tabs);
+		// 	add(", 0., 1.)");
 		case TCall({ e : TGlobal(g = Texel) }, args):
 			add(getFunName(g,args,e.t));
 			add("(");
@@ -566,6 +859,13 @@ class GlslOut {
 			add(")");
 		case TMeta(_, _, e):
 			addExpr(e, tabs);
+		case TDeclSource(s):
+			add(s);
+		case TGLSLSource(s):
+			if (s.indexOf("Tangent")>-1) {
+				trace("FOUND: Tangent:"+s);
+			}
+			add(s);
 		}
 	}
 
@@ -610,12 +910,17 @@ class GlslOut {
 			return isBlock(loop);
 		case TBlock(_):
 			return true;
+		case TDeclSource(_):
+			return true;
+		case TGLSLSource(_):
+			return true;
 		default:
 			return false;
 		}
 	}
 
 	function initVar( v : TVar ){
+		// trace("InitVar: v="+v);
 		switch( v.kind ) {
 		case Param, Global:
 			if( v.type.match(TBuffer(_)) )
@@ -670,6 +975,8 @@ class GlslOut {
 	public function run( s : ShaderData ) {
 		locals = new Map();
 		decls = [];
+		customfuncs = [];
+		sources = [];
 		buf = new StringBuf();
 		exprValues = [];
 
@@ -720,6 +1027,31 @@ class GlslOut {
 		}
 		add("\n");
 
+		for (f in customfuncs) {
+			add( f );
+			add("\n\n");
+		}
+
+		if( isVertex ) {
+			for (vf in s.glvfuncs) {
+				if (vf.src.indexOf("#extension")!=-1)
+					decl( StringTools.trim(vf.src) )
+				else {
+					add( StringTools.trim(vf.src) );
+					add("\n\n");
+				}
+			}
+		} else {
+			for (ff in s.glffuncs) {
+				if (ff.src.indexOf("#extension")!=-1)
+					decl( StringTools.trim(ff.src) )
+				else {
+					add( StringTools.trim(ff.src) );
+					add("\n\n");
+				}
+			}
+		}
+
 		for( e in exprValues ) {
 			add(e);
 			add("\n\n");
@@ -738,6 +1070,9 @@ class GlslOut {
 
 		decls.push(buf.toString());
 		buf = null;
+		#if (shader_debug_dump || debug_gltf)
+		trace("GLSL: version="+version+" glES="+glES+"\n"+decls.join("\n"));
+		#end
 		return decls.join("\n");
 	}
 

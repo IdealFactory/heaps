@@ -7,29 +7,30 @@ class Clearcoat extends h3d.shader.pbrsinglepass.PBRSinglePassLib  {
         @param var vClearCoatParams : Vec2;
         @param var vClearCoatRefractionParams : Vec4;
 
-        var normalW:Vec3;
-        var geometricNormalW:Vec3;
-        var viewDirectionW:Vec3;
-        var specularEnvironmentR0:Vec3;
-        var specularEnvironmentR90:Vec3;
-        var environmentBrdf:Vec3;
-        var reflectionVector:Vec3;
-        var ambientMonochrome:Float;
+        // var normalW:Vec3;
+        // var geometricNormalW:Vec3;
+        // var viewDirectionW:Vec3;
+        // var specularEnvironmentR0:Vec3;
+        // var specularEnvironmentR90:Vec3;
+        // var environmentBrdf:Vec3;
+        // var reflectionVector:Vec3;
+        // var ambientMonochrome:Float;
 
-        var lightingIntensity:Vec4;
+    //    @keep var lightingIntensity:Vec4;
 
-        var seo:Float;
-        var eho:Float;
-        var specularEnvironmentReflectance:Vec3;
-        var finalIrradiance:Vec3;
-        var energyConservationFactor:Vec3;
+    //    @keep var seo:Float;
+    //    @keep var eho:Float;
+    //    @keep var specularEnvironmentReflectance:Vec3;
+    //    @keep var finalIrradiance:Vec3;
+    //    @keep var energyConservationFactor:Vec3;
 
-        var ccOutConservationFactor:Float;
-        var ccOutFinalClearCoatRadianceScaled:Vec3;
-        var ccOutEnergyConsFCC:Vec3;
+    //    @keep var ccOutConservationFactor:Float;
+    //    @keep var ccOutFinalClearCoatRadianceScaled:Vec3;
+    //    @keep var ccOutEnergyConsFCC:Vec3;
 
         function fragment() {
 
+            /*
             // Function clearcoatBlock
             var clearCoatIntensity = vClearCoatParams.x;
             var clearCoatRoughness = vClearCoatParams.y;
@@ -42,7 +43,7 @@ class Clearcoat extends h3d.shader.pbrsinglepass.PBRSinglePassLib  {
             var ccOutClearCoatAARoughnessFactors:Vec2 = getAARoughnessFactors(clearCoatNormalW.xyz);
             var clearCoatNdotVUnclamped:Float = dot(clearCoatNormalW, viewDirectionW);
             var clearCoatNdotV:Float = absEps(clearCoatNdotVUnclamped);
-            var environmentClearCoatBrdf:Vec3 = getBRDFLookup(clearCoatNdotV, clearCoatRoughness);
+            var environmentClearCoatBrdf:Vec3 = getBRDFLookup(clearCoatNdotV, clearCoatRoughness, environmentBrdfSampler);
             var clearCoatAlphaG:Float = convertRoughnessToAverageSlope(clearCoatRoughness);
             clearCoatAlphaG += ccOutClearCoatAARoughnessFactors.y;
             var environmentClearCoatRadiance:Vec4 = vec4(0., 0., 0., 0.);
@@ -60,7 +61,7 @@ class Clearcoat extends h3d.shader.pbrsinglepass.PBRSinglePassLib  {
             environmentClearCoatRadiance.rgb *= vec3(vReflectionInfos.x);
             environmentClearCoatRadiance.rgb *= vReflectionColor.rgb;
  
-            var clearCoatEnvironmentReflectance:Vec3 = getReflectanceFromBRDFLookup2(vec3(vClearCoatRefractionParams.x), environmentClearCoatBrdf);
+            var clearCoatEnvironmentReflectance:Vec3 = getReflectanceFromBRDFLookup(vec3(vClearCoatRefractionParams.x), environmentClearCoatBrdf);
             var clearCoatSeo:Float = environmentRadianceOcclusion(ambientMonochrome, clearCoatNdotVUnclamped);
             clearCoatEnvironmentReflectance *= vec3(clearCoatSeo);
             var clearCoatEho:Float = environmentHorizonOcclusion(-viewDirectionW, clearCoatNormalW, geometricNormalW);
@@ -81,6 +82,23 @@ class Clearcoat extends h3d.shader.pbrsinglepass.PBRSinglePassLib  {
             specularEnvironmentReflectance *= vec3(ccOutConservationFactor);
 
             energyConservationFactor = getEnergyConservationFactor(ccOutSpecularEnvironmentR0, environmentBrdf);
+            */
+            glslsource("
+    // Clearcoat fragment
+    clearcoatOutParams clearcoatOut;
+    clearcoatOut.specularEnvironmentR0 = specularEnvironmentR0;
+    vec3 specularEnvironmentReflectance = getReflectanceFromBRDFLookup(clearcoatOut.specularEnvironmentR0, specularEnvironmentR90, environmentBrdf);
+    specularEnvironmentReflectance *= seo;
+    specularEnvironmentReflectance *= eho;
+    subSurfaceOutParams subSurfaceOut;
+    subSurfaceOut.specularEnvironmentReflectance = specularEnvironmentReflectance;
+
+    vec3 diffuseBase = vec3(0., 0., 0.);
+    preLightingInfo preInfo;
+    lightingInfo info;
+    float shadow = 1.;
+    vec3 energyConservationFactor = getEnergyConservationFactor(clearcoatOut.specularEnvironmentR0, environmentBrdf);
+");
         }
     }
     

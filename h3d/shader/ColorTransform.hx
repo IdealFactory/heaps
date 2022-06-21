@@ -14,7 +14,7 @@ class ColorTransform extends hxsl.Shader {
 
 		function fragment() {
 			// old = (old value * Multiplier) + Offset
-			output.color = (pixelColor * colorMultiplier) + (colorOffset / 255.0);
+			// output.color = (pixelColor * colorMultiplier) + (colorOffset / 255.0);
 		}
 
 	};

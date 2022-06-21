@@ -16,10 +16,12 @@ class AmbientLight extends hxsl.Shader {
 		@const var additive : Bool;
 
 		function __init__() {
+			glslsource("// AmbientLight __init__");
 			lightColor = additive ? global.ambientLight : vec3(0.);
 		}
 
 		function __init__fragment() {
+			glslsource("// AmbientLight __init__fragment");
 			lightPixelColor = additive ? global.ambientLight : vec3(0.);
 		}
 
@@ -28,10 +30,12 @@ class AmbientLight extends hxsl.Shader {
 		}
 
 		function vertex() {
+			glslsource("// AmbientLight vertex");
 			if( !global.perPixelLighting ) pixelColor.rgb *= calcLight(lightColor);
 		}
 
 		function fragment() {
+			glslsource("// AmbientLight fragment");
 			if( global.perPixelLighting ) pixelColor.rgb *= calcLight(lightPixelColor);
 		}
 

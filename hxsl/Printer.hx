@@ -22,6 +22,17 @@ class Printer {
 		}
 		if( s.vars.length > 0 )
 			add("\n");
+		if (s.funs[0].kind==Vertex) {
+			for( s in s.glvfuncs ) {
+				add(s);
+				add("\n\n");
+			}
+		} else {
+			for( s in s.glffuncs ) {
+				add(s);
+				add("\n\n");
+			}
+		}
 		for( f in s.funs ) {
 			addFun(f);
 			add("\n\n");
@@ -53,6 +64,8 @@ class Printer {
 				add("@" + (switch( q ) {
 				case Const(max): "const" + (max == null ? "" : "("+max+")");
 				case Private: "private";
+				case Keep: "keep";
+				case KeepV: "keepv";
 				case Nullable: "nullable";
 				case PerObject: "perObject";
 				case Name(n): "name('" + n + "')";
@@ -298,6 +311,10 @@ class Printer {
 			}
 			add(" ");
 			addExpr(e, tabs);
+		case TDeclSource(src):
+			add(src);
+		case TGLSLSource(src):
+			add(src);
 		}
 
 	}
@@ -347,7 +364,8 @@ class Printer {
 			var regVars = [];
 			function regVar( v : TVar, reg ) {
 				if( reg ) {
-					if( vars.exists(v.id) ) throw "Duplicate var " + v.id;
+					if( vars.exists(v.id) )
+						throw "Duplicate var " + v.id;
 					vars.set(v.id, v);
 					regVars.push(v);
 				}
@@ -363,7 +381,8 @@ class Printer {
 			function checkExpr( e : TExpr ) {
 				switch( e.e ) {
 				case TVar(v):
-					if( !vars.exists(v.id) ) throw "Unbound var " + v.name+"@" + v.id;
+					if( !vars.exists(v.id) )
+						throw "Unbound var " + v.name+"@" + v.id;
 				case TVarDecl(v, init):
 					if( init != null ) checkExpr(init);
 					regVar(v, true);

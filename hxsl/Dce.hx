@@ -44,13 +44,16 @@ class Dce {
 			var i = get(v);
 			if( v.kind == Input )
 				inputs.push(i);
-			if( v.kind == Output )
+			trace("VertVars:i="+i+" v="+v.name);
+			if( v.kind == Output || (v.qualifiers!=null && v.qualifiers.indexOf(KeepV)>-1) )
 				i.keep = true;
 		}
 		for( v in fragment.vars ) {
 			var i = get(v);
-			if( v.kind == Output )
+			trace("FragVars:i="+i+" v="+v.name);
+			if( v.kind == Output || (v.qualifiers!=null && v.qualifiers.indexOf(Keep)>-1)) {
 				i.keep = true;
+			}
 		}
 
 		// collect dependencies
@@ -94,6 +97,8 @@ class Dce {
 		for( v in used ) {
 			if( v.used ) continue;
 			if( v.v.kind == VarKind.Input) continue;
+			if( v.v.qualifiers!=null && (v.v.qualifiers.indexOf(Keep)>-1 || v.v.qualifiers.indexOf(KeepV)>-1)) continue;
+			trace("DCE-Removing: v="+v.v.name);
 			vertex.vars.remove(v.v);
 			fragment.vars.remove(v.v);
 		}
@@ -115,7 +120,7 @@ class Dce {
 
 	function markRec( v : VarDeps ) {
 		if( v.used ) return;
-		debug(v.v.name+" is used");
+		debug(v.v.name+" is used id="+v.v.id);
 		v.used = true;
 		for( d in v.deps )
 			markRec(d);
@@ -141,44 +146,58 @@ class Dce {
 	function check( e : TExpr, writeTo : Array<VarDeps>, isAffected : Array<VarDeps> ) : Void {
 		switch( e.e ) {
 		case TVar(v):
+			// trace("TVar: writeTo: v="+v);
 			link(v, writeTo);
 		case TBinop(OpAssign | OpAssignOp(_), { e : (TVar(v) | TSwiz( { e : TVar(v) }, _)) }, e):
 			var v = get(v);
+			// trace("TBinop: writeTo: v="+v);
 			writeTo.push(v);
 			check(e, writeTo, isAffected);
 			writeTo.pop();
-			if( isAffected.indexOf(v) < 0 )
+			if( isAffected.indexOf(v) < 0 ) {
+				// trace(" - writeTo.isAffected: v="+v);
 				isAffected.push(v);
+			}
 		case TBlock(el):
 			var noWrite = [];
 			for( i in 0...el.length )
 				check(el[i],i < el.length - 1 ? noWrite : writeTo, isAffected);
 		case TVarDecl(v, init) if( init != null ):
+			// trace("DCE: TVarDecl: writeTo: v="+v);
 			writeTo.push(get(v));
 			check(init, writeTo, isAffected);
 			writeTo.pop();
 		case TIf(e, eif, eelse):
+			// trace("DCE: TIf:");
 			var affect = [];
 			check(eif, writeTo, affect);
 			if( eelse != null ) check(eelse, writeTo, affect);
 			var len = affect.length;
 			for( v in writeTo )
-				if( affect.indexOf(v) < 0 )
+				if( affect.indexOf(v) < 0 ) {
+					// trace(" - TIf.affect.push: v="+v);
 					affect.push(v);
+				}
 			check(e, affect, isAffected);
 			for( i in 0...len ) {
 				var v = affect[i];
-				if( isAffected.indexOf(v) < 0 )
+				if( isAffected.indexOf(v) < 0 ) {
+					// trace(" - TIf.isAffected.push: v="+v);
 					isAffected.push(v);
+				}
 			}
 		case TFor(v, it, loop):
+			// trace("DCE: TFor: loop: v="+v);
 			var affect = [];
 			check(loop, writeTo, affect);
 			check(it, affect, isAffected);
 			for( v in affect )
-				if( isAffected.indexOf(v) < 0 )
+				if( isAffected.indexOf(v) < 0 ) {
+					// trace(" - TFor.isAffected.push: v="+v);
 					isAffected.push(v);
+				}
 		case TCall({ e : TGlobal(ChannelRead) }, [{ e : TVar(c) }, uv, { e : TConst(CInt(cid)) }]):
+			// trace("DCE: TCall-1: c="+c);
 			check(uv, writeTo, isAffected);
 			if( channelVars[cid] == null ) {
 				channelVars[cid] = c;
@@ -187,6 +206,7 @@ class Dce {
 				link(channelVars[cid], writeTo);
 			}
 		case TCall({ e : TGlobal(ChannelReadLod) }, [{ e : TVar(c) }, uv, lod, { e : TConst(CInt(cid)) }]):
+			// trace("DCE: TCall-2: c="+c);
 			check(uv, writeTo, isAffected);
 			check(lod, writeTo, isAffected);
 			if( channelVars[cid] == null ) {
@@ -196,6 +216,7 @@ class Dce {
 				link(channelVars[cid], writeTo);
 			}
 		default:
+			// trace("DCE: Default: e="+e);
 			e.iter(check.bind(_, writeTo, isAffected));
 		}
 	}

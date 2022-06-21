@@ -4,27 +4,47 @@ class EmissiveMap extends PBRSinglePassLib {
 
 	static var SRC = {
 
-        @param var emissiveSampler : Sampler2D;
-        @param var vEmissiveInfos : Vec2;
-        @param var vEmissiveColor : Vec3; 
+        @keep @param var emissiveSampler : Sampler2D;
+        @param var uEmissiveInfos : Vec2;
+        @param var uEmissiveColor : Vec3; 
         
-        var uvOffset:Vec2;
-        var finalEmissive:Vec3;
+        @keep var finalEmissive:Vec3;
         var lightingIntensity:Vec4;
 
+        @keep var vEmissiveInfos : Vec2;
+        @keep var vEmissiveColor : Vec3; 
+
+        function __init__fragment() {
+            glslsource("// EmmissiveMap __init__fragment");
+
+            vEmissiveInfos = uEmissiveInfos;
+            vEmissiveColor = uEmissiveColor;
+        }
+
+        fragfunction("emissiveDefine",
+"#define vEmissiveUV vMainUV1");
+
         function fragment() {
-            finalEmissive = vEmissiveColor;
-            finalEmissive *= lightingIntensity.y;
-            var emissiveColorTex = emissiveSampler.get(vMainUV1 + uvOffset).rgb; //vec3 // vEmissiveUV -> vMainUV1
-            finalEmissive *= toLinearSpace_V3(emissiveColorTex.rgb);
-            finalEmissive *= vEmissiveInfos.y;
+            glslsource("
+    // EmmissiveMap fragment
+    finalEmissive = vEmissiveColor;
+    vec3 emissiveColorTex = texture(emissiveSampler, vEmissiveUV+uvOffset).rgb;
+    finalEmissive *= toLinearSpace(emissiveColorTex.rgb);
+    finalEmissive *= vEmissiveInfos.y;
+");
+
+            // finalEmissive = vEmissiveColor;
+            // finalEmissive *= lightingIntensity.y;
+            // var emissiveColorTex = emissiveSampler.get(vMainUV1 + uvOffset).rgb; //vec3 // vEmissiveUV -> vMainUV1
+            // finalEmissive *= toLinearSpace(emissiveColorTex.rgb);
+            // finalEmissive *= vEmissiveInfos.y;
           }
     }
     
     public function new() {
         super(); 
 
-        this.vEmissiveInfos.set( 0, 1 );
-        this.vEmissiveColor.set( 1, 1, 1 );
+        this.uEmissiveInfos.set( 0, 1 );
+        this.uEmissiveColor.set( 1, 1, 1 );
     }
 }

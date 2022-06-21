@@ -69,7 +69,16 @@ class Clone {
 			name : s.name,
 			vars : [for( v in s.vars ) tvar(v)],
 			funs : [for( f in s.funs ) tfun(f)],
+			glvfuncs : s.glvfuncs.slice(0),
+			glffuncs : s.glffuncs.slice(0)
 		};
+	}
+
+	function copyFuncs(funcs:Map<String, TGLSLFunc>) {
+		var newFuncs = new Map<String, TGLSLFunc>();
+		for (f in funcs.keys()) 
+			newFuncs.set(f, funcs[f]);
+		return newFuncs;
 	}
 
 	public static function shaderData( s : ShaderData ) {

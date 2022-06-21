@@ -27,10 +27,12 @@ class DirLight extends hxsl.Shader {
 		}
 
 		function vertex() {
+			glslsource("// DirLight vertex");
 			lightColor.rgb += calcLighting();
 		}
 
 		function fragment() {
+			glslsource("// DirLight fragment");
 			lightPixelColor.rgb += calcLighting();
 		}
 

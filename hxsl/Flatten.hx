@@ -25,6 +25,7 @@ class Flatten {
 	var globals : Array<TVar>;
 	var params : Array<TVar>;
 	var outVars : Array<TVar>;
+	var keptTextures : Array<TVar>;
 	var varMap : Map<TVar,Alloc>;
 	var econsts : TExpr;
 	public var consts : Array<Float>;
@@ -37,6 +38,7 @@ class Flatten {
 		globals = [];
 		params = [];
 		outVars = [];
+		keptTextures = [];
 		if( constsToGlobal ) {
 			consts = [];
 			var p = s.funs[0].expr.p;
@@ -55,6 +57,8 @@ class Flatten {
 				name : s.name,
 				vars : s.vars.copy(),
 				funs : [for( f in s.funs ) mapFun(f, mapConsts)],
+				glvfuncs : s.glvfuncs.slice(0),
+				glffuncs : s.glffuncs.slice(0)
 			};
 			for( v in s.vars )
 				switch( v.type ) {
@@ -78,16 +82,20 @@ class Flatten {
 		}
 		pack(prefix + "Globals", Global, globals, VFloat);
 		pack(prefix + "Params", Param, params, VFloat);
-		var allVars = globals.concat(params);
+		var allVars = globals.concat(params);//.concat(keptTextures);
 		var textures = packTextures(prefix + "Textures", allVars, TSampler2D)
 			.concat(packTextures(prefix+"TexturesCube", allVars, TSamplerCube))
 			.concat(packTextures(prefix+"TexturesArray", allVars, TSampler2DArray));
+		// packKeptVars( s.vars );
+		packKeptTextures( allVars );
 		packBuffers(allVars);
 		var funs = [for( f in s.funs ) mapFun(f, mapExpr)];
 		return {
 			name : s.name,
 			vars : outVars,
 			funs : funs,
+			glvfuncs : s.glvfuncs.slice(0),
+			glffuncs : s.glffuncs.slice(0)
 		};
 	}
 
@@ -132,6 +140,13 @@ class Flatten {
 			e.map(mapExpr);
 		};
 		return optimize(e);
+	}
+
+	function copyFuncs(funcs:Map<String, TGLSLFunc>) {
+		var newFuncs = new Map<String, TGLSLFunc>();
+		for (f in funcs.keys()) 
+			newFuncs.set(f, funcs[f]);
+		return newFuncs;
 	}
 
 	function mapConsts( e : TExpr ) : TExpr {
@@ -363,7 +378,11 @@ class Flatten {
 		};
 		var pos = 0;
 		var samplers = [];
+		// var keptSampler = false;
 		for( v in vars ) {
+			if (v.name.indexOf("Sampler")>-1) {
+				trace("Packtextures: Alloc: v="+name+" g="+g.name+" g.id="+g.id);
+			}
 			var count = 1;
 			if( v.type != t ) {
 				switch( v.type ) {
@@ -374,6 +393,42 @@ class Flatten {
 					continue;
 				}
 			}
+			if( v.qualifiers != null ) {
+				var allocated = false;
+				for( q in v.qualifiers )
+					switch( q ) {
+					case Keep, KeepV:
+						var g1 = {
+							id : Tools.allocVarId(),
+							name : v.name,
+							type : t,
+							kind : Param,
+						};
+						// keptSampler = true;
+						trace(" - setting g1.id="+g1.id+" to name:"+g1.name);
+						// Allocate individual texture
+						var alloc = new Array<Alloc>();
+						var a = new Alloc(g1, null, pos, count);
+						a.v = v;
+						if( v.qualifiers != null )
+							for( q in v.qualifiers )
+								switch( q ) {
+								case Sampler(name):
+									for( i in 0...count )
+										samplers[pos+i] = name;
+								default:
+								}
+						varMap.set(v, a);
+						alloc.push(a);
+						outVars.push(g1);
+						allocData.set(g1, alloc);
+						allocated = true;
+					default:
+					}
+				if (allocated)
+					continue;
+			}
+
 			var a = new Alloc(g, null, pos, count);
 			a.v = v;
 			if( v.qualifiers != null )
@@ -388,7 +443,8 @@ class Flatten {
 			alloc.push(a);
 			pos += count;
 		}
-		g.type = TArray(t, SConst(pos));
+		// if (!keptSampler)
+			g.type = TArray(t, SConst(pos));
 		if( samplers.length > 0 ) {
 			for( i in 0...pos )
 				if( samplers[i] == null )
@@ -423,6 +479,68 @@ class Flatten {
 		allocData.set(g, alloc);
 	}
 
+	function packKeptVars( vars : Array<TVar> ) {
+		
+		for( v in vars )
+			if( (v.qualifiers!=null && (v.qualifiers.indexOf(Keep)>-1 || v.qualifiers.indexOf(KeepV)>-1)) ) {
+				var g : TVar = {
+					id : Tools.allocVarId(),
+					name : v.name,
+					type : v.type,
+					kind : v.kind,
+				};
+				var alloc = new Array<Alloc>();
+				var size = varSize(v.type, VFloat);
+				var a = new Alloc(g, null, 0, size);
+				a.v = v;
+				alloc.push(a);
+				var add = true;
+				for (ov in outVars) {
+					if (ov.name == g.name) {
+						add = false;
+						break;
+					}
+				}
+				if (add) {
+					outVars.push(v);
+					allocData.set(g, alloc);
+				}
+			}
+	}
+
+	function packKeptTextures( vars : Array<TVar> ) {
+		
+		for( tv in keptTextures ) {
+			var found = false;
+			for( v in vars ) {
+				if (tv.name==v.name) {
+					trace("packKeptTextures: matched existing - "+v.name);
+					found = true;
+				}
+			}
+			if (!found) {
+				var g : TVar = {
+					id : Tools.allocVarId(),
+					name : tv.name,
+					type : tv.type,
+					kind : Param,
+				};
+				var alloc = new Array<Alloc>();
+				var a = new Alloc(g, null, 0, 1);
+				a.v = tv;
+				varMap.set(tv, a);
+				alloc.push(a);
+				outVars.push(tv);
+				allocData.set(g, alloc);
+				trace("packKeptTextures: Adding - "+tv.name+" v.id="+a.v.id+" g.id="+a.g.id);
+			} else {
+				trace("packKeptTextures: "+tv.name+" NOT MATCHED");
+			}
+
+		}
+	}
+
+
 	function pack( name : String, kind : VarKind, vars : Array<TVar>, t : VecType ) {
 		var alloc = new Array<Alloc>(), apos = 0;
 		var g : TVar = {
@@ -432,7 +550,7 @@ class Flatten {
 			kind : kind,
 		};
 		for( v in vars ) {
-			if( v.type.isSampler() || v.type.match(TBuffer(_)) )
+			if( v.type.isSampler() || v.type.match(TBuffer(_)) || (v.qualifiers!=null && (v.qualifiers.indexOf(Keep)>-1 || v.qualifiers.indexOf(KeepV)>-1)))
 				continue;
 			switch( v.type ) {
 			case TArray(t,_) if( t.isSampler() ): continue;
@@ -500,12 +618,23 @@ class Flatten {
 			for( v in vl )
 				gatherVar(v);
 		default:
+			trace("GatherVar: v.name="+v.name+" t="+v.type+" k="+v.kind+" q="+v.qualifiers);
 			switch( v.kind ) {
+			case Global if ((v.type == TSampler2D || v.type == TSamplerCube) && v.qualifiers!=null && v.qualifiers.indexOf(Keep)!=-1):
+				trace("KEEPING Texture2D(Global): v="+v.name);
+				keptTextures.push(v);
+				// outVars.push(v);
 			case Global:
-				if( v.hasQualifier(PerObject) )
+				if( v.hasQualifier(PerObject) ) {
 					params.push(v);
-				else
+				} else {
 					globals.push(v);
+				}
+			case Param if ((v.type == TSampler2D || v.type == TSamplerCube) && v.qualifiers!=null && v.qualifiers.indexOf(Keep)!=-1):
+				trace("KEEPING Texture2D(Param): v="+v.name);
+				keptTextures.push(v);
+				params.push(v);
+				// outVars.push(v);
 			case Param:
 				params.push(v);
 			default:

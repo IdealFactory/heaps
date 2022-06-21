@@ -51,6 +51,7 @@ class Macros {
 			throw "assert";
 		case TBuffer(_):
 			macro : hxsl.Types.Buffer;
+		case TCallable, TSource: macro : Void;
 		}
 	}
 
@@ -392,7 +393,7 @@ class Macros {
 					var pos = expr.pos;
 					if( !Lambda.has(f.access, AStatic) ) f.access.push(AStatic);
 					Context.getLocalClass().get().meta.add(":src", [expr], pos);
-					try {
+					// try {
 						var shader = new MacroParser().parseExpr(expr);
 						var c = Context.getLocalClass();
 						var csup = c.get().superClass;
@@ -432,10 +433,11 @@ class Macros {
 						for( f in buildFields(shader, check.inits, pos) )
 							if( !supFields.exists(f.name) )
 								fields.push(f);
-					} catch( e : Ast.Error ) {
-						fields.remove(f);
-						Context.error(e.msg, e.pos);
-					}
+					// } catch( e : Ast.Error ) {
+					// 	trace(e);
+					// 	fields.remove(f);
+					// 	Context.error(e.msg, e.pos);
+					// }
 				default:
 				}
 			}

@@ -17,6 +17,17 @@ class ShaderList {
 		return new ShaderIterator(this,s);
 	}
 
+	public var count(get, null):Int;
+	function get_count():Int {
+		var hd = next;
+		var count = s!=null ? 1 : 0;
+		while(hd != null) {
+			++count;
+			hd = hd.next;
+		}
+		return count;
+	}
+
 	public static function addSort( s : Shader, shaders : ShaderList ) {
 		var prev = null;
 		var hd = shaders;

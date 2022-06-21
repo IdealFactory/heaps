@@ -58,6 +58,10 @@ class MacroParser {
 			if( v.kind == null ) v.kind = Param else error("Duplicate type qualifier", m.pos);
 		case "input":
 			if( v.kind == null ) v.kind = Input else error("Duplicate type qualifier", m.pos);
+		case "keep":
+			v.qualifiers.push(Keep);
+		case "keepv":
+			v.qualifiers.push(KeepV);
 		case "const":
 			v.qualifiers.push(Const());
 		case "private":

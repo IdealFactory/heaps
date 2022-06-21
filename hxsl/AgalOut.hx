@@ -886,7 +886,7 @@ class AgalOut {
 			unused.remove(v.id);
 			return r;
 		}
-		if( v.kind != Local ) throw "assert " + v;
+		if( v.kind != Local) throw "assert " + v;
 		r = allocReg(v.type);
 		varMap.set(v.id, r);
 		return r;

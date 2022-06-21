@@ -94,7 +94,7 @@ class Serializer {
 			}
 		case TChannel(size):
 			out.addByte(size);
-		case TVoid, TInt, TBool, TFloat, TString, TMat2, TMat3, TMat4, TMat3x4, TSampler2D, TSampler2DArray, TSamplerCube:
+		case TVoid, TInt, TBool, TFloat, TString, TMat2, TMat3, TMat4, TMat3x4, TSampler2D, TSampler2DArray, TSamplerCube, TCallable, TSource:
 		}
 	}
 
@@ -178,7 +178,7 @@ class Serializer {
 			for( q in v.qualifiers ) {
 				out.addByte(q.getIndex());
 				switch (q) {
-				case Private, Nullable, PerObject, Shared, Ignore:
+				case Private, Keep, KeepV, Nullable, PerObject, Shared, Ignore:
 				case Const(max): out.addInt32(max == null ? 0 : max);
 				case Name(n): writeString(n);
 				case Precision(p): out.addByte(p.getIndex());
@@ -198,6 +198,12 @@ class Serializer {
 		writeArr(f.args, writeVar);
 		writeType(f.ret);
 		writeExpr(f.expr);
+	}
+
+	function writeSrc( f : TGLSLFunc ) {
+		writeID(f.id);
+		writeString(f.name);
+		writeString(f.src);
 	}
 
 	function writeConst( c : Const ) {
@@ -289,6 +295,12 @@ class Serializer {
 			writeString(m);
 			writeArr(args, writeConst);
 			writeExpr(e);
+		case TDeclSource(src):
+			// trace("TDeclSource: src="+src);
+			writeString(src);
+		case TGLSLSource(src):
+			// trace("TGLSLSource: src="+src);
+			writeString(src);
 		}
 		writeType(e.t);
 		// no position
@@ -356,6 +368,8 @@ class Serializer {
 				}), readExpr());
 		case 19: TWhile(readExpr(), readExpr(), input.readByte() != 0);
 		case 20: TMeta(readString(), readArr(readConst), readExpr());
+		case 21: TDeclSource(readString());
+		case 22: TGLSLSource(readString());
 		default: throw "assert";
 		}
 		return {
@@ -403,6 +417,8 @@ class Serializer {
 				case 10: Doc(readString());
 				case 11: Borrow(readString());
 				case 12: Sampler(readString());
+				case 13: Keep;
+				case 14: KeepV;
 				default: throw "assert";
 				}
 				v.qualifiers.push(q);
@@ -423,6 +439,18 @@ class Serializer {
 		};
 	}
 
+	function readSrc() : TGLSLFunc {
+		var i = readID();
+		var n = readString();
+		var s = readString();
+		// trace("ReadSrc-TGLSLFunc: i="+i+" n="+n+" src="+s);
+		return {
+			id : i,
+			name : n,
+			src : s
+		};
+	}
+
 	static var SIGN = 0x8B741D; // will be encoded to HXSL
 
 	public function unserialize( data : String ) : ShaderData {
@@ -431,10 +459,13 @@ class Serializer {
 			throw "Invalid HXSL data";
 		varMap = new Map();
 		types = [];
+		// // trace("About to unserialize: data="+data);
 		return {
 			name : readString(),
 			vars : readArr(readVar),
 			funs : readArr(readFun),
+			glvfuncs : readArr(readSrc),
+			glffuncs : readArr(readSrc)
 		};
 	}
 
@@ -449,6 +480,8 @@ class Serializer {
 		writeString(s.name);
 		writeArr(s.vars, writeVar);
 		writeArr(s.funs, writeFun);
+		writeArr(s.glvfuncs, writeSrc);
+		writeArr(s.glffuncs, writeSrc);
 		return haxe.crypto.Base64.encode(out.getBytes(),false);
 	}
 

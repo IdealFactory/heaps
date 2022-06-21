@@ -56,6 +56,7 @@ class BaseMesh extends hxsl.Shader {
 
 		// each __init__ expr is out of order dependency-based
 		function __init__() {
+			glslsource("// BaseMesh __init__");
 			relativePosition = input.position;
 			transformedPosition = relativePosition * global.modelView.mat3x4();
 			projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
@@ -70,6 +71,7 @@ class BaseMesh extends hxsl.Shader {
 		}
 
 		function __init__fragment() {
+			glslsource("// BaseMesh __init__fragment");
 			transformedNormal = transformedNormal.normalize();
 			// same as __init__, but will force calculus inside fragment shader, which limits varyings
 			screenUV = screenToUv(projectedPosition.xy / projectedPosition.w);
@@ -79,11 +81,13 @@ class BaseMesh extends hxsl.Shader {
 		}
 
 		function vertex() {
+			glslsource("// BaseMesh vertex");
 			output.position = projectedPosition * vec4(1, camera.projFlip, 1, 1);
 			pixelTransformedPosition = transformedPosition;
 		}
 
 		function fragment() {
+			glslsource("// BaseMesh fragment");
 			output.color = pixelColor;
 			output.depth = depth;
 			output.normal = transformedNormal;

@@ -44,6 +44,8 @@ class Cache {
 			name : "shaderLinker_"+id,
 			vars : [],
 			funs : [],
+			glvfuncs : [],
+			glffuncs : []
 		};
 		var pos = null;
 		var outVars = new Map<String,TVar>();
@@ -174,6 +176,7 @@ class Cache {
 		for( s in shaders ) {
 			var i = @:privateAccess s.instance;
 			shaderDatas.push( { inst : i, p : s.priority, index : index++ } );
+			@:privateAccess trace("CompileRuntimeShader: s="+s.instance.shader.name+" pri="+s.priority);
 		}
 		shaderDatas.reverse(); // default is reverse order
 		/*
@@ -208,6 +211,7 @@ class Cache {
 		#end
 
 		#if shader_debug_dump
+		#if !js
 		var shaderId = @:privateAccess RuntimeShader.UID;
 		if( shaderId == 0 ) try sys.FileSystem.createDirectory("shaders") catch( e : Dynamic ) {};
 		var dbg = sys.io.File.write("shaders/"+shaderId+"_dump.c");
@@ -220,6 +224,17 @@ class Cache {
 				dbg.writeString(Printer.shaderToString(s.inst.shader,DEBUG_IDS)+"\n\n");
 			}
 		}
+		#else
+		var dbg = null;
+		var shaderId = @:privateAccess RuntimeShader.UID;
+		var oldTrace = haxe.Log.trace;
+		trace("DEBUG-SHADER: ID="+shaderId);
+		trace("----- DATAS ----\n\n");
+		for( s in shaderDatas ) {
+			trace("\t\t**** " + s.inst.shader.name + (s.p == 0 ? "" : " P="+s.p)+ " *****\n");
+			trace(Printer.shaderToString(s.inst.shader,DEBUG_IDS)+"\n\n");
+		}
+		#end
 		//TRACE = shaderId == 0;
 		#end
 
@@ -229,6 +244,10 @@ class Cache {
 			e.msg += "\n\nin\n\n" + shaders.join("\n-----\n");
 			throw e;
 		}
+
+		trace("LINKED SHADER ----------");
+		trace(Printer.shaderToString(s));
+		trace("------------------------");
 
 		if( batchMode ) {
 			function checkRec( v : TVar ) {
@@ -255,10 +274,15 @@ class Cache {
 		#end
 
 		#if shader_debug_dump
+		#if !js
 		if( dbg != null ) {
 			dbg.writeString("----- LINK ----\n\n");
 			dbg.writeString(Printer.shaderToString(s,DEBUG_IDS)+"\n\n");
 		}
+		#else
+		trace("----- LINK ----\n\n");
+		trace(Printer.shaderToString(s,DEBUG_IDS)+"\n\n");
+		#end
 		#end
 
 		// params tracking
@@ -270,7 +294,9 @@ class Cache {
 				default:
 				}
 				var inf = shaderDatas[v.instanceIndex];
-				paramVars.set(v.id, { instance : inf.index, index : inf.inst.params.get(v.merged[0].id) } );
+				var mID = inf.inst.params.get(v.merged[0].id);
+				trace("Inf:"+v.v.name+" id="+v.id+" inf.index="+inf.index+" mergedID="+mID);
+				paramVars.set(v.id, { instance : inf.index, index : mID } );
 			}
 
 		var prev = s;
@@ -282,11 +308,17 @@ class Cache {
 		#end
 
 		#if shader_debug_dump
+		#if !js
 		if( dbg != null ) {
 			dbg.writeString("----- SPLIT ----\n\n");
 			dbg.writeString(Printer.shaderToString(s.vertex, DEBUG_IDS) + "\n\n");
 			dbg.writeString(Printer.shaderToString(s.fragment, DEBUG_IDS) + "\n\n");
 		}
+		#else
+		trace("----- SPLIT ----\n\n");
+		trace(Printer.shaderToString(s.vertex, DEBUG_IDS) + "\n\n");
+		trace(Printer.shaderToString(s.fragment, DEBUG_IDS) + "\n\n");
+		#end
 		#end
 
 		var prev = s;
@@ -298,21 +330,33 @@ class Cache {
 		#end
 
 		#if shader_debug_dump
+		#if !js
 		if( dbg != null ) {
 			dbg.writeString("----- DCE ----\n\n");
 			dbg.writeString(Printer.shaderToString(s.vertex, DEBUG_IDS) + "\n\n");
 			dbg.writeString(Printer.shaderToString(s.fragment, DEBUG_IDS) + "\n\n");
 		}
+		#else
+		trace("----- DCE ----\n\n");
+		trace(Printer.shaderToString(s.vertex, DEBUG_IDS) + "\n\n");
+		trace(Printer.shaderToString(s.fragment, DEBUG_IDS) + "\n\n");
+		#end
 		#end
 
 		var r = buildRuntimeShader(s.vertex, s.fragment, paramVars);
 
 		#if shader_debug_dump
+		#if !js
 		if( dbg != null ) {
 			dbg.writeString("----- FLATTEN ----\n\n");
 			dbg.writeString(Printer.shaderToString(r.vertex.data, DEBUG_IDS) + "\n\n");
 			dbg.writeString(Printer.shaderToString(r.fragment.data,DEBUG_IDS)+"\n\n");
 		}
+		#else
+		trace("----- FLATTEN ----\n\n");
+		trace(Printer.shaderToString(r.vertex.data, DEBUG_IDS) + "\n\n");
+		trace(Printer.shaderToString(r.fragment.data,DEBUG_IDS)+"\n\n");
+		#end
 		#end
 
 		r.spec = { instances : @:privateAccess [for( s in shaders ) new ShaderInstanceDesc(s.shader, s.constBits)], signature : null };
@@ -334,10 +378,15 @@ class Cache {
 			byID.set(r.signature, r);
 
 		#if shader_debug_dump
+		#if !js
 		dbg.writeString("---- OUTPUT -----\n\n");
 		dbg.writeString(h3d.Engine.getCurrent().driver.getNativeShaderCode(r)+"\n\n");
 		if( dbg != null ) dbg.close();
 		haxe.Log.trace = oldTrace;
+		#else
+		trace("---- OUTPUT -----\n\n");
+		trace(h3d.Engine.getCurrent().driver.getNativeShaderCode(r)+"\n\n");
+		#end
 		#end
 
 		return r;
@@ -388,23 +437,50 @@ class Cache {
 		c.texturesCount = 0;
 		for( g in flat.allocData.keys() ) {
 			var alloc = flat.allocData.get(g);
+			if (g.name.indexOf("Sampler")>-1) {
+				trace("Flatten flat.allocData: g.name="+g.name);
+			}
 			switch( g.kind ) {
 			case Param:
 				var out = [];
 				var count = 0;
 				for( a in alloc ) {
-					if( a.v == null ) continue; // padding
+					if (g.name.indexOf("Sampler")>-1) {
+						trace(" - a.name="+a.v.name+" a.v.id="+(a.v==null ? "null" : a.v.id+"")+" a.g.id="+a.g.id+" a.g.name="+a.g.name+" : g.id="+g.id+" g.name="+g.name);
+					}
+					if( a.v == null || a.g.name!=g.name) {
+						if (g.name.indexOf("Sampler")>-1) {
+							trace("   - CONTINUING");
+						}
+						continue; // padding
+					}
 					var p = params.get(a.v.id);
+					if (g.name.indexOf("Sampler")>-1) {
+						trace("   - CHECKING P="+p);
+					}
 					if( p == null ) {
+
+
+//Check out why albedoSampler is getting into AllocParam0 and not AllocParam1.......
+
+
+						trace("AllocParam0: a="+a.v.name+" a.s="+a.size);
 						var ap = new AllocParam(a.v.name, a.pos, -1, -1, a.v.type);
+						// if ((a.v.type==TSampler2D || a.v.type==TSamplerCube) && (a.v.qualifiers!=null && a.v.qualifiers.indexOf(Keep)>-1))
+						if (a.v.qualifiers!=null && (a.v.qualifiers.indexOf(Keep)>-1 || a.v.qualifiers.indexOf(KeepV)>-1))
+							ap.useName = true;
 						ap.perObjectGlobal = new AllocGlobal( -1, getPath(a.v), a.v.type);
 						out.push(ap);
 						count++;
 						continue;
 					}
+					trace("AllocParam1: about to push param: a="+a.v.name+" a.s="+a.size);
 					var ap = new AllocParam(a.v.name, a.pos, p.instance, p.index, a.v.type);
+					if (a.v.qualifiers!=null && (a.v.qualifiers.indexOf(Keep)>-1 || a.v.qualifiers.indexOf(KeepV)>-1))
+						ap.useName = true;
 					switch( a.v.type ) {
 					case TArray(t,_) if( t.isSampler() ):
+						trace("  - AllocParam1 isSampler: a="+a.v.name+" a.g="+a.g.name+" g.name="+g.name);
 						// hack to mark array of texture, see ShaderManager.fillParams
 						ap.pos = -a.size;
 						count += a.size;
@@ -417,6 +493,7 @@ class Cache {
 					out[i].next = out[i + 1];
 				switch( g.type ) {
 				case TArray(t, _) if( t.isSampler() ):
+					trace("AllocParam2: TArray.t.isSampler: about to push texture");
 					textures.push({ t : t, all : out });
 					c.texturesCount += count;
 				case TArray(TVec(4, VFloat), SConst(size)):
@@ -425,6 +502,25 @@ class Cache {
 				case TArray(TBuffer(_), _):
 					c.buffers = out[0];
 					c.bufferCount = out.length;
+				//PUT-BACK
+				case TSampler2D:
+					trace("AllocParam - TSampler2D: g="+g.name);
+					textures.push({ t : g.type, all : out });
+					c.texturesCount += count;
+					// c.params = out[0];
+					// c.paramsSize = 1;
+				case TSamplerCube:
+					trace("AllocParam - TSamplerCube: g="+g.name);
+					textures.push({ t : g.type, all : out });
+					// c.params = out[0];
+					// c.paramsSize = 1;
+					c.texturesCount += count;
+				case TSampler2DArray:
+					trace("AllocParam - TSampler2DArray: g="+g.name);
+					textures.push({ t : g.type, all : out });
+					// c.params = out[0];
+					// c.paramsSize = 1;
+					c.texturesCount += count;
 				default: throw "assert";
 				}
 			case Global:
@@ -435,6 +531,23 @@ class Cache {
 				case TArray(TVec(4, VFloat),SConst(size)):
 					c.globals = out[0];
 					c.globalsSize = size;
+
+				//PUT-BACK
+				case TSampler2D:
+					trace("AllocGlobal - TSampler2D");
+					c.globals = out[0];
+					c.globalsSize = 1;
+					// textures.push({ t : g.type, all : out });
+				case TSamplerCube:
+					trace("AllocGlobal - TSampler2DCube");
+					c.globals = out[0];
+					c.globalsSize = 1;
+					// textures.push({ t : g.type, all : out });
+				case TSampler2DArray:
+					trace("AllocGlobal - TSampler2DArray");
+					c.globals = out[0];
+					c.globalsSize = 1;
+					// textures.push({ t : g.type, all : out });
 				default:
 					throw "assert";
 				}
@@ -516,6 +629,8 @@ class Cache {
 			name : "batchShader_"+id,
 			vars : [vcount,hasOffset,vbuffer,voffset,inputOffset],
 			funs : [],
+			glvfuncs : [],
+			glffuncs : []
 		};
 
 		function getVarRec( v : TVar, name, kind ) {
@@ -611,6 +726,7 @@ class Cache {
 				}
 				index = best << 2;
 			}
+			trace("AllocParam: AddParam: p="+p.name);
 			var p2 = new AllocParam(p.name, index, p.instance, p.index, p.type);
 			p2.perObjectGlobal = p.perObjectGlobal;
 			p2.next = params;

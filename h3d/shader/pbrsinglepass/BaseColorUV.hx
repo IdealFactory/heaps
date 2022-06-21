@@ -7,15 +7,13 @@ class BaseColorUV extends PBRSinglePassLib {
             var uv : Vec2;
         }
 
-        var uvOffset:Vec2;
-
  		function vertex() {
             var uvUpdated : Vec2 = input.uv;
             vMainUV1 = uvUpdated;
         }
 
         var surfaceAlbedo:Vec3;
-        var alpha:Float;
+        @keep var alpha:Float;
 
         function fragment() {
             surfaceAlbedo = vAlbedoColor.rgb; //vec3

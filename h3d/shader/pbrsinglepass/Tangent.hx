@@ -4,43 +4,66 @@ class Tangent extends PBRSinglePassLib {
 
 	static var SRC = {
         
-		@global var global : {
-			@perObject var modelView : Mat4;
-		};
-
 		@input var input : {
             var normal : Vec3;                                        // attribute vec4 tangent;    
             var tangent : Vec4;                                        // attribute vec4 tangent;    
         }
 
-        // @param var bumpSampler : Sampler2D;                             // uniform sampler2D bumpSampler;
-        @param var vBumpInfos : Vec3;                                   // uniform vec3 vBumpInfos;
+        @keep @param var bumpSampler : Sampler2D;                             // uniform sampler2D bumpSampler;
+        @param var uBumpInfos : Vec3;                                   // uniform vec3 vBumpInfos;
 
-        @var var vTBN : Mat3;
+        @keep @keepv @var var vTBN : Mat3;
+        @keep var vBumpInfos : Vec3;
         
         var finalWorld:Mat4;
         var normalUpdated:Vec3;
         var normalW:Vec3;
         var TBN:Mat3;
+        @keepv var tangentUpdated:Vec4; 
         
         function vertex() {
-            var tangentUpdated = input.tangent;
-            var tbnNormal = normalize(normalUpdated);
-            var tbnTangent = normalize(tangentUpdated.xyz);
-            var tbnBitangent = cross(tbnNormal, tbnTangent) * tangentUpdated.w;
-            vTBN = finalWorld.mat3() #if !flash * mat3(tbnTangent, tbnBitangent, tbnNormal) #end;
+            glslsource("// Tangent vertex-test");
+            tangentUpdated = vec4(input.tangent.x * -1.0, input.tangent.z, input.tangent.y, input.tangent.w * -1.0);
+            glslsource("// Tangent vertex
+    vec3 tbnNormal = normalize(normalUpdated);
+    vec3 tbnTangent = normalize(tangentUpdated.xyz);
+    vec3 tbnBitangent = cross(tbnNormal, tbnTangent)*tangentUpdated.w;
+    vTBN = mat3(finalWorld)*mat3(tbnTangent, tbnBitangent, tbnNormal);
+");
         }
 
+        function __init__fragment() {
+            glslsource("// Tangent __init__fragment");
+
+            vBumpInfos = uBumpInfos;
+		}
+
+        fragfunction("tangentDefine",
+"#define vBumpUV vMainUV1");
+
+        fragfunction("perturbNormal",
+"vec3 perturbNormalBase(mat3 cotangentFrame, vec3 normal, float scale) {
+    normal = normalize(normal*vec3(scale, scale, 1.0));
+    return normalize(cotangentFrame*normal);
+}
+vec3 perturbNormal(mat3 cotangentFrame, vec3 textureSample, float scale) {
+    return perturbNormalBase(cotangentFrame, textureSample*2.0-1.0, scale);
+}
+");
+
         function fragment() {
-            TBN = vTBN;
-            // var pt = perturbNormal(TBN, bumpSampler.get(vMainUV1).xyz, vBumpInfos.y);
-            // normalW = vec3(pt.x, -pt.z, -pt.y);
+            glslsource("
+    // Tangent fragment
+    float normalScale = 1.0;
+    mat3 TBN = vTBN;
+    normalW = perturbNormal(TBN, texture(bumpSampler, vBumpUV+uvOffset).xyz, vBumpInfos.y);
+");
         }
     };
 
 	public function new() {
         super();
 
-        this.vBumpInfos.set( 0, 1, 0.0500 );
+        this.uBumpInfos.set( 0, 1, 0.0500 );
     }
 }

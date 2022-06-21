@@ -171,9 +171,10 @@ class ShaderManager {
 		#end
 	}
 
-	public inline function getParamValue( p : hxsl.RuntimeShader.AllocParam, shaders : hxsl.ShaderList, opt = false ) : Dynamic {
+	public function getParamValue( p : hxsl.RuntimeShader.AllocParam, shaders : hxsl.ShaderList, opt = false ) : Dynamic {
 		if( p.perObjectGlobal != null ) {
 			var v : Dynamic = globals.fastGet(p.perObjectGlobal.gid);
+			// trace("getParamValue(g): gid="+p.perObjectGlobal.gid+" p.path="+p.perObjectGlobal.path+" v="+v);
 			if( v == null ) throw "Missing global value " + p.perObjectGlobal.path+" for shader "+shaderInfo(shaders,p.perObjectGlobal.path);
 			if( p.type.match(TChannel(_)) )
 				return v.texture;
@@ -183,12 +184,13 @@ class ShaderManager {
 		var n = p.instance;
 		while( --n > 0 ) si = si.next;
 		var v = si.s.getParamValue(p.index);
+		// trace("getParamValue(_): p.name="+p.name+" p.ind="+p.index+" v="+v);
 		if( v == null && !opt ) throw "Missing param value " + si.s + "." + p.name;
 		return v;
 	}
 
 	public function fillGlobals( buf : h3d.shader.Buffers, s : hxsl.RuntimeShader ) {
-		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
+		function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var g = s.globals;
 			var ptr = getPtr(buf.globals);
 			while( g != null ) {
@@ -212,7 +214,7 @@ class ShaderManager {
 	public function fillParams( buf : h3d.shader.Buffers, s : hxsl.RuntimeShader, shaders : hxsl.ShaderList ) {
 		var curInstance = -1;
 		var curInstanceValue = null;
-		inline function getInstance( index : Int ) {
+		function getInstance( index : Int ) {
 			if( curInstance == index )
 				return curInstanceValue;
 			var si = shaders;
@@ -221,7 +223,7 @@ class ShaderManager {
 			curInstanceValue = si.s;
 			return curInstanceValue;
 		}
-		inline function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
+		function fill(buf:h3d.shader.Buffers.ShaderBuffers, s:hxsl.RuntimeShader.RuntimeShaderData) {
 			var p = s.params;
 			var ptr = getPtr(buf.params);
 			while( p != null ) {
@@ -230,10 +232,12 @@ class ShaderManager {
 					if( p.type == TFloat ) {
 						var i = getInstance(p.instance);
 						ptr[p.pos] = i.getParamFloatValue(p.index);
+						// trace("fillParams.fill-1: perObjectGlobalNull p="+p+" ptr="+ptr[p.pos]);
 						p = p.next;
 						continue;
 					}
 					v = getInstance(p.instance).getParamValue(p.index);
+					// trace("fillParams.fill-2: s.textures="+p);
 					if( v == null ) throw "Missing param value " + curInstanceValue + "." + p.name;
 				} else
 					v = getParamValue(p, shaders);
@@ -242,8 +246,13 @@ class ShaderManager {
 			}
 			var tid = 0;
 			var p = s.textures;
+			// trace("fillParams.fill-3: s.textures="+(p==null ? "null" : p.name));
+			// if (p!=null && p.name=="texture") {
+			// 	trace("Processing texture....");
+			// }
 			while( p != null ) {
 				var t : Dynamic = getParamValue(p, shaders, !STRICT);
+				// trace(" - getParamVal: t="+t);
 				if( p.pos < 0 ) {
 					// is array !
 					var arr : Array<h3d.mat.Texture> = t;

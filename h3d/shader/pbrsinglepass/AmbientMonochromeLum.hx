@@ -4,11 +4,16 @@ class AmbientMonochromeLum extends PBRSinglePassLib {
 
 	static var SRC = {
 
-        var ambientMonochrome:Float;
-        var ambientOcclusionColor:Vec3;
+        // @keep var ambientMonochrome:Float;
 
         function fragment() {
-            ambientMonochrome = ambientOcclusionColor.r; //float
+            // ambientMonochrome = ambientOcclusionColor.r; //float
+
+            glslsource("
+    // AmbientMonochromeLum fragment
+    // float ambientMonochrome = getLuminance(aoOut.ambientOcclusionColor);
+    float ambientMonochrome = aoOut.ambientOcclusionColor.r;
+");
         }
 	}
 }

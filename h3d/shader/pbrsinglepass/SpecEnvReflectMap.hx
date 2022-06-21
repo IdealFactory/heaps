@@ -15,10 +15,13 @@ class SpecEnvReflectMap extends PBRSinglePassLib {
         var eho:Float;
 
         function fragment() {
-            seo = environmentRadianceOcclusion(ambientMonochrome, NdotVUnclamped); //float
-            eho = environmentHorizonOcclusion(-viewDirectionW, normalW, geometricNormalW); //float
-            specularEnvironmentReflectance *= seo;
-            specularEnvironmentReflectance *= eho;
+            // seo = environmentRadianceOcclusion(ambientMonochrome, NdotVUnclamped); //float
+            // eho = environmentHorizonOcclusion(-viewDirectionW, normalW, geometricNormalW); //float
+            // specularEnvironmentReflectance *= seo;
+            // specularEnvironmentReflectance *= eho;
+
+            glslsource("
+            ");
         }
 	}
 }

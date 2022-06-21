@@ -27,6 +27,10 @@ class Checker {
 	static var ivec4 = TVec(4, VInt);
 
 	var vars : Map<String,TVar>;
+	var glslFFuncs : Map<String, TGLSLFunc>;
+	var glslVFuncs : Map<String, TGLSLFunc>;
+	var glslVFuncID : Int;
+	var glslFFuncID : Int;
 	var globals : Map<String,{ g : TGlobal, t : Type }>;
 	var curFun : TFunction;
 	var inLoop : Bool;
@@ -50,7 +54,7 @@ class Checker {
 		for( g in Ast.TGlobal.createAll() ) {
 			var def = switch( g ) {
 			case Vec2, Vec3, Vec4, Mat2, Mat3, Mat3x4, Mat4, IVec2, IVec3, IVec4, BVec2, BVec3, BVec4: [];
-			case Radians, Degrees, Cos, Sin, Tan, Asin, Acos, Exp, Log, Exp2, Log2, Sqrt, Inversesqrt, Abs, Sign, Floor, Ceil, Fract, Saturate: genFloat;
+			case Radians, Degrees, Cos, Sin, Tan, Asin, Acos, Exp, Log, Exp2, Log2, Sqrt, Inversesqrt, Abs, Sign, Floor, Ceil, Fract: genFloat;
 			case Atan: genFloat.concat(genFloat2);
 			case Pow: genFloat2;
 			case LReflect:
@@ -181,6 +185,80 @@ class Checker {
 				[{ args : [{ name : "screenPos", type : vec2 }], ret : vec2 }];
 			case UvToScreen:
 				[{ args : [{ name : "uv", type : vec2 }], ret : vec2 }];
+
+			// PBR Single Pass
+			case Saturate:
+				[for( t in genType ) { args : [{ name : "x", type : t }], ret : t } ];
+			case AbsEps:
+				[for( t in genType ) { args : [{ name : "x", type : t }], ret : t } ];
+			case MaxEps:
+				[for( t in genType ) { args : [{ name : "x", type : t }], ret : t } ];
+			case SaturateEps:
+				[for( t in genType ) { args : [{ name : "x", type : t }], ret : t } ];
+/*			case ToLinearSpace:
+				[for( t in genType ) { args : [{ name : "color", type : t }], ret : t } ];
+			// case ToLinearSpace3:
+			// 	[{ args : [{ name : "color", type : vec3 }], ret : vec3 }];				
+			// case ToLinearSpace4:
+			// 	[{ args : [{ name : "color", type : vec4 }], ret : vec4 }];				
+			case ToGammaSpace:
+				[for( t in genType ) { args : [{ name : "color", type : t }], ret : t } ];
+			// case ToGammaSpace3:
+			// 	[{ args : [{ name : "color", type : vec3 }], ret : vec3 }];				
+			// case ToGammaSpace4:
+			// 	[{ args : [{ name : "color", type : vec4 }], ret : vec4 }];				
+			case Square:
+				[for( t in genType ) { args : [{ name : "value", type : t }], ret : t } ];
+			// case Square3:
+			// 	[{ args : [{ name : "value", type : vec3 }], ret : vec3 }];				
+			case Pow5:
+				[{ args : [{ name : "value", type : TFloat }], ret : TFloat }];				
+			case GetLuminance:
+				[{ args : [{ name : "color", type : vec3 }], ret : TFloat }];				
+			case GetRand:
+				[{ args : [{ name : "seed", type : vec2 }], ret : TFloat }];				
+			case Dither:
+				[{ args : [{ name : "seed", type : vec2 }, { name : "varianceAmount", type : TFloat }], ret : TFloat }];
+			case ToRGBD:
+				[{ args : [{ name : "color", type : vec3 }], ret : vec4 }];	
+			// case FromRGBD:
+			// 	[{ args : [{ name : "rgbd", type : vec4 }], ret : vec3 }];
+			case ConvertRoughnessToAverageSlope:
+				[{ args : [{ name : "roughness", type : TFloat }], ret : TFloat }];
+			case FresnelGrazingReflectance:
+				[{ args : [{ name : "reflectance0", type : TFloat }], ret : TFloat }];
+			case GetAARoughnessFactors:
+				[{ args : [{ name : "normalVector", type : vec3 }], ret : vec2 }];
+			case ApplyImageProcessing:
+				[{ args : [{ name : "result", type : vec4 }], ret : vec4 }];
+			case ComputeEnvironmentIrradiance:
+				[{ args : [{ name : "normal", type : vec3 }], ret : vec3 }];
+			case GetEnergyConservationFactor:
+				[{ args : [{ name : "specularEnvironmentR0", type : vec3 }, { name : "environmentBrdf", type : vec3 }], ret : vec3 }];
+			case GetBRDFLookup:
+				[{ args : [{ name : "NdotV", type : TFloat }, { name : "perceptualRoughness", type : TFloat }, { name : "brdf", type : TSampler2D }], ret : vec3 }];
+			case GetReflectanceFromBRDFLookup:
+				[
+					{ args : [{ name : "specularEnvironmentR0", type : vec3 }, { name : "specularEnvironmentR90", type : vec3 }, { name : "environmentBrdf", type : vec3 }], ret : vec3 },
+					{ args : [{ name : "specularEnvironmentR0", type : vec3 }, { name : "environmentBrdf", type : vec3 }], ret : vec3 }
+				];
+			case GetLodFromAlphaG:
+				[{ args : [{ name : "cubeMapDimensionPixels", type : TFloat }, { name : "microsurfaceAverageSlope", type : TFloat }], ret : TFloat }];
+			case EnvironmentRadianceOcclusion:
+				[{ args : [{ name : "ambientOcclusion", type : TFloat }, { name : "NdotVUnclamped", type : TFloat }], ret : TFloat }];
+			case EnvironmentHorizonOcclusion:
+				[{ args : [{ name : "view", type : vec3 }, { name : "normal", type : vec3 }, { name : "geometricNormal", type : vec3 }], ret : TFloat }];
+			
+			// case ComputeCubicCoords:
+			// 	[{ args : [{ name : "worldPos", type : vec4 }, { name : "worldNormal", type : vec3 }, { name : "eyePosition", type : vec3 }, { name : "reflectionMatrix", type : TMat4 }], ret : vec3 }];
+			// case ComputeReflectionCoords:
+			// 	[{ args : [{ name : "worldPos", type : vec4 }, { name : "worldNormal", type : vec3 }], ret : vec3 }];
+			// case GetSheenReflectanceFromBRDFLookup:
+			// 	[{ args : [{ name : "reflectance0", type : vec3 }, { name : "environmentBrdf", type : vec3 }], ret : vec3 }];
+
+			case Source:
+				[{ args : [{ name : "src", type : TString }], ret : TVoid }];
+*/			
 			case Trace:
 				[];
 			case VertexID, InstanceID, FragCoord, FrontFacing:
@@ -221,6 +299,10 @@ class Checker {
 
 	public function check( name : String, shader : Expr ) : ShaderData {
 		vars = new Map();
+		glslVFuncs = new Map();
+		glslFFuncs = new Map();
+		glslVFuncID = 0;
+		glslFFuncID = 0;
 		inits = [];
 		inLoop = false;
 		inWhile = false;
@@ -269,10 +351,19 @@ class Checker {
 
 		var vars = Lambda.array(vars);
 		vars.sort(function(v1, v2) return (v1.id < 0 ? -v1.id : v1.id) - (v2.id < 0 ? -v2.id : v2.id));
+
+		var vfuncs = Lambda.array(glslVFuncs);
+		vfuncs.sort(function(v1, v2) return (v1.id < 0 ? -v1.id : v1.id) - (v2.id < 0 ? -v2.id : v2.id));
+
+		var ffuncs = Lambda.array(glslFFuncs);
+		ffuncs.sort(function(v1, v2) return (v1.id < 0 ? -v1.id : v1.id) - (v2.id < 0 ? -v2.id : v2.id));
+
 		return {
 			name : name,
 			vars : vars,
 			funs : tfuns,
+			glvfuncs : vfuncs,
+			glffuncs : ffuncs
 		};
 	}
 
@@ -353,6 +444,7 @@ class Checker {
 
 	function typeExpr( e : Expr, with : WithType ) : TExpr {
 		var type = null;
+		// trace("TypeExpr: e.expr="+e.expr);
 		var ed = switch( e.expr ) {
 		case EConst(c):
 			type = switch( c ) {
@@ -422,6 +514,7 @@ class Checker {
 			}
 			TBinop(op, e1, e2);
 		case EIdent(name):
+			// trace("EIdent(name) matched:");
 			var v = vars.get(name);
 			if( v != null ) {
 				switch( name ) {
@@ -437,12 +530,26 @@ class Checker {
 					type = g.t;
 					TGlobal(g.g);
 				} else {
-					switch( name ) {
-					case "PI":
-						type = TFloat;
-						TConst(CFloat(Math.PI));
-					default:
-						error("Unknown identifier '" + name + "'", e.pos);
+					var vfunc = glslVFuncs.get(name);
+					if (vfunc!=null) {
+						// trace(" - vfunc="+vfunc);
+						type = TCallable;
+						TDeclSource(vfunc.src);
+					} else {
+						var ffunc = glslFFuncs.get(name);
+						if (ffunc!=null) {
+							// trace(" - ffunc="+ffunc);
+							type = TCallable;
+							TDeclSource(ffunc.src);
+						} else {
+							switch( name ) {
+							case "PI":
+								type = TFloat;
+								TConst(CFloat(Math.PI));
+							default:
+								error("Unknown identifier '" + name + "'", e.pos);
+							}
+						}
 					}
 				}
 			}
@@ -460,17 +567,23 @@ class Checker {
 			}
 		case ECall(e1, args):
 			function makeCall(e1) {
+				// // trace("MakeCall: e1="+e1);
 				return switch( e1.t ) {
 				case TFun(variants):
 					var e = unifyCallParams(e1, args, variants, e.pos);
 					type = e.t;
 					e.e;
+				case TCallable:
+					type = e1.t;
+					e1.e;
 				default:
 					error(e1.t.toString() + " cannot be called", e.pos);
 				}
 			}
+			// trace("ECALL:"+e1.expr);
 			switch( e1.expr ) {
 			case EField(e1, f):
+				// trace(" - EFIELD:f="+f);
 				var e1 = typeExpr(e1, Value);
 				var ef = fieldAccess(e1, f, with, e.pos);
 				if( ef == null ) error(e1.t.toString() + " has no field '" + f + "'", e.pos);
@@ -498,7 +611,17 @@ class Checker {
 						e.e;
 					}
 				}
+			case EIdent("glslsource"):
+				// trace("GLSLSource:"+args);
+				// var src = "vec3 test = vec3(0.);";
+				var src = switch( args[0].expr ) {
+					case EConst(CString(s)) : s;
+					default : null;
+				}
+				type = TVoid;
+				TGLSLSource(src);
 			default:
+				// trace(" - default makeCall="+e1);
 				makeCall(typeExpr(e1, Value));
 			}
 		case EParenthesis(e):
@@ -656,8 +779,11 @@ class Checker {
 			var def = def == null ? null : typeExpr(def, with);
 			type = TVoid;
 			TSwitch(et, cases, def);
+		case EDeclarationSource(src):
+			// trace("TDeclSource created:"+src);
+			TDeclSource( src );
 		}
-		if( type == null ) throw "assert";
+		if( type == null ) throw "assert: e="+e;
 		return { e : ed, t : type, p : e.pos };
 	}
 
@@ -669,6 +795,7 @@ class Checker {
 	}
 
 	function checkExpr( e : Expr, funs : Array<{ f : FunDecl, p : Position, inherit : Bool }>, isImport, isExtends ) {
+		// trace("CheckExpr: e.expr="+e.expr);
 		switch( e.expr ) {
 		case EBlock(el):
 			for( e in el )
@@ -743,6 +870,34 @@ class Checker {
 			try sexpr = loadShader(path.join(".")) catch( err : Error ) error(Std.string(err), e.pos);
 			if( sexpr != null )
 				checkExpr(sexpr, funs, isImport, true);
+		case ECall( { expr : EIdent("vertfunction") }, [n, e]):
+			var name = switch( n) {
+				case { expr : EConst(CString(s)) } : s;
+				default : null;
+			}
+			var src = switch( e) {
+				case { expr : EConst(CString(s)) } : s;
+				default : null;
+			}
+			// trace("vertfunction: name="+name+" src="+src+" e="+e);
+			if (src!=null && !glslVFuncs.exists(name)) {
+				// trace("ADDING GLVertFunc: name="+name+" src="+src);
+				glslVFuncs.set( name, { id: glslVFuncID++, name: name, src: src } );
+			}
+		case ECall( { expr : EIdent("fragfunction") }, [n, e]):
+			var name = switch( n) {
+				case { expr : EConst(CString(s)) } : s;
+				default : null;
+			}
+			var src = switch( e) {
+				case { expr : EConst(CString(s)) } : s;
+				default : null;
+			}
+			// trace("fragfunction: name="+name+" src="+src+" e="+e);
+			if (src!=null && !glslFFuncs.exists(name)) {
+				// trace("ADDING GLFragFunc: name="+name+" src="+src);
+				glslFFuncs.set( name, { id: glslFFuncID++, name: name, src: src } );
+			}
 		default:
 			error("This expression is not allowed at shader declaration level", e.pos);
 		}
@@ -786,6 +941,7 @@ class Checker {
 			for( q in v.qualifiers )
 				switch( q ) {
 				case Private:
+				case Keep, KeepV:
 				case Const(_):
 					var p = parent;
 					while( p != null ) {

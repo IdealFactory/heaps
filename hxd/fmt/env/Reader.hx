@@ -22,7 +22,8 @@ class Reader {
     var images:Array<Array<hxd.BitmapData>>;
     var mipmapsCount:Int;
     var imagesReady:Bool = false;
-    var order = [0, 1, 3, 2, 4, 5];
+    // var order = [0, 1, 3, 2, 4, 5];
+    var order = [0, 1, 2, 3, 4, 5];
 
     static var envCount = 0;
     
@@ -134,6 +135,7 @@ class Reader {
                 var size = img.getSize();
                 var bmp = new hxd.BitmapData(size.width, size.height);
 		        var pixels = img.getPixels( hxd.PixelFormat.RGBA);
+                trace("RGBDecode: im="+im+" f="+face+" yflip");
 		        bmp.setPixels(pixels);
 		        pixels.dispose();
                 // images[im][face] = new hxd.res.Image( entry ).toBitmap();
@@ -158,6 +160,7 @@ class Reader {
             sourceTexture.wrap = h3d.mat.Data.Wrap.Repeat;
             
             var shader = new h3d.shader.pbrsinglepass.RGBDDecode();
+            shader.scale.set( 1, -1 );
             var screen = new h3d.pass.ScreenFx( shader );
             var engine = h3d.Engine.getCurrent();
             
@@ -200,7 +203,7 @@ class Reader {
             for (im in 0...mipmapsCount) {
                 for (face in 0...6) {
                     #if debug_gltf
-                    trace("Environemnt texture upload env:IM="+im+" face="+face);
+                    trace("Environment texture upload env:IM="+im+" face="+face);
                     #end
                     texture.uploadBitmap(images[im][face], im, face);
                 }

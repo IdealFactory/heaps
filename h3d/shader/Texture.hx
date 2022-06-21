@@ -18,10 +18,12 @@ class Texture extends hxsl.Shader {
 		var specColor : Vec3;
 
 		function vertex() {
+			glslsource("// Texture vertex");
 			calculatedUV = input.uv;
 		}
 
 		function fragment() {
+			glslsource("// Texture fragment");
 			var c = texture.get(calculatedUV);
 			if( killAlpha && c.a - killAlphaThreshold < 0 ) discard;
 			if( additive )

@@ -27,18 +27,22 @@ class Globals {
 	}
 
 	public function set( path : String, v : Dynamic ) {
-		map.set(allocID(path), v);
+		var id = allocID(path);
+		// trace("Globals.set: path="+path+" v="+v+" id="+id);
+		map.set(id, v);
 	}
 
 	public function get( path : String) : Dynamic {
 		return map.get(allocID(path));
 	}
 
-	public inline function fastSet( id : Int, v : Dynamic ) {
+	public function fastSet( id : Int, v : Dynamic ) {
+		// trace("Globals.set: v="+v+" id="+id);
 		map.set(id, v);
 	}
 
-	public inline function fastGet( id : Int ) : Dynamic {
+	public function fastGet( id : Int ) : Dynamic {
+		// trace("Globals.fastGet: id="+id+" exists="+map.exists(id));
 		return map.get(id);
 	}
 

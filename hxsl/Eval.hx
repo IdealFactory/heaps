@@ -114,11 +114,21 @@ class Eval {
 			curFun = funs[i];
 			curFun.expr = evalExpr(curFun.expr,false);
 		}
+	
 		return {
 			name : s.name,
 			vars : [for( v in s.vars ) mapVar(v)],
 			funs : funs,
+			glvfuncs : s.glvfuncs.slice(0),
+			glffuncs : s.glffuncs.slice(0)
 		};
+	}
+
+	function copyFuncs(funcs:Map<String, TGLSLFunc>) {
+		var newFuncs = new Map<String, TGLSLFunc>();
+		for (f in funcs.keys()) 
+			newFuncs.set(f, funcs[f]);
+		return newFuncs;
 	}
 
 	var markReturn : Bool;
@@ -531,6 +541,12 @@ class Eval {
 				e2 = evalExpr(e, isVal);
 			}
 			TMeta(name, args, e2);
+		case TDeclSource(s):
+			trace("EVAL: TDeclSource="+s);
+			TDeclSource(s);
+		case TGLSLSource(s):
+			trace("EVAL: TGLSLSource="+s);
+			TGLSLSource(s);
 		};
 		return { e : d, t : e.t, p : e.p }
 	}

@@ -8,14 +8,17 @@ class AllocParam {
 	public var type : Ast.Type;
 	public var perObjectGlobal : AllocGlobal;
 	public var next : AllocParam;
+	public var useName : Bool;
 	public function new(name, pos, instance, index, type) {
 		this.name = name;
 		this.pos = pos;
 		this.instance = instance;
 		this.index = index;
 		this.type = type;
+		this.useName = false;
 	}
 	public function clone( resetGID = false ) {
+		trace("AllocParam: clone: p="+name);
 		var p = new AllocParam(name,pos,instance,index,type);
 		if( perObjectGlobal != null ) p.perObjectGlobal = perObjectGlobal.clone(resetGID);
 		if( next != null ) p.next = next.clone(resetGID);

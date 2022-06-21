@@ -20,6 +20,8 @@ enum Type {
 	TBuffer( t : Type, size : SizeDecl );
 	TChannel( size : Int );
 	TMat2;
+	TCallable;
+	TSource;
 }
 
 enum VecType {
@@ -86,6 +88,8 @@ enum VarQualifier {
 	Doc( s : String );
 	Borrow( source : String );
 	Sampler( name : String );
+	Keep;
+	KeepV;
 }
 
 enum Prec {
@@ -139,6 +143,7 @@ enum ExprDef {
 	ESwitch( e : Expr, cases : Array<{ values : Array<Expr>, expr:Expr }>, def : Null<Expr> );
 	EWhile( cond : Expr, loop : Expr, normalWhile : Bool );
 	EMeta( name : String, args : Array<Expr>, e : Expr );
+	EDeclarationSource( src : String );
 }
 
 typedef TVar = {
@@ -156,6 +161,12 @@ typedef TFunction = {
 	var args : Array<TVar>;
 	var ret : Type;
 	var expr : TExpr;
+}
+
+typedef TGLSLFunc = {
+	var id : Int;
+	var name : String;
+	var src : String;
 }
 
 enum FunctionKind {
@@ -227,13 +238,50 @@ enum TGlobal {
 	Mat4;
 	// extra (not in GLSL ES)
 	Mat3x4;
-	Saturate;
+	// Saturate;
 	Pack;
 	Unpack;
 	PackNormal;
 	UnpackNormal;
 	ScreenToUv;
 	UvToScreen;
+
+	// PBR Single Pass 
+	Saturate;
+	AbsEps;
+	MaxEps;
+	SaturateEps;
+/*	ToLinearSpace;
+	// ToLinearSpace3;
+	// ToLinearSpace4;
+	ToGammaSpace;
+	// ToGammaSpace3;
+	// ToGammaSpace4;
+	Square;
+	// Square3;
+	Pow5;
+	GetLuminance;
+	GetRand;
+	Dither;
+	ToRGBD;
+	// FromRGBD;
+	ConvertRoughnessToAverageSlope;
+	FresnelGrazingReflectance;
+	GetAARoughnessFactors;
+	ApplyImageProcessing;
+	ComputeEnvironmentIrradiance;
+	GetEnergyConservationFactor;
+	GetBRDFLookup;
+	GetReflectanceFromBRDFLookup;
+	GetLodFromAlphaG;
+	EnvironmentRadianceOcclusion;
+	EnvironmentHorizonOcclusion;
+	// ComputeCubicCoords;
+	// ComputeReflectionCoords;
+	// GetSheenReflectanceFromBRDFLookup;
+
+	Source;
+*/	
 	// extensions
 	DFdx;
 	DFdy;
@@ -281,6 +329,8 @@ enum TExprDef {
 	TSwitch( e : TExpr, cases : Array<{ values : Array<TExpr>, expr:TExpr }>, def : Null<TExpr> );
 	TWhile( e : TExpr, loop : TExpr, normalWhile : Bool );
 	TMeta( m : String, args : Array<Const>, e : TExpr );
+	TDeclSource( s : String );
+	TGLSLSource( s : String );
 }
 
 typedef TExpr = { e : TExprDef, t : Type, p : Position }
@@ -289,6 +339,8 @@ typedef ShaderData = {
 	var name : String;
 	var vars : Array<TVar>;
 	var funs : Array<TFunction>;
+	var glvfuncs : Array<TGLSLFunc>;
+	var glffuncs : Array<TGLSLFunc>;
 }
 
 class Tools {
@@ -470,6 +522,8 @@ class Tools {
 			return hasSideEffect(e) || hasSideEffect(loop);
 		case TMeta(_, _, e):
 			return hasSideEffect(e);
+		case TDeclSource(_), TGLSLSource(_):
+			return true;
 		}
 	}
 
@@ -497,7 +551,7 @@ class Tools {
 		case TWhile(e, loop, _):
 			f(e);
 			f(loop);
-		case TConst(_), TVar(_), TGlobal(_), TDiscard, TContinue, TBreak:
+		case TConst(_), TVar(_), TGlobal(_), TDiscard, TContinue, TBreak, TDeclSource(_), TGLSLSource(_):
 		case TMeta(_, _, e): f(e);
 		}
 	}
@@ -518,7 +572,7 @@ class Tools {
 		case TArrayDecl(el): TArrayDecl([for( e in el ) f(e)]);
 		case TSwitch(e, cases, def): TSwitch(f(e), [for( c in cases ) { values : [for( v in c.values ) f(v)], expr : f(c.expr) }], def == null ? null : f(def));
 		case TWhile(e, loop, normalWhile): TWhile(f(e), f(loop), normalWhile);
-		case TConst(_), TVar(_), TGlobal(_), TDiscard, TContinue, TBreak: e.e;
+		case TConst(_), TVar(_), TGlobal(_), TDiscard, TContinue, TBreak, TDeclSource(_), TGLSLSource(_): e.e;
 		case TMeta(m, args, e): TMeta(m, args, f(e)); // don't map args
 		}
 		return { e : ed, t : e.t, p : e.p };
@@ -526,7 +580,7 @@ class Tools {
 
 	public static function size( t : Type ) {
 		return switch( t ) {
-		case TVoid: 0;
+		case TVoid, TCallable, TSource: 0;
 		case TFloat, TInt: 1;
 		case TVec(n, _), TChannel(n): n;
 		case TStruct(vl):

@@ -213,6 +213,7 @@ class HlslOut {
 	function addValue( e : TExpr, tabs : String ) {
 		switch( e.e ) {
 		case TBlock(el):
+			trace("HLSL-EL:"+el);
 			var name = "val" + (exprIds++);
 			var tmp = buf;
 			buf = new StringBuf();

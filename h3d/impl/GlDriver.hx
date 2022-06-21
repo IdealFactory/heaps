@@ -201,6 +201,8 @@ class GlDriver extends Driver {
 		if( reg.match(v) )
 			glES = Std.parseFloat(reg.matched(1));
 
+		// glES = 1;
+
 		#if !js
 		if( glES == null ) {
 			commonVA = gl.createVertexArray();
@@ -210,6 +212,8 @@ class GlDriver extends Driver {
 
 		var reg = ~/[0-9]+\.[0-9]+/;
 		var v : String = gl.getParameter(GL.SHADING_LANGUAGE_VERSION);
+		// shaderVersion = 100;
+
 		if( reg.match(v) ) {
 			#if js
 			glES = Std.parseFloat(reg.matched(0));
@@ -375,7 +379,9 @@ class GlDriver extends Driver {
 				index = 0;
 			}
 			for( i in 0...count ) {
-				var loc:Dynamic = gl.getUniformLocation(p.p, prefix+name+"["+index+"]");
+				trace("TEXTURES: i="+i+" t="+t.name+" useName="+t.useName);
+				var n = t.useName ? t.name : prefix+name+"["+index+"]";
+				var loc:Dynamic = gl.getUniformLocation(p.p, n);
 				/*
 					This is a texture that is used in HxSL but has been optimized out by GLSL compiler.
 					While some drivers will correctly report `null` here, some others (AMD) will instead
@@ -614,6 +620,7 @@ class GlDriver extends Driver {
 				if( pt.u == null ) continue;
 
 				var idx = s.vertex ? i : curShader.vertex.textures.length + i;
+				// trace("GLDriver.Textures: t="+t+" pt="+pt+" idx="+idx);
 				if( boundTextures[idx] != t.t ) {
 					boundTextures[idx] = t.t;
 

@@ -27,6 +27,7 @@ class PBRSinglePass extends Material {
 	public var ambientOcclusion : h3d.shader.pbrsinglepass.AmbientOcclusion;
 	public var ambientOcclusionMap : h3d.shader.pbrsinglepass.AmbientOcclusionMap;
     public var output : h3d.shader.pbrsinglepass.Output;
+    public var debug : h3d.shader.pbrsinglepass.Debug;
     public var colorTransform : h3d.shader.ColorTransform;
 
     public var hasTangentBuffer(default, set):Bool;
@@ -50,6 +51,7 @@ class PBRSinglePass extends Material {
         envLighting = new h3d.shader.pbrsinglepass.EnvLighting();
         finalCombination = new h3d.shader.pbrsinglepass.FinalCombination();
         output = new h3d.shader.pbrsinglepass.Output();
+        debug = new h3d.shader.pbrsinglepass.Debug();
         colorTransform = new h3d.shader.ColorTransform();
          
         var bm = mainPass.getShader( h3d.shader.BaseMesh );
@@ -63,18 +65,26 @@ class PBRSinglePass extends Material {
         mainPass.addShaderAtIndex(pbrshader, baseMeshOffset);
         baseMeshOffset--;
         addBaseColor();
-        addAmbientOcculsion();
         addSurface();
+        addAmbientOcculsion();
         addIrradiance();
-        mainPass.addShaderAtIndex(envLighting, 5 + baseMeshOffset);
+        mainPass.addShaderAtIndex(envLighting, 8 + baseMeshOffset);
         addAmbientMonochrome();
         addSpecEnvReflect();
-        mainPass.addShaderAtIndex(finalCombination, 8 + baseMeshOffset);
         addSheen([1, 1, 1], 0, 0);
         addClearCoat( 0, 0 );
         addEmissive();
-        mainPass.addShaderAtIndex(output, 10 + baseMeshOffset);
-        mainPass.addShaderAtIndex(colorTransform, 11 + baseMeshOffset);
+        mainPass.addShaderAtIndex(finalCombination, mainPass.shaders.count);
+        mainPass.addShaderAtIndex(debug, mainPass.shaders.count);
+        mainPass.addShaderAtIndex(output, mainPass.shaders.count);
+        mainPass.addShaderAtIndex(colorTransform, mainPass.shaders.count);
+        dumpShaders("Shaders after init");
+    }
+
+    function dumpShaders(hdr:String){
+        trace(hdr+":");
+        for (s in mainPass.getShaders())
+            trace(" s="+s);
     }
 
 	public var reflectivityMap(get, set) : h3d.mat.Texture;
@@ -83,6 +93,7 @@ class PBRSinglePass extends Material {
 
     override function get_texture() {
         if( uv1 == null ) return null;
+        // if( pbrshader == null ) return null;
 		return uv1.albedoSampler;
 	}
 
@@ -90,20 +101,23 @@ class PBRSinglePass extends Material {
         if( t != null && uv1 == null ) addUV1();
         if( uv1 == null ) return null;
         uv1.albedoSampler = t;
+        // if (pbrshader==null) return null;
+        // pbrshader.albedoSampler = t;
 		return t;
 	}
 
     override function get_normalMap() {
         if( normalMapping != null ) return normalMapping.bumpSampler;
-        // if( tangent != null ) return tangent.bumpSampler;
+        if( tangent != null ) return tangent.bumpSampler;
         return null;
 	}
 
 	override function set_normalMap(t) {
         if( t != null) {
+            trace("NORMALMAP: Setting: hasTangentBuffer="+this.hasTangentBuffer);
             if (this.hasTangentBuffer) {
                 if (tangent==null) addTangent();
-                // tangent.bumpSampler = t;
+                tangent.bumpSampler = t;
             } else {
                 if (normalMapping==null) addNormalMap();
                 normalMapping.bumpSampler = t;
@@ -124,10 +138,10 @@ class PBRSinglePass extends Material {
     function set_metalnessFactor( val:Float ):Float {
         this.metalnessFactor = val;
         if (surface!=null) {
-            surface.vReflectivityColor.x = val;
+            surface.uReflectivityColor.x = val;
         };
         if (surfaceMap!=null) {
-            surfaceMap.vReflectivityColor.x = val;
+            surfaceMap.uReflectivityColor.x = val;
         };
         return val;
     }
@@ -135,10 +149,10 @@ class PBRSinglePass extends Material {
     function set_roughnessFactor( val:Float ):Float {
         this.roughnessFactor = val;
         if (surface!=null) {
-            surface.vReflectivityColor.y = val;
+            surface.uReflectivityColor.y = val;
         };
         if (surfaceMap!=null) {
-            surfaceMap.vReflectivityColor.y = val;
+            surfaceMap.uReflectivityColor.y = val;
         };
         return val;
     }
@@ -236,10 +250,10 @@ class PBRSinglePass extends Material {
     
 	public function setColorRGBA(r, g, b, a) {
         if( baseColor != null )
-            baseColor.vAlbedoColor.set(r, g, b, a);
+            baseColor.uAlbedoColor.set(r, g, b, a);
 
         if( uv1 != null )
-            uv1.vAlbedoColor.set(r, g, b, a);
+            uv1.uAlbedoColor.set(r, g, b, a);
     }
    
     function shaderList(sl:hxsl.ShaderList, ind:Int=0){
@@ -253,6 +267,7 @@ class PBRSinglePass extends Material {
     function addBaseColor() {
         baseColor = new h3d.shader.pbrsinglepass.BaseColor();
         mainPass.addShaderAtIndex(baseColor, 2+baseMeshOffset);
+        dumpShaders("BaseColor added");
     }
 
     function addBaseColorUV() {
@@ -264,6 +279,7 @@ class PBRSinglePass extends Material {
             baseColorUV = new h3d.shader.pbrsinglepass.BaseColorUV();
         }
         mainPass.addShaderAtIndex(baseColorUV, 2+baseMeshOffset);
+        dumpShaders("BaseColorUV added");
     }
 
     function addUV1() {
@@ -279,6 +295,7 @@ class PBRSinglePass extends Material {
             uv1 = new h3d.shader.pbrsinglepass.UV1();
         }
         mainPass.addShaderAtIndex(uv1, 2+baseMeshOffset);
+        dumpShaders("UV1 added");
     }
 
     function addNormalMap() {
@@ -291,6 +308,7 @@ class PBRSinglePass extends Material {
             normalMapping = new h3d.shader.pbrsinglepass.NormalMap();
         }
         mainPass.addShaderAtIndex(normalMapping, 1+baseMeshOffset);
+        dumpShaders("NormalMap added");
     }
 
     function addTangent() {
@@ -305,21 +323,24 @@ class PBRSinglePass extends Material {
         }
         if (tangent == null) {
             tangent = new h3d.shader.pbrsinglepass.Tangent();
-            // if (oldNM != null) {
-            //     tangent.bumpSampler = oldNM.bumpSampler;
-            // }
+            if (oldNM != null) {
+                tangent.bumpSampler = oldNM.bumpSampler;
+            }
         }
-        mainPass.addShaderAtIndex(tangent, 1+baseMeshOffset);
+        mainPass.addShaderAtIndex(tangent, 2+baseMeshOffset);
+        dumpShaders("Tangent added");
     }
 
     function addAmbientOcculsion() {
         ambientOcclusion = new h3d.shader.pbrsinglepass.AmbientOcclusion();
         mainPass.addShaderAtIndex(ambientOcclusion, 3+baseMeshOffset);
+        dumpShaders("AmbientOcclusion added");
     }
 
     function addAmbientMonochrome() {
         ambientMonochrome = new h3d.shader.pbrsinglepass.AmbientMonochrome();
-        mainPass.addShaderAtIndex(ambientMonochrome, 5+baseMeshOffset);
+        mainPass.addShaderAtIndex(ambientMonochrome, 6+baseMeshOffset);
+        dumpShaders("AmbientMonochrome added");
     }
 
     function addAmbientOcculsionMap() {
@@ -337,11 +358,13 @@ class PBRSinglePass extends Material {
         }
         ambientMonochromeLum = new h3d.shader.pbrsinglepass.AmbientMonochromeLum();
         mainPass.addShaderAtIndex(ambientMonochromeLum, 5+baseMeshOffset);
+        dumpShaders("AmbientMonochromeLum added");
     }
 
     function addSurface() {
         surface = new h3d.shader.pbrsinglepass.Surface();
         mainPass.addShaderAtIndex(surface, 4+baseMeshOffset);
+        dumpShaders("Surface added");
     }
 
     function addSurfaceMap() {
@@ -353,14 +376,16 @@ class PBRSinglePass extends Material {
         if (surfaceMap == null) {
             surfaceMap = new h3d.shader.pbrsinglepass.SurfaceMap();
             if (old != null)
-                surfaceMap.vReflectivityColor.set( old.vReflectivityColor.x, old.vReflectivityColor.y, old.vReflectivityColor.z, old.vReflectivityColor.w ); 
+                surfaceMap.uReflectivityColor.set( old.uReflectivityColor.x, old.uReflectivityColor.y, old.uReflectivityColor.z, old.uReflectivityColor.w ); 
         }
         mainPass.addShaderAtIndex(surfaceMap, 4+baseMeshOffset);
+        dumpShaders("SurfaceMap added");
     }
 
     function addIrradiance() {
         irradiance = new h3d.shader.pbrsinglepass.Irradiance();
         mainPass.addShaderAtIndex(irradiance, 5+baseMeshOffset);
+        dumpShaders("Irradiance added");
     }
 
     function addIrradianceMap() {
@@ -372,12 +397,13 @@ class PBRSinglePass extends Material {
             irradianceMap = new h3d.shader.pbrsinglepass.IrradianceMap();
         }
         mainPass.addShaderAtIndex(irradianceMap, 5+baseMeshOffset);
-
+        dumpShaders("IrradianceMap added");
     }
 
     function addSpecEnvReflect() {
         specEnvReflect = new h3d.shader.pbrsinglepass.SpecEnvReflect();
-        mainPass.addShaderAtIndex(specEnvReflect, 6+baseMeshOffset);
+        mainPass.addShaderAtIndex(specEnvReflect, 7+baseMeshOffset);
+        dumpShaders("SpecEnvReflect added");
     }
 
     function addSpecEnvReflectMap() {
@@ -388,12 +414,14 @@ class PBRSinglePass extends Material {
         if (specEnvReflectMap == null) {
             specEnvReflectMap = new h3d.shader.pbrsinglepass.SpecEnvReflectMap();
         }
-        mainPass.addShaderAtIndex(specEnvReflectMap, 6+baseMeshOffset);
+        mainPass.addShaderAtIndex(specEnvReflectMap, 7+baseMeshOffset);
+        dumpShaders("SpecEnvReflectMap added");
     }
 
     function addEmissive() {
         emissive = new h3d.shader.pbrsinglepass.Emissive();
         mainPass.addShaderAtIndex(emissive, 11+baseMeshOffset);
+        dumpShaders("Emissive added");
     }
 
     function addEmissiveMap() {
@@ -406,78 +434,79 @@ class PBRSinglePass extends Material {
             emissiveMap = new h3d.shader.pbrsinglepass.EmissiveMap();
         }
         mainPass.addShaderAtIndex(emissiveMap, 11+baseMeshOffset);
+        dumpShaders("EmissiveMap added");
     }
 
     public var sphericalHarmonics(default, set):hxd.fmt.env.SphericalHarmonics;
     function set_sphericalHarmonics(value:hxd.fmt.env.SphericalHarmonics):hxd.fmt.env.SphericalHarmonics {
         this.sphericalHarmonics = value;
-        vSphericalL00( value.l00.x, value.l00.y, value.l00.z ); 
-        vSphericalL10( value.l10.x, value.l10.y, value.l10.z ); 
-        vSphericalL20( value.l20.x, value.l20.y, value.l20.z ); 
-        vSphericalL11( value.l11.x, value.l11.y, value.l11.z ); 
-        vSphericalL21( value.l21.x, value.l21.y, value.l21.z ); 
-        vSphericalL22( value.l22.x, value.l22.y, value.l22.z ); 
-        vSphericalL1_1( value.l1_1.x, value.l1_1.y, value.l1_1.z ); 
-        vSphericalL2_1( value.l2_1.x, value.l2_1.y, value.l2_1.z ); 
-        vSphericalL2_2( value.l2_2.x, value.l2_2.y, value.l2_2.z );
+        vSphL00( value.l00.x, value.l00.y, value.l00.z ); 
+        vSphL10( value.l10.x, value.l10.y, value.l10.z ); 
+        vSphL20( value.l20.x, value.l20.y, value.l20.z ); 
+        vSphL11( value.l11.x, value.l11.y, value.l11.z ); 
+        vSphL21( value.l21.x, value.l21.y, value.l21.z ); 
+        vSphL22( value.l22.x, value.l22.y, value.l22.z ); 
+        vSphL1_1( value.l1_1.x, value.l1_1.y, value.l1_1.z ); 
+        vSphL2_1( value.l2_1.x, value.l2_1.y, value.l2_1.z ); 
+        vSphL2_2( value.l2_2.x, value.l2_2.y, value.l2_2.z );
         return value;
     }
 
-    public function vSphericalL00(vx:Float, vy:Float, vz:Float) {
-        if (irradiance!=null) irradiance.vSphericalL00.set(vx, vy, vz); 
-        if (irradianceMap!=null) irradianceMap.vSphericalL00.set(vx, vy, vz); 
+    public function vSphL00(vx:Float, vy:Float, vz:Float) {
+        if (irradiance!=null) irradiance.vSphL00.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphL00.set(vx, vy, vz); 
     }
 
-    public function vSphericalL10(vx:Float, vy:Float, vz:Float) {
-        if (irradiance!=null) irradiance.vSphericalL10.set(vx, vy, vz); 
-        if (irradianceMap!=null) irradianceMap.vSphericalL10.set(vx, vy, vz); 
+    public function vSphL10(vx:Float, vy:Float, vz:Float) {
+        if (irradiance!=null) irradiance.vSphL10.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphL10.set(vx, vy, vz); 
     }
 
-    public function vSphericalL20(vx:Float, vy:Float, vz:Float) {
-        if (irradiance!=null) irradiance.vSphericalL20.set(vx, vy, vz); 
-        if (irradianceMap!=null) irradianceMap.vSphericalL20.set(vx, vy, vz); 
+    public function vSphL20(vx:Float, vy:Float, vz:Float) {
+        if (irradiance!=null) irradiance.vSphL20.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphL20.set(vx, vy, vz); 
     }
 
-    public function vSphericalL11(vx:Float, vy:Float, vz:Float) {
-        if (irradiance!=null) irradiance.vSphericalL11.set(vx, vy, vz); 
-        if (irradianceMap!=null) irradianceMap.vSphericalL11.set(vx, vy, vz); 
+    public function vSphL11(vx:Float, vy:Float, vz:Float) {
+        if (irradiance!=null) irradiance.vSphL11.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphL11.set(vx, vy, vz); 
     }
 
-    public function vSphericalL21(vx:Float, vy:Float, vz:Float) {
-        if (irradiance!=null) irradiance.vSphericalL21.set(vx, vy, vz); 
-        if (irradianceMap!=null) irradianceMap.vSphericalL21.set(vx, vy, vz); 
+    public function vSphL21(vx:Float, vy:Float, vz:Float) {
+        if (irradiance!=null) irradiance.vSphL21.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphL21.set(vx, vy, vz); 
     }
 
-    public function vSphericalL22(vx:Float, vy:Float, vz:Float) {
-        if (irradiance!=null) irradiance.vSphericalL22.set(vx, vy, vz); 
-        if (irradianceMap!=null) irradianceMap.vSphericalL22.set(vx, vy, vz); 
+    public function vSphL22(vx:Float, vy:Float, vz:Float) {
+        if (irradiance!=null) irradiance.vSphL22.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphL22.set(vx, vy, vz); 
     }
 
-    public function vSphericalL1_1(vx:Float, vy:Float, vz:Float) {
-        if (irradiance!=null) irradiance.vSphericalL1_1.set(vx, vy, vz); 
-        if (irradianceMap!=null) irradianceMap.vSphericalL1_1.set(vx, vy, vz); 
+    public function vSphL1_1(vx:Float, vy:Float, vz:Float) {
+        if (irradiance!=null) irradiance.vSphL1_1.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphL1_1.set(vx, vy, vz); 
     }
 
-    public function vSphericalL2_1(vx:Float, vy:Float, vz:Float) {
-        if (irradiance!=null) irradiance.vSphericalL2_1.set(vx, vy, vz); 
-        if (irradianceMap!=null) irradianceMap.vSphericalL2_1.set(vx, vy, vz); 
+    public function vSphL2_1(vx:Float, vy:Float, vz:Float) {
+        if (irradiance!=null) irradiance.vSphL2_1.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphL2_1.set(vx, vy, vz); 
     }
 
-    public function vSphericalL2_2(vx:Float, vy:Float, vz:Float) {
-        if (irradiance!=null) irradiance.vSphericalL2_2.set(vx, vy, vz); 
-        if (irradianceMap!=null) irradianceMap.vSphericalL2_2.set(vx, vy, vz); 
+    public function vSphL2_2(vx:Float, vy:Float, vz:Float) {
+        if (irradiance!=null) irradiance.vSphL2_2.set(vx, vy, vz); 
+        if (irradianceMap!=null) irradianceMap.vSphL2_2.set(vx, vy, vz); 
     }
 
     public function vLightData( vx, vy, vz ) {
-        envLighting.vLightData0.set( vx, vy, vz, 0 );
+        envLighting.uLightData0.set( vx, vy, vz, 0 );
     }
 
     public function vLightDiffuse( vx, vy, vz ) {
-        envLighting.vLightDiffuse0.set( vx, vy, vz, 1 );
+        envLighting.uLightDiffuse0.set( vx, vy, vz, 1 );
     }
 
     public function vLightingIntensity( vx, vy, vz, vw ) {
-        envLighting.vLightingIntensity.set( vx, vy, vz, vw );
+        envLighting.uLightingIntensity.set( vx, vy, vz, vw );
     }
 
     public function addSheen( sheenColor:Array<Float>, sheenIntensity:Float, sheenRoughness:Float, sheenTexture:h3d.mat.Texture = null ) {
@@ -492,6 +521,7 @@ class PBRSinglePass extends Material {
         }
 
         mainPass.addShaderAtIndex(sheen, 9+baseMeshOffset);
+        dumpShaders("Sheen added");
     }
 
     public function addClearCoat( ccFactor:Float, ccRoughnessFactor:Float, ccTexture:h3d.mat.Texture = null, ccRoughnessTexture:h3d.mat.Texture = null, ccNormalTexture:h3d.mat.Texture = null ) {
@@ -510,6 +540,7 @@ class PBRSinglePass extends Material {
             // clearCoat.reflectivitySampler = ccNormalTexture;
         }
 
-        mainPass.addShaderAtIndex(clearCoat, 10+baseMeshOffset);
+        mainPass.addShaderAtIndex(clearCoat, 9+baseMeshOffset);
+        dumpShaders("Clearcoat added");
     }
 }
