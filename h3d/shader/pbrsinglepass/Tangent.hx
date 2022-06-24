@@ -23,12 +23,16 @@ class Tangent extends PBRSinglePassLib {
         
         function vertex() {
             glslsource("// Tangent vertex-test");
-            tangentUpdated = vec4(input.tangent.x * -1.0, input.tangent.z, input.tangent.y, input.tangent.w * -1.0);
+            // tangentUpdated = vec4(input.tangent.x, input.tangent.z * -1.0, input.tangent.y * -1.0, input.tangent.w);
+            tangentUpdated = vec4(input.tangent.x, input.tangent.y, input.tangent.z, input.tangent.w);
             glslsource("// Tangent vertex
     vec3 tbnNormal = normalize(normalUpdated);
     vec3 tbnTangent = normalize(tangentUpdated.xyz);
     vec3 tbnBitangent = cross(tbnNormal, tbnTangent)*tangentUpdated.w;
-    vTBN = mat3(finalWorld)*mat3(tbnTangent, tbnBitangent, tbnNormal);
+    mat4 f = mat4( vec4( 1., 0., 0., 0.), vec4(0., 1., 0., 0.), vec4(0., 0., 1., 0.), vec4(0., 0., 0., 1.));
+    mat3 fw3 = mat3(finalWorld);
+    mat3 fw = mat3( fw3[0] * vec3( -1., 0., 0.), fw3[2], fw3[1]);
+    vTBN = fw*mat3(tbnTangent, tbnBitangent, tbnNormal);
 ");
         }
 

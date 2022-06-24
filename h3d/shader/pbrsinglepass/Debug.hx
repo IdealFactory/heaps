@@ -27,6 +27,9 @@ class Debug extends hxsl.Shader {
         finalColor.rgb = vPositionW.rgb;
         finalColor.rgb = normalize(finalColor.rgb) * 0.5 + 0.5;
     }");
+        glslsource("if (dbgid==90.0) {
+            finalColor.rgb = normalize(debugVar.rgb);
+    }");
             glslsource("if (dbgid==2.0) {
         finalColor.rgb = vNormalW.rgb;
         finalColor.rgb = normalize(finalColor.rgb) * 0.5 + 0.5;
@@ -46,9 +49,6 @@ class Debug extends hxsl.Shader {
             glslsource("if (dbgid==6.0) {
         finalColor.rgb = vec3(vMainUV1, 0.0);
     }");
-//             glslsource("if (dbgid==7.0) {
-//         finalColor.rgb = vec3(vMainUV2, 0.0);
-// }");
 //             glslsource("if (dbgid==8.0) {
 //         finalColor.rgb = clearcoatOut.TBNClearCoat[0];
 //         finalColor.rgb = normalize(finalColor.rgb) * 0.5 + 0.5;

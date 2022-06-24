@@ -75,7 +75,7 @@ class PBRSinglePass extends Material {
         addClearCoat( 0, 0 );
         addEmissive();
         mainPass.addShaderAtIndex(finalCombination, mainPass.shaders.count);
-        mainPass.addShaderAtIndex(debug, mainPass.shaders.count);
+        // mainPass.addShaderAtIndex(debug, mainPass.shaders.count);
         mainPass.addShaderAtIndex(output, mainPass.shaders.count);
         mainPass.addShaderAtIndex(colorTransform, mainPass.shaders.count);
         dumpShaders("Shaders after init");

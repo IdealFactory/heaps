@@ -171,13 +171,13 @@ class PBRSinglePass extends h3d.shader.pbrsinglepass.PBRSinglePassLib {
     
             positionUpdated = input.position * vec3(-1.0, 1., 1.); //vec3
             normalUpdated = vec3(input.normal.x * -1.0, input.normal.y, input.normal.z); //vec3
-            // normalUpdated.r = -normalUpdated.r;
             finalWorld = gmv;//world; //mat4
             worldPos = positionUpdated * finalWorld.mat3x4(); //vec4 // finalWorld * vec4(positionUpdated, 1.0)
             vPositionW = vec3(worldPos.r, worldPos.b, worldPos.g);//vec3(worldPos.rgb);
             var normalWorld = mat3(finalWorld); //mat3
             tmpNormal = vec3(normalUpdated.r, normalUpdated.g, normalUpdated.b);
             vNormalW = normalize(tmpNormal * finalWorld.mat3())#if !flash .rbg#end; // normalize(normalWorld * normalUpdated);
+            normalUpdated.x = normalUpdated.x * -1.0;
             var uv2 = vec2(0., 0.); //vec2
             vEyePosition = vec3(camera.position.r, camera.position.b, camera.position.g); //camera.position;//
             vReflectionMatrix = uReflectionMatrix;

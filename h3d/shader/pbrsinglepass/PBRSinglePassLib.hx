@@ -38,7 +38,7 @@ class PBRSinglePassLib extends hxsl.Shader  {
         @keep @var var vNormalW : Vec3;                                       // varying vec3 vNormalW;
         @keep @var var vEyePosition : Vec3;
 
-        @keep @var var vMainUV1 : Vec2; 
+        @keep @keepv @var var vMainUV1 : Vec2; 
 
         @keep @keepv @var var vEnvironmentIrradiance : Vec3;
 
@@ -80,7 +80,7 @@ class PBRSinglePassLib extends hxsl.Shader  {
 
         // @keep var environmentBrdfSamp : Vec4;
 
-        @keep var debugVar:Vec4;
+        @keep @keepv @var var debugVar:Vec4;
 
         // function saturate(x:Float):Float { 
         //     return clamp(x,0.0,1.0);
@@ -421,6 +421,19 @@ const float Epsilon = 0.0000001;
     + vSphericalL20*((3.0*normal.z*normal.z)-1.0)
     + vSphericalL21*(normal.z*normal.x)
     + vSphericalL22*(normal.x*normal.x-(normal.y*normal.y));
+}");
+
+        vertfunction("transposeMat3",
+"mat3 transposeMat3(mat3 inMatrix) {
+    vec3 i0=inMatrix[0];
+    vec3 i1=inMatrix[1];
+    vec3 i2=inMatrix[2];
+    mat3 outMatrix=mat3(
+    vec3(i0.x,i1.x,i2.x),
+    vec3(i0.y,i1.y,i2.y),
+    vec3(i0.z,i1.z,i2.z)
+    );
+    return outMatrix;
 }");
         
         fragfunction("defines",
