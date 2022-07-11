@@ -11,7 +11,7 @@ import hxd.fmt.gltf.Data;
 
 #if openfl
 import openfl.display3D.Context3D;
-import openfl._internal.renderer.context3D.Context3DState;
+import openfl.display3D._internal.Context3DState;
 
 typedef LoadInfo = {
 	var type:String;

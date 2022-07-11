@@ -433,7 +433,7 @@ class GltfTools {
 		var decoderModule:Dynamic = null;
 		var decoder:Dynamic = null;
 		var buffer:Dynamic = null;
-		untyped __js__ ("
+		untyped #if haxe4 js.Syntax.code #else __js__ #end ("
 
 			if (typeof window['DracoDecoderModule'] != 'undefined') {
 				decoderModule = new DracoDecoderModule();
@@ -453,10 +453,10 @@ class GltfTools {
 		var status:Dynamic;
         switch (geometryType) {
             case 1: //decoderModule.TRIANGULAR_MESH:
-                geometry = untyped __js__ ("new decoderModule.Mesh();");
+                geometry = untyped #if haxe4 js.Syntax.code #else __js__ #end ("new decoderModule.Mesh();");
                 status = decoder.DecodeBufferToMesh(buffer, geometry);
              case 0://decoderModule.POINT_CLOUD:
-                geometry = untyped __js__ ("new decoderModule.PointCloud();");
+                geometry = untyped #if haxe4 js.Syntax.code #else __js__ #end ("new decoderModule.PointCloud();");
                 status = decoder.DecodeBufferToPointCloud(buffer, geometry);
             default:
                 throw "Invalid geometry type "+geometryType;
@@ -470,7 +470,7 @@ class GltfTools {
 
 		if (geometryType == 1 /*decoderModule.TRIANGULAR_MESH */) {
             var numFaces = geometry.num_faces();
-            var faceIndices = untyped __js__ ("new decoderModule.DracoInt32Array();");
+            var faceIndices = untyped #if haxe4 js.Syntax.code #else __js__ #end ("new decoderModule.DracoInt32Array();");
             try {
                 var indices = new IndexBuffer(numFaces * 3);//new Uint32Array(numFaces * 3);
 				for (i in 0...numFaces) {
@@ -499,7 +499,7 @@ class GltfTools {
 	private static function processDracoAttribute( decoderModule, decoder, geometry, numPoints, id ) : FloatBuffer {
 		var buffer:FloatBuffer = null;
 		#if js
-		var dracoData = untyped __js__ ("new decoderModule.DracoFloat32Array();");
+		var dracoData = untyped #if haxe4 js.Syntax.code #else __js__ #end ("new decoderModule.DracoFloat32Array();");
 
 		var attribute = decoder.GetAttributeByUniqueId(geometry, id);
 		decoder.GetAttributeFloatForAllPoints(geometry, attribute, dracoData);
@@ -657,7 +657,7 @@ class GltfTools {
 		return getBufferBytes( l, bvId, acc );
 	}
 
-	public static function getBufferBytes( l, bvId, acc = null ):Bytes {
+	public static function getBufferBytes( l, bvId, acc:Accessor = null ):Bytes {
 		var bv = l.root.bufferViews[ bvId ];
 		var accOffset = acc==null ? 0 : (!Reflect.hasField( acc, "byteOffset") ? 0 : acc.byteOffset);
 		var offset = !Reflect.hasField( bv, "byteOffset") ? 0 : bv.byteOffset;

@@ -13,7 +13,7 @@ class Tangent extends PBRSinglePassLib {
             var tangent : Vec4;                                        // attribute vec4 tangent;    
         }
 
-        // @param var bumpSampler : Sampler2D;                             // uniform sampler2D bumpSampler;
+        @param var bumpSampler : Sampler2D;                             // uniform sampler2D bumpSampler;
         @param var vBumpInfos : Vec3;                                   // uniform vec3 vBumpInfos;
 
         @var var vTBN : Mat3;
@@ -33,8 +33,8 @@ class Tangent extends PBRSinglePassLib {
 
         function fragment() {
             TBN = vTBN;
-            // var pt = perturbNormal(TBN, bumpSampler.get(vMainUV1).xyz, vBumpInfos.y);
-            // normalW = vec3(pt.x, -pt.z, -pt.y);
+            var pt = perturbNormal(TBN, bumpSampler.get(vMainUV1).xyz, vBumpInfos.y);
+            normalW = vec3(pt.x, -pt.z, -pt.y);
         }
     };
 

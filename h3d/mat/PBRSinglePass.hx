@@ -95,7 +95,7 @@ class PBRSinglePass extends Material {
 
     override function get_normalMap() {
         if( normalMapping != null ) return normalMapping.bumpSampler;
-        // if( tangent != null ) return tangent.bumpSampler;
+        if( tangent != null ) return tangent.bumpSampler;
         return null;
 	}
 
@@ -103,7 +103,7 @@ class PBRSinglePass extends Material {
         if( t != null) {
             if (this.hasTangentBuffer) {
                 if (tangent==null) addTangent();
-                // tangent.bumpSampler = t;
+                tangent.bumpSampler = t;
             } else {
                 if (normalMapping==null) addNormalMap();
                 normalMapping.bumpSampler = t;
@@ -305,9 +305,9 @@ class PBRSinglePass extends Material {
         }
         if (tangent == null) {
             tangent = new h3d.shader.pbrsinglepass.Tangent();
-            // if (oldNM != null) {
-            //     tangent.bumpSampler = oldNM.bumpSampler;
-            // }
+            if (oldNM != null) {
+                tangent.bumpSampler = oldNM.bumpSampler;
+            }
         }
         mainPass.addShaderAtIndex(tangent, 1+baseMeshOffset);
     }
