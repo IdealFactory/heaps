@@ -2,6 +2,8 @@ package h3d.scene;
 
 class Interactive extends Object implements hxd.SceneEvents.Interactive {
 
+	var debugObj : Object;
+
 	public var shape : h3d.col.Collider;
 
 	/**
@@ -40,6 +42,11 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 	**/
 	public var bestMatch : Bool;
 
+	/**
+	 	When set, will display the debug object of the shape (using makeDebugObj)
+	**/
+	public var showDebug(get, set) : Bool;
+
 
 	var scene : Scene;
 	var mouseDownButton : Int = -1;
@@ -55,6 +62,42 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 		super(parent);
 		this.shape = shape;
 		cursor = Button;
+	}
+
+
+	inline function get_showDebug() return debugObj != null;
+
+	public function set_showDebug(val) {
+		if( !val ) {
+			if( debugObj != null )
+				debugObj.remove();
+			debugObj = null;
+			return false;
+		}
+		if( debugObj != null )
+			return true;
+		debugObj = shape.makeDebugObj();
+		if( debugObj != null ) {
+			setupDebugMaterial(debugObj);
+
+			debugObj.ignoreParentTransform = true;
+			this.addChild(debugObj);
+		}
+		return debugObj != null;
+	}
+
+	public static dynamic function setupDebugMaterial(debugObj: Object) {
+		var materials = debugObj.getMaterials();
+		for( m in materials ) {
+			var engine = h3d.Engine.getCurrent();
+			if( engine.driver.hasFeature(Wireframe) )
+				m.mainPass.wireframe = true;
+			m.castShadows = false;
+			m.receiveShadows = false;
+			m.color.a = 0.7;
+			m.blendMode = Alpha;
+			// m.mainPass.depth(false, Always);
+		}
 	}
 
 	override function onAdd() {
@@ -86,49 +129,49 @@ class Interactive extends Object implements hxd.SceneEvents.Interactive {
 		if( propagateEvents ) e.propagate = true;
 		if( cancelEvents ) e.cancel = true;
 		switch( e.kind ) {
-			case EMove:
-				onMove(e);
-			case EPush:
-				if( enableRightButton || e.button == 0 ) {
-					mouseDownButton = e.button;
-					onPush(e);
-					if( e.cancel ) mouseDownButton = -1;
+		case EMove:
+			onMove(e);
+		case EPush:
+			if( enableRightButton || e.button == 0 ) {
+				mouseDownButton = e.button;
+				onPush(e);
+				if( e.cancel ) mouseDownButton = -1;
+			}
+		case ERelease:
+			if( enableRightButton || e.button == 0 ) {
+				onRelease(e);
+				var frame = hxd.Timer.frameCount;
+				if( mouseDownButton == e.button && (lastClickFrame != frame || allowMultiClick) ) {
+					onClick(e);
+					lastClickFrame = frame;
 				}
-			case ERelease:
-				if( enableRightButton || e.button == 0 ) {
-					onRelease(e);
-					var frame = hxd.Timer.frameCount;
-					if( mouseDownButton == e.button && (lastClickFrame != frame || allowMultiClick) ) {
-						onClick(e);
-						lastClickFrame = frame;
-					}
-				}
-				mouseDownButton = -1;
-			case EReleaseOutside:
-				if( enableRightButton || e.button == 0 ) {
-					onRelease(e);
-					if ( mouseDownButton == e.button )
-						onReleaseOutside(e);
-				}
-				mouseDownButton = -1;
-			case EOver:
-				onOver(e);
-			case EOut:
-				onOut(e);
-			case EWheel:
-				onWheel(e);
-			case EFocusLost:
-				onFocusLost(e);
-			case EFocus:
-				onFocus(e);
-			case EKeyUp:
-				onKeyUp(e);
-			case EKeyDown:
-				onKeyDown(e);
-			case ECheck:
-				onCheck(e);
-			case ETextInput:
-				onTextInput(e);
+			}
+			mouseDownButton = -1;
+		case EReleaseOutside:
+			if( enableRightButton || e.button == 0 ) {
+				onRelease(e);
+				if ( mouseDownButton == e.button )
+					onReleaseOutside(e);
+			}
+			mouseDownButton = -1;
+		case EOver:
+			onOver(e);
+		case EOut:
+			onOut(e);
+		case EWheel:
+			onWheel(e);
+		case EFocusLost:
+			onFocusLost(e);
+		case EFocus:
+			onFocus(e);
+		case EKeyUp:
+			onKeyUp(e);
+		case EKeyDown:
+			onKeyDown(e);
+		case ECheck:
+			onCheck(e);
+		case ETextInput:
+			onTextInput(e);
 		}
 	}
 

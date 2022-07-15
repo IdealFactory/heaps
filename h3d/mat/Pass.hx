@@ -5,16 +5,16 @@ import h3d.mat.Data;
 #if !macro
 @:build(hxd.impl.BitsBuilder.build())
 #end
-class Pass implements hxd.impl.Serializable {
+class Pass {
 
-	@:s public var name(default, null) : String;
+	public var name(default, null) : String;
 	var flags : Int = 0;
 	var passId : Int;
-	@:s var bits : Int = 0;
-	@:s var parentPass : Pass;
+	var bits : Int = 0;
+	var parentPass : Pass;
 	var parentShaders : hxsl.ShaderList;
 	var shaders : hxsl.ShaderList;
-	@:s var nextPass : Pass;
+	var nextPass : Pass;
 
 	@:bits(flags) public var enableLights : Bool;
 	/**
@@ -44,7 +44,7 @@ class Pass implements hxd.impl.Serializable {
 	public var colorMask : Int;
 	public var layer : Int = 0;
 
-	@:s public var stencil : Stencil;
+	public var stencil : Stencil;
 
 	// one bit for internal engine usage
 	@:bits(bits) @:noCompletion var reserved : Bool;
@@ -231,6 +231,21 @@ class Pass implements hxd.impl.Serializable {
 		return false;
 	}
 
+	public function removeShaders< T:hxsl.Shader >(t:Class<T>) {
+		var sl = shaders, prev = null;
+		while( sl != null ) {
+			if( hxd.impl.Api.isOfType(sl.s, t) ) {
+				if( prev == null )
+					shaders = sl.next;
+				else
+					prev.next = sl.next;
+			}
+			else
+				prev = sl;
+			sl = sl.next;
+		}
+	}
+
 	public function getShader< T:hxsl.Shader >(t:Class<T>) : T {
 		var s = shaders;
 		while( s != parentShaders ) {
@@ -291,37 +306,6 @@ class Pass implements hxd.impl.Serializable {
 			return h3d.Engine.getCurrent().driver.getNativeShaderCode(shader);
 		}
 	}
-
-	#if hxbit
-
-	public function customSerialize( ctx : hxbit.Serializer ) {
-		var ctx : hxd.fmt.hsd.Serializer = cast ctx;
-		var s = shaders;
-		while( s != parentShaders ) {
-			ctx.addShader(s.s);
-			s = s.next;
-		}
-		ctx.addShader(null);
-	}
-	public function customUnserialize( ctx : hxbit.Serializer ) {
-		var ctx : hxd.fmt.hsd.Serializer = cast ctx;
-		var head = null;
-		while( true ) {
-			var s = ctx.getShader();
-			if( s == null ) break;
-			var sl = new hxsl.ShaderList(s);
-			if( head == null ) {
-				head = shaders = sl;
-			} else {
-				head.next = sl;
-				head = sl;
-			}
-		}
-		setPassName(name);
-		loadBits(bits);
-	}
-	#end
-
 	#end
 
 }

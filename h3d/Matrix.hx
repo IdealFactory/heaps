@@ -80,6 +80,20 @@ class Matrix {
 		return _44 == 1;
 	}
 
+	public function isIdentityEpsilon( e : Float ) {
+		if( Math.abs(_41) > e || Math.abs(_42) > e || Math.abs(_43) > e )
+			return false;
+		if( Math.abs(_11-1) > e || Math.abs(_22-1) > e || Math.abs(_33-1) > e )
+			return false;
+		if( Math.abs(_12) > e || Math.abs(_13) > e || Math.abs(_14) > e )
+			return false;
+		if( Math.abs(_21) > e || Math.abs(_23) > e || Math.abs(_24) > e )
+			return false;
+		if( Math.abs(_31) > e || Math.abs(_32) > e || Math.abs(_34) > e )
+			return false;
+		return Math.abs(_44 - 1) <= e;
+	}
+
 	public function initRotationX( a : Float ) {
 		var cos = Math.cos(a);
 		var sin = Math.sin(a);
@@ -215,8 +229,8 @@ class Matrix {
 		multiply(this, tmp);
 	}
 
-	public inline function getPosition( ?v : Vector ) {
-		if( v == null ) v = new Vector();
+	public inline function getPosition() {
+		var v = new Vector();
 		v.set(_41,_42,_43,_44);
 		return v;
 	}
@@ -239,9 +253,8 @@ class Matrix {
 		_44 = vw;
 	}
 
-	public inline function getScale(?v: h3d.Vector) {
-		if(v == null)
-			v = new Vector();
+	public inline function getScale() {
+		var v = new Vector();
 		v.x = Math.sqrt(_11 * _11 + _12 * _12 + _13 * _13);
 		v.y = Math.sqrt(_21 * _21 + _22 * _22 + _23 * _23);
 		v.z = Math.sqrt(_31 * _31 + _32 * _32 + _33 * _33);

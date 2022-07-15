@@ -317,23 +317,26 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		ctx.lightSystem = null;
 
 		var found = null;
-		var passes = new h3d.pass.PassList(@:privateAccess ctx.passes);
-
-		if( !passes.isEmpty() ) {
-			var p = hardwarePass;
-			if( p == null )
-				hardwarePass = p = new h3d.pass.HardwarePick();
-			ctx.setGlobal("depthMap", { texture : h3d.mat.Texture.fromColor(0xFF00000, 0) });
-			p.pickX = pixelX;
-			p.pickY = pixelY;
-			p.setContext(ctx);
-			p.draw(passes);
-			if( p.pickedIndex >= 0 )
-				for( po in passes )
-					if( p.pickedIndex-- == 0 ) {
-						found = po.obj;
-						break;
-					}
+		for ( passes in @:privateAccess ctx.passes ) {
+			if ( found != null )
+				break;
+			var passList = new h3d.pass.PassList(passes);
+			if( !passList.isEmpty() ) {
+				var p = hardwarePass;
+				if( p == null )
+					hardwarePass = p = new h3d.pass.HardwarePick();
+				ctx.setGlobal("depthMap", { texture : h3d.mat.Texture.fromColor(0xFF00000, 0) });
+				p.pickX = pixelX;
+				p.pickY = pixelY;
+				p.setContext(ctx);
+				p.draw(passList);
+				if( p.pickedIndex >= 0 )
+					for( po in passList )
+						if( p.pickedIndex-- == 0 ) {
+							found = po.obj;
+							break;
+						}
+			}
 		}
 
 		ctx.done();
@@ -378,6 +381,13 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	}
 
 	/**
+		Automatically called when the 3D context is lost
+	**/
+	public function onContextLost() {
+		ctx.wasContextLost = true;
+	}
+
+	/**
 		Render the scene on screen. Internal usage only.
 	**/
 	@:access(h3d.mat.Pass)
@@ -405,23 +415,13 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 
 		syncRec(ctx);
 		emitRec(ctx);
-		// sort by pass id
-		ctx.passes = haxe.ds.ListSort.sortSingleLinked(ctx.passes, function(p1, p2) {
-			return p1.pass.passId - p2.pass.passId;
-		});
 
-		// group by pass implementation
-		var curPass = ctx.passes;
 		var passes = [];
 		var passIndex = -1;
-		while( curPass != null ) {
-			var passId = curPass.pass.passId;
-			var p = curPass, prev = null;
-			while( p != null && p.pass.passId == passId ) {
-				prev = p;
-				p = p.next;
-			}
-			prev.next = null;
+		for ( passId in 0...ctx.passes.length ) {
+			var curPass = ctx.passes[passId];
+			if ( curPass == null )
+				continue;
 			var pobjs = ctx.cachedPassObjects[++passIndex];
 			if( pobjs == null ) {
 				pobjs = new Renderer.PassObjects();
@@ -430,7 +430,6 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			pobjs.name = curPass.pass.name;
 			pobjs.passes.init(curPass);
 			passes.push(pobjs);
-			curPass = p;
 		}
 
 		// send to rendered
@@ -452,6 +451,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			engine.driver.setRenderFlag(CameraHandness,0);
 
 		ctx.done();
+		ctx.wasContextLost = false;
 		ctx.scene = null;
 		ctx.camera = null;
 		ctx.engine = null;
@@ -461,23 +461,5 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			p.passes.init(null);
 		}
 	}
-
-	/**
-		Serialize the scene content as HSD bytes (see hxd.fmt.hsd package). Requires -lib hxbit
-	**/
-	public function serializeScene() : haxe.io.Bytes {
-		#if hxbit
-		var s = new hxd.fmt.hsd.Serializer();
-		return s.saveHSD(this, false, camera);
-		#else
-		throw "You need -lib hxbit to serialize the scene data";
-		#end
-	}
-
-	#if (hxbit && !macro && heaps_enable_serialize)
-	override function customSerialize(ctx:hxbit.Serializer) {
-		throw this + " should not be serialized";
-	}
-	#end
 
 }

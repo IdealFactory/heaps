@@ -7,7 +7,7 @@ import hxd.Math;
 	@see `Object.getBounds`
 	@see `Object.getSize`
 **/
-class Bounds {
+class Bounds implements Collider {
 
 	/** X-axis left-most bounding box point. **/
 	public var xMin : Float;
@@ -64,6 +64,22 @@ class Bounds {
 	**/
 	public inline function contains( p : Point ) : Bool {
 		return p.x >= xMin && p.x < xMax && p.y >= yMin && p.y < yMax;
+	}
+
+	/**
+	 * Same as distance but does not perform sqrt
+	 */
+	 public inline function distanceSq( p : Point ) {
+		var dx = p.x < xMin ? xMin - p.x : p.x > xMax ? p.x - xMax : 0.;
+		var dy = p.y < yMin ? yMin - p.y : p.y > yMax ? p.y - yMax : 0.;
+		return dx * dx + dy * dy;
+	}
+
+	/**
+	 * Returns the distance betwen the point and the bounds. Or 0 if the point is inside the bounds.
+	 */
+	public inline function distance( p : Point ) {
+		return Math.sqrt(distanceSq(p));
 	}
 
 	/**
