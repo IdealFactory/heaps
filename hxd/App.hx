@@ -191,6 +191,9 @@ class App implements h3d.IDrawable {
 
 	function mainLoop() {
 		hxd.Timer.update();
+		#if openfl
+		@:privateAccess if (sevents.pendingEvents.length > 0)
+		#end
 		sevents.checkEvents();
 		if( isDisposed ) return;
 		update(hxd.Timer.dt);
