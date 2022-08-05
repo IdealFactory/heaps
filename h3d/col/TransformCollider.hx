@@ -27,7 +27,7 @@ class TransformCollider implements Collider {
 		return new TransformCollider(mt, collider);
 	}
 
-	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
+	public function rayIntersection( r : Ray, bestMatch : Bool ) : HitPoint {
 		var tmpRay = TMP_RAY;
 		TMP_RAY = null;
 		tmpRay.load(r);
@@ -38,11 +38,11 @@ class TransformCollider implements Collider {
 			TMP_RAY = tmpRay;
 			return hit;
 		}
-		var pt = r.getPoint(hit);
+		var pt = r.getPoint(hit.hit);
 		pt.transform(mat);
 		r.load(tmpRay);
 		TMP_RAY = tmpRay;
-		return hxd.Math.distance(pt.x - r.px, pt.y - r.py, pt.z - r.pz);
+		return new HitPoint(hxd.Math.distance(pt.x - r.px, pt.y - r.py, pt.z - r.pz));
 	}
 
 	public function contains( p : Point ) {

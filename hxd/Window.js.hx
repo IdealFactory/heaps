@@ -100,11 +100,9 @@ class Window {
 		// add mousemove on window (track mouse even when outside of component)
 		// unless we're having a custom canvas (prevent leaking the listener)
 		#if !openfl
-		if( customCanvas )
+		if( customCanvas ) {
 			canvas.addEventListener("mousemove", onMouseMove);
-		}
-
-		else {
+		} else {
 			js.Browser.window.addEventListener("mousemove", onMouseMove);
 		}
 

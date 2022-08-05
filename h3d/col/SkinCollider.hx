@@ -15,7 +15,7 @@ class SkinCollider implements Collider {
 		this.obj = obj;
 		this.col = col;
 		this.transform = new PolygonBuffer();
-		this.transform.setData(col.buffer.copy(), col.indexes, col.uvs.copy(), col.startIndex, col.triCount);
+		this.transform.setData(col.buffer.copy(), col.indexes, col.uvs!=null ? col.uvs.copy() : null, col.startIndex, col.triCount);
 		currentBounds = new h3d.col.Bounds();
 	}
 

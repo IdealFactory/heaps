@@ -24,7 +24,7 @@ class HeightMap implements Collider {
 	/**
 		Returns the height value at given coordinates.
 	**/
-	public function getZ( x : Float, y : Float ) : Float {
+	public function getZ( x : Float, y : Float ) : HitPoint {
 		throw "Not implemented: requires override";
 	}
 

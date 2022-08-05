@@ -650,7 +650,7 @@ class GlDriver extends Driver {
 				#if !js
 				if( t.lodBias != t.t.bias ) {
 					t.t.bias = t.lodBias;
-					gl.texParameterf(pt.mode, #if lime GL2.MAX_TEXTURE_LOD_BIAS #else GL2.TEXTURE_LOD_BIAS #end, t.lodBias);
+					gl.texParameterf(pt.mode, #if lime GL.MAX_TEXTURE_LOD_BIAS #else GL2.TEXTURE_LOD_BIAS #end, t.lodBias);
 				}
                 if (pt.t != TSamplerCube && h3d.mat.Texture.maxTextureMaxAnisotropy>0 && t.anisotropy>0) {
 					gl.texParameterf(mode, h3d.mat.Texture.textureMaxAnisotropy, t.anisotropy);
@@ -2095,8 +2095,8 @@ class GlDriver extends Driver {
 		GL.MAX
 		#end
 		#else
-		GL.FUNC_MIN,
-		GL.FUNC_MAX
+		#if js GL.MIN #else GL.FUNC_MIN #end,
+		#if js GL.MAX #else GL.FUNC_MAX #end,
 		#end
 	];
 

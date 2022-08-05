@@ -75,9 +75,10 @@ class PolygonBuffer implements Collider {
 			// p1.z = p1.z;
 			// p2.z = p2.z;
 			
-			var uv0 = new FPoint(uvs[uvi0++], uvs[uvi0]);
-			var uv1 = new FPoint(uvs[uvi1++], uvs[uvi1]);
-			var uv2 = new FPoint(uvs[uvi2++], uvs[uvi2]);
+			
+			var uv0 = new FPoint(uvs==null ? 0 : uvs[uvi0++], uvs==null ? 0 : uvs[uvi0]);
+			var uv1 = new FPoint(uvs==null ? 0 : uvs[uvi1++], uvs==null ? 0 : uvs[uvi1]);
+			var uv2 = new FPoint(uvs==null ? 0 : uvs[uvi2++], uvs==null ? 0 : uvs[uvi2]);
 
 			var e1 = p1.sub(p0);
 			var e2 = p2.sub(p0);
@@ -153,7 +154,6 @@ class PolygonBuffer implements Collider {
 				var ty = tu*uv0.y + tv*uv1.y + tw*uv2.y;
 				t.u = tx;
 				t.v = ty;
-				// trace(" - NOT bestMatch="+hitInfo);
 				return t;
 			}
 			if( best < 0 || t < best ) {
@@ -174,37 +174,11 @@ class PolygonBuffer implements Collider {
 				var ty = tu*uv0.y + tv*uv1.y + tw*uv2.y;
 				best.u = tx;
 				best.v = 1 + ty;
-				// trace("CALC-1: uvw:"+u+"/"+v+"/"+w+" uv0:"+uv0+" uv1:"+uv1+" uv2:"+uv2+" p:"+p+" q:"+q+" ");
-				// var g = com.idealfactory.editor.view.product3D.component.HeapsMain.draw.graphics;
-				// // var g = PbrWebGL1.draw.graphics;
-				// g.clear();
-				// g.beginFill(0xffffff);
-				// g.drawRect( 0, 0, 1800, 200);
-				// g.endFill();
-
-				// draw( g, u, v, 0, 0xff0000);
-				
-				// com.idealfactory.editor.view.product3D.component.HeapsMain.debug.text="uvw:"+u+"/"+v+"/"+w+"\ntuvw:"+tu+"/"+tv+"/"+tw;
-				// com.idealfactory.editor.view.product3D.component.HeapsMain.debug.text+="\nuv:"+u+"/"+v+"\ntxy:"+tx+"/"+ty;
-				// com.idealfactory.editor.view.product3D.component.HeapsMain.debug.text="Q1Q1:"+Q1Q1+" Q1Q2:"+Q1Q2+" Q2Q2:"+Q2Q2;
-				// com.idealfactory.editor.view.product3D.component.HeapsMain.debug.text="\nRED P0:"+p0+"\nGRN P1:"+p1+"\nBLU P2:"+p2;
-				// com.idealfactory.editor.view.product3D.component.HeapsMain.debug.text+="\ncoeff:"+coeff+"\np:"+r.px+"/"+r.py+"/"+r.pz+"\nc:"+cx+"/"+cy+"/"+cz+"\ndir:"+rdir.x+"/"+rdir.y+"/"+rdir.z;
-				// com.idealfactory.editor.view.product3D.component.HeapsMain.debug.text+="\ndet:"+det+" invDet:"+invDet;
-				// com.idealfactory.editor.view.product3D.component.HeapsMain.debug.text+="\nuvw:"+u+"/"+v+"/"+w+"\ntuvw:"+tu+"/"+tv+"/"+tw;
-				// com.idealfactory.editor.view.product3D.component.HeapsMain.debug.text+="\nuv:"+u+"/"+v+"\ntxy:"+best.u+"/"+best.v;
-				
 			}
 		}
-		// trace(" - BestMatch="+hitInfo);
 		return best;
 	}
 	var sz = 50;
-
-	function draw( g:openfl.display.Graphics, u:Float, v:Float, off:Float, col:UInt ) {
-		g.lineStyle( 2, col );
-		g.moveTo( sz + (off * sz * 2), 50 );
-		g.lineTo( sz + (off * sz * 2) + (u * 50), 50 + (v * 50) );
-}
 
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {

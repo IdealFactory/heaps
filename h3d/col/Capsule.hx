@@ -17,7 +17,7 @@ class Capsule implements Collider {
 		return new Seg(a, b).distanceSq(p) < r*r;
 	}
 
-	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
+	public function rayIntersection( r : Ray, bestMatch : Bool ) : HitPoint {
 		// computing  t'  =  (t * AB.RD + AB.AO) / AB.AB  =  t * m + n
 		var AB = new h3d.col.Point(b.x-a.x, b.y-a.y, b.z-a.z);
 		var o = r.getPos();
@@ -45,27 +45,27 @@ class Capsule implements Collider {
 
 		if (coefA == 0.0) { // if parallel
 			tmpSphere.load(this.a.x, this.a.y, this.a.z, this.r);
-			var intersectSphereA = tmpSphere.rayIntersection(r, bestMatch);
+			var intersectSphereA = tmpSphere.rayIntersection(r, bestMatch).hit;
 			tmpSphere.load(this.b.x, this.b.y, this.b.z, this.r);
-			var intersectSphereB = tmpSphere.rayIntersection(r, bestMatch);
+			var intersectSphereB = tmpSphere.rayIntersection(r, bestMatch).hit;
 
 			if (intersectSphereA < 0 && intersectSphereB < 0) {
-				return -1;
+				return new HitPoint(-1);
 			}
 
 			if (intersectSphereB < intersectSphereA) {
-				return intersectSphereB;
+				return new HitPoint(intersectSphereB);
 			}
 
 			if (intersectSphereA < intersectSphereB) {
-				return intersectSphereA;
+				return new HitPoint(intersectSphereA);
 			}
 		}
 
 		var discriminant = coefB * coefB - 4.0 * coefA * coefC;
 
 		if (discriminant < 0.0) {
-			return -1;
+			return new HitPoint(-1);
 		}
 		var discriminantSqrt = Math.sqrt(discriminant);
 
@@ -78,15 +78,15 @@ class Capsule implements Collider {
 
 		if (tPrimeMin < 0.0) {
 			tmpSphere.load(this.a.x, this.a.y, this.a.z, this.r);
-			return tmpSphere.rayIntersection(r, bestMatch);
+			return new HitPoint(tmpSphere.rayIntersection(r, bestMatch).hit);
 		} else if (tPrimeMin > 1.0) {
 			tmpSphere.load(this.b.x, this.b.y, this.b.z, this.r);
-			return tmpSphere.rayIntersection(r, bestMatch);
+			return new HitPoint(tmpSphere.rayIntersection(r, bestMatch).hit);
 		} else {
 			var intersection = new Point(o.x + (RD.x * tMin), o.y + (RD.y * tMin), o.z + (RD.z * tMin));
-			return o.distance(intersection);
+			return new HitPoint(o.distance(intersection));
 		}
-		return -1;
+		return new HitPoint(-1);
 	}
 
 	public function inFrustum( f : Frustum, ?m : h3d.Matrix ) {
