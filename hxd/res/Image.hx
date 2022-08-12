@@ -304,7 +304,7 @@ class Image extends Resource {
 			pixels = decodeJPG(bytes, inf.width, inf.height, fmt, flipY);
 			if( pixels == null ) throw "Failed to decode JPG " + entry.path;
 			#elseif openfl
-			#if display
+			#if !macro
 			var i = lime._internal.format.JPEG.decodeBytes(bytes);
 			pixels = new Pixels(i.width, i.height, i.data.toBytes(), BGRA);
 			#else

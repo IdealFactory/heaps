@@ -682,10 +682,12 @@ class GlslOut {
 		var f = s.funs[0];
 		isVertex = f.kind == Vertex;
 
+		#if (!desktop)
 		if (isVertex)
 			decl("precision highp float;");
 		else
 			decl("precision mediump float;");
+		#end
 
 		initVars(s);
 
