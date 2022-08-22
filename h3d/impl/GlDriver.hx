@@ -884,9 +884,12 @@ class GlDriver extends Driver {
 	function getChannels( t : Texture ) {
 		return switch( t.internalFmt ) {
 		case GL.RGBA32F, GL.RGBA16F: GL.RGBA;
-        #if (!lime&&!js)
-        case GL.SRGB_ALPHA, GL.SRGB8_ALPHA: GL.RGBA;
-        case GL.RGBA8: GL.BGRA;
+		#if lime
+		case GL.SRGB8_ALPHA8: GL.RGBA;
+		case GL.RGBA8: GL.RGBA;
+		#elseif !js
+		case GL.SRGB_ALPHA, GL.SRGB8_ALPHA: GL.RGBA;
+		case GL.RGBA8: GL.BGRA;
 		#end
 		case GL.SRGB, GL.SRGB8: GL.RGB;
 		case GL.RGBA: GL.RGBA;
