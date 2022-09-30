@@ -1,8 +1,10 @@
 package hxd.fmt.gltf;
 
 import haxe.io.Bytes;
+import hxd.BytesBuffer;
 import hxd.FloatBuffer;
 import hxd.IndexBuffer;
+import h3d.Matrix;
 
 typedef GltfId = Int;
 
@@ -516,6 +518,33 @@ class GltfTools {
 		return buffer;
 	}
 
+	public static function getBytesBuffer( attribute, l, accId ) : BytesBuffer {
+		var acc = l.root.accessors[ accId ];
+		var ct:ComponentType = acc.componentType;
+		
+		var buffer = new BytesBuffer();
+		var bytes = getBufferBytesByAccessor( l, accId );
+ 		var bytePtr:BytePointer = { pos: 0 };
+		var out = "";
+		var i:Int;
+		var b0:Int, b1:Int, b2:Int, b3:Int;
+		var ctr = 0;
+		while ( bytePtr.pos < bytes.length ) {
+			i = (((b0=getInt(ct, bytes, bytePtr)) & 0xff)) | 
+				(((b1=getInt(ct, bytes, bytePtr)) & 0xff) << 8) | 
+				(((b2=getInt(ct, bytes, bytePtr)) & 0xff) << 16) | 
+				(((b3=getInt(ct, bytes, bytePtr)) & 0xff) << 24);
+			out += b0+" "+b1+" "+b2+" "+b3+" ";
+			buffer.writeInt32( i );
+			ctr++;
+		}
+		#if debug_gltf
+		trace("BytesBuffer("+attribute+":Len="+buffer.length+")="+out+" ...");
+		#end
+
+		return buffer;
+	}
+
 	public static function getIndexBuffer( attribute, l, accId ) : IndexBuffer {
 		var buffer:IndexBuffer = new IndexBuffer();
 		var bytes = getBufferBytesByAccessor( l, accId );
@@ -544,26 +573,75 @@ class GltfTools {
 			}
 		}
 		#if debug_gltf
-		trace("IndexBuffer("+attribute+")="+out);
+		trace("IndexBuffer("+attribute+":Len="+buffer.length+")="+out);
 		#end
 		
 		return buffer;
 	}
 
-	public static function getFloatBuffer( attribute, l, accId ) : FloatBuffer {
+	public static function getFloatBuffer( attribute, l, accId, invert = 0 ) : FloatBuffer {
+		var acc = l.root.accessors[ accId ];
+		var ct:ComponentType = acc.componentType;
+		
 		var buffer:FloatBuffer = new FloatBuffer();
 		var bytes = getBufferBytesByAccessor( l, accId );
- 		var pos = 0;
+		var bytePtr:BytePointer = { pos: 0 };
 		var out = "";
-		while ( pos < bytes.length ) {
-			if (attribute!="TEXCOORD_0" && pos < 128) out += bytes.getFloat( pos )+" ";
-			if (attribute=="TEXCOORD_0" && pos %8==0 && pos < 128) out += "\n";
-			if (attribute=="TEXCOORD_0" && pos < 128) out += bytes.getFloat( pos )+" ";
-			buffer.push( bytes.getFloat( pos ));
-			pos += 4;
+		var f:Float;
+		var ctr = 0;
+		var flipX = (invert & 1)>0;
+		var flipY = (invert & 2)>0;
+		var flipZ = (invert & 4)>0;
+		while ( bytePtr.pos < bytes.length ) {
+			f = getFloat( ct, bytes, bytePtr );
+			if (ctr < 32) out += f+" ";
+			if (flipX && (ctr % 3)==0) f=-f;
+			if (flipY && (ctr % 3)==1) f=-f;
+			if (flipZ && (ctr % 3)==2) f=-f;
+			buffer.push( f );
+			ctr++;
 		}
 		#if debug_gltf
-		trace("FloatBuffer("+attribute+")="+out+" ...");
+		trace("FloatBuffer("+attribute+":Len="+buffer.length+")="+out+" ...");
+		#end
+		
+		return buffer;
+	}
+
+	public static function getNormalisedFloatBuffer( attribute, l, accId ) : FloatBuffer {
+		var acc = l.root.accessors[ accId ];
+		var ct:ComponentType = acc.componentType;
+		var count:Int = acc.count;
+		var t:AccessorType = acc.type;
+
+		var buffer:FloatBuffer = new FloatBuffer();
+		var bytes = getBufferBytesByAccessor( l, accId );
+ 		var bytePtr:BytePointer = { pos: 0 };
+
+		var componentCount = 1;
+		if (acc != null) {
+			switch (acc.type) {
+				case Vec2 : componentCount = 2;
+				case Vec3 : componentCount = 3;
+				case Vec4 | Mat2: componentCount = 4;
+				case Mat3 : componentCount = 9;
+				case Mat4 : componentCount = 16;
+				default: componentCount = 1;
+			}
+		}
+
+		var out = "";
+		var f:Float;
+		var ctr = 0;
+		while ( ctr++ < count ) {
+			for (i in 0...componentCount) { 
+				f = getFloat( ct, bytes, bytePtr );
+				if (bytePtr.pos < 128) out += f+" ";
+				buffer.push( f );
+			}
+		}
+		#if debug_gltf
+		trace("NormalisedFloatBuffer("+attribute+":Len="+buffer.length+")="+out+" ...");
 		#end
 		
 		return buffer;
@@ -604,9 +682,9 @@ class GltfTools {
 		while ( ctr++ < count ) {
 			switch (t) {
 				case Vec3: buffer.push( [ bytes.getFloat( bytePtr.pos ), bytes.getFloat( bytePtr.pos+4 ), bytes.getFloat( bytePtr.pos+8 ) ] ); bytePtr.pos+=12;
-				case Vec4: buffer.push( [ getFloat( ct, bytes, bytePtr ), getFloat( ct, bytes, bytePtr ), getFloat( ct, bytes, bytePtr ), getFloat( ct, bytes, bytePtr ) ] );
+				case Vec4: buffer.push( [ getFloat( ct, bytes, bytePtr, true ), getFloat( ct, bytes, bytePtr, true ), getFloat( ct, bytes, bytePtr, true ), getFloat( ct, bytes, bytePtr, true ) ] );
 				default:
-					throw "Incorrect accessor type for getAnimationFloatArrayBufferByAccessor call (should be Vec3 or Vec4";
+					throw "Incorrect accessor type for getAnimationFloatArrayBufferByAccessor call (should be Vec3 or Vec4)";
 			}
 		}
 		return buffer;
@@ -620,20 +698,20 @@ class GltfTools {
 	// var CTUnsignedInt = 5125;
 	// var CTFloat = 5126;
 
-	static function getFloat(type, bytes, bytePtr) {
+	static function getFloat(type, bytes, bytePtr, normalise = false) {
 		var f:Float;
 		switch (type) {
 			case CTByte:
-				f = Math.max( bytes.get( bytePtr.pos ) / 127.0, -1);
+				f = normalise ? Math.max( bytes.get( bytePtr.pos ) / 127.0, -1) : bytes.get( bytePtr.pos );
 				bytePtr.pos++;
 			case CTUnsignedByte:
-				f = bytes.get( bytePtr.pos ) / 255.0;
+				f = normalise ? bytes.get( bytePtr.pos ) / 255.0 : bytes.get( bytePtr.pos );
 				bytePtr.pos++;
 			case CTShort:
-				f = Math.max( ((bytes.get( bytePtr.pos ) << 8) | bytes.get( bytePtr.pos+1 )) / 32767.0, -1);
+				f = normalise ? Math.max( ((bytes.get( bytePtr.pos ) << 8) | bytes.get( bytePtr.pos+1 )) / 32767.0, -1) : ((bytes.get( bytePtr.pos ) << 8) | bytes.get( bytePtr.pos+1 ));
 				bytePtr.pos += 2;
 			case CTUnsignedShort : 
-				f = bytes.getUInt16( bytePtr.pos ) / 65535.0;
+				f = normalise ? bytes.getUInt16( bytePtr.pos ) / 65535.0 : bytes.getUInt16( bytePtr.pos );
 				bytePtr.pos += 2;
 			case CTFloat :
 				f = bytes.getFloat( bytePtr.pos );
@@ -643,6 +721,81 @@ class GltfTools {
 				bytePtr.pos++;
 		}
 		return f;
+	}
+
+	static function getInt(type, bytes, bytePtr) {
+		var i:Int;
+		switch (type) {
+			case CTByte:
+				i = bytes.get( bytePtr.pos );
+				bytePtr.pos++;
+			case CTUnsignedByte:
+				i = bytes.get( bytePtr.pos );
+				bytePtr.pos++;
+			case CTShort:
+				i = ((bytes.get( bytePtr.pos ) << 8) | bytes.get( bytePtr.pos+1 ));
+				bytePtr.pos += 2;
+			case CTUnsignedShort : 
+				i = bytes.getUInt16( bytePtr.pos );
+				bytePtr.pos += 2;
+			case CTFloat :
+				i = Std.int( bytes.getFloat( bytePtr.pos ) );
+				bytePtr.pos += 4;
+			default:
+				i = bytes.get( bytePtr.pos );
+				bytePtr.pos++;
+		}
+		return i;
+	}
+
+	public static function getMatrixArrayBufferByAccessor( l, accId ):Array<Matrix> {
+		var acc = l.root.accessors[ accId ];
+		var bvId = acc.bufferView;
+		var ct:ComponentType = acc.componentType;
+		var count:Int = acc.count;
+		var t:AccessorType = acc.type;
+
+		var bytes = getBufferBytesByAccessor( l, accId );
+		var buffer = new Array<Matrix>();
+		var bytePtr:BytePointer = { pos: 0 };
+
+		var out:String = "";
+		var ctr = 0;
+		var m:Matrix;
+		while ( ctr++ < count ) {
+			switch (t) {
+				case Mat4:
+					m = new Matrix();
+					m._11 = bytes.getFloat( bytePtr.pos );
+					m._12 = bytes.getFloat( bytePtr.pos+4 );
+					m._13 = bytes.getFloat( bytePtr.pos+8 );
+					m._14 = bytes.getFloat( bytePtr.pos+12 );
+					m._21 = bytes.getFloat( bytePtr.pos+16 );
+					m._22 = bytes.getFloat( bytePtr.pos+20 );
+					m._23 = bytes.getFloat( bytePtr.pos+24 );
+					m._24 = bytes.getFloat( bytePtr.pos+28 );
+					m._31 = bytes.getFloat( bytePtr.pos+32 );
+					m._32 = bytes.getFloat( bytePtr.pos+36 );
+					m._33 = bytes.getFloat( bytePtr.pos+40 );
+					m._34 = bytes.getFloat( bytePtr.pos+44 );
+					m._41 = bytes.getFloat( bytePtr.pos+48 );
+					m._42 = bytes.getFloat( bytePtr.pos+52 );
+					m._43 = bytes.getFloat( bytePtr.pos+56 );
+					m._44 = bytes.getFloat( bytePtr.pos+60 );
+					bytePtr.pos+=64;
+					buffer.push( m ); 
+
+					out += m;
+				default:
+					throw "Incorrect accessor type for getMatrixArrayBufferByAccessor call (should be Mat4)";
+			}
+		}
+		#if debug_gltf
+		trace("MatrixArray:Len="+buffer.length+"):\n"+out);
+		#end
+
+		return buffer;
+
 	}
 
 	public static function getBufferBytesByAccessor( l, accId ):Bytes {

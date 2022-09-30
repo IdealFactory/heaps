@@ -50,6 +50,7 @@ class PBRSinglePass extends h3d.shader.pbrsinglepass.PBRSinglePassLib {
 		var relativePosition : Vec3;
 		var transformedPosition : Vec3;
 		var pixelTransformedPosition : Vec3;
+		var relativeNormal : Vec3;
 		var transformedNormal : Vec3;
 		var projectedPosition : Vec4;
 		var pixelColor : Vec4;
@@ -108,15 +109,15 @@ class PBRSinglePass extends h3d.shader.pbrsinglepass.PBRSinglePassLib {
         // var debugVar:Vec4;
         var gmv:Mat4;
         var flip:Mat4;
-        // var reflectionMatrix:Mat4;
-
+ 
 		function __init__() {
-            flip = mat4( vec4(1, 0, 0, 0), vec4(0, -1, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, 0, 1));
+            flip = mat4( vec4(-1, 0, 0, 0), vec4(0, 1, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, 0, 1));
             gmv = global.modelView * flip;
-            relativePosition = input.position;
-            transformedPosition = relativePosition * gmv.mat3x4();
+            relativePosition = input.position;// * flip.mat3x4();
+            transformedPosition = relativePosition;//* global.modelView.mat3x4() * flip.mat3x4();
             projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
-            transformedNormal = (vec3(input.normal.x, input.normal.y, input.normal.z) * gmv.mat3x4()).normalize();
+			relativeNormal = input.normal; //input.normal;// * flip.mat3x4();
+			transformedNormal = (relativeNormal.xyz * gmv.mat3x4()).normalize();
 
             camera.dir = (camera.position - transformedPosition).normalize();
 			pixelColor = color;
@@ -131,6 +132,10 @@ class PBRSinglePass extends h3d.shader.pbrsinglepass.PBRSinglePassLib {
             finalSheenRadianceScaled = vec3(0.);
             finalClearCoatScaled = vec3(0.);
 		}
+
+        function __init__vertex() {
+            transformedPosition *= gmv.mat3x4();
+        }
 
 		function __init__fragment() {
 			transformedNormal = transformedNormal.normalize();
@@ -175,16 +180,6 @@ class PBRSinglePass extends h3d.shader.pbrsinglepass.PBRSinglePassLib {
             PI = 3.1415926535897932384626433832795;
             MINIMUMVARIANCE = 0.0005;
             
-            // LinearEncodePowerApprox  = 2.2;
-            // GammaEncodePowerApprox  = 0.45454545454545454; //1.0/LinearEncodePowerApprox;
-            // LuminanceEncodeApprox  = vec3(0.2126,0.7152,0.0722);
-            // LuminanceEncodeApproxX  = 0.2126;
-            // LuminanceEncodeApproxY = 0.7152;
-            // LuminanceEncodeApproxZ  = 0.0722;
-            // Epsilon = 0.0000001;
-    
-            // rgbdMaxRange = 255.0;
-
             viewDirectionW = normalize(vEyePosition.xyz - positionW); //vec3 // 
             uvOffset = vec2(0.0, 0.0); //vec2
 
@@ -193,11 +188,4 @@ class PBRSinglePass extends h3d.shader.pbrsinglepass.PBRSinglePassLib {
             AARoughnessFactors = getAARoughnessFactors(normalW.xyz);
         }
 	};
-
-	// public function new() {
-    //     super();
-
-    //     this.vReflectionMatrix.loadValues([ 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
-	// }
-
 }

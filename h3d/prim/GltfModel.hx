@@ -10,6 +10,7 @@ class GltfModel extends MeshPrimitive {
 	public var skin : h3d.anim.Skin;
 	public var multiMaterial:Bool;
 	public var name:String;
+	public var targets:Array<Array<FloatBuffer>>;
 
 	var bounds : h3d.col.Bounds;
 	var tcount : Int = -1;
@@ -28,7 +29,7 @@ class GltfModel extends MeshPrimitive {
 
 	override public function vertexCount():Int
 	{
-		return triCount() * 3;
+		return Std.int( geom.getVertices().length / 3 );
 	}
 
 	public function setSkin( skin : h3d.anim.Skin ) {
@@ -83,6 +84,17 @@ class GltfModel extends MeshPrimitive {
 		var idx = geom.getIndices();
 		var uvs = geom.getUVs();
 		var uv2s = geom.getUV2s(); //TODO: Implement 2nd UV coords
+		var joints = geom.getJoints();//Float(); 
+		var weights = geom.getWeights();
+		targets = geom.getTargetData();
+
+		if (targets!=null) {
+			for (t in targets) {
+				for (b in 0...2) {
+					if (t[b]==null) t[b] = new hxd.FloatBuffer( verts.length );
+				}
+			}
+		}
 
 		addBuffer("position", h3d.Buffer.ofFloats(verts, 3));
 		if( norms != null ) addBuffer("normal", h3d.Buffer.ofFloats(norms, 3));
@@ -90,6 +102,23 @@ class GltfModel extends MeshPrimitive {
 		addBuffer("uv", h3d.Buffer.ofFloats(uvs, 2));
 		var moreThan64KVertices = verts.length>65535;
 		indexes = h3d.Indexes.alloc(idx, 0, -1, moreThan64KVertices);
+		if ( targets != null ) {
+			var targetCtr = 1;
+			for (t in targets) {
+				addBuffer("targetPosition_"+targetCtr, h3d.Buffer.ofFloats(t[0], 3));
+				addBuffer("targetNormal_"+targetCtr, h3d.Buffer.ofFloats(t[0], 3));
+				addBuffer("targetTangent_"+targetCtr, h3d.Buffer.ofFloats(t[0], 3));
+				targetCtr++;
+			}
+		}
+		if( skin != null && joints != null && weights != null ) {
+			var nverts = Std.int(joints.length / 4);
+			var jointBuf = new h3d.Buffer(nverts, 1);
+			var bytes = joints.getBytes();
+			jointBuf.uploadBytes(bytes, 0, nverts);
+			addBuffer("indexes", jointBuf, 0);
+			addBuffer("weights", h3d.Buffer.ofFloats(weights, skin.bonesPerVertex));
+		}
 	}
 
 	public function getFaces():Array<TriFace> {

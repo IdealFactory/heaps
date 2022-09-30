@@ -6,6 +6,9 @@ import hxd.fmt.gltf.Data;
 class Library extends BaseLibrary {
 
     var gltfFileProcessed:Void->Void;
+    var containerCtr = 0;
+    var jointCtr = 0;
+    var allJointNodes:Array<Int>;
     var bytes:Bytes;
 
     public function load( ?fileName:String = "gltffile", ?bytes:Bytes, gltfFileProcessed ) {	
@@ -97,6 +100,16 @@ class Library extends BaseLibrary {
     }
 
 	function processglTF() {
+        // Get all joints for all skins to set object names correctly
+        allJointNodes = [];
+        if (root.skins!=null)
+            for (s in root.skins) {
+                if (s.joints!=null)
+                    for (j in s.joints) {
+                        if (allJointNodes.indexOf( j )==-1) allJointNodes.push( j );
+                    }
+            }
+
 
         // Check for Draco compression
         if ( root.extensionsUsed != null && root.extensionsUsed.length > 0 ) {
@@ -130,12 +143,19 @@ class Library extends BaseLibrary {
             for ( scene in root.scenes ) {
                 var sceneContainer = new h3d.scene.Object();
                 sceneContainer.name = "SceneContainer";
-                sceneContainer.rotate( Math.PI/2, 0, 0 );
+                var flipContainer = new h3d.scene.Object();
+                flipContainer.rotate( Math.PI/2, 0, 0 );
+                flipContainer.scaleX = -1;
+                flipContainer.scaleZ = -1;
+                sceneContainer.addChild(flipContainer);
                 scenes.push( sceneContainer );
                 if (scene.nodes != null)
                     for ( node in scene.nodes )
-                        traverseNodes(node, sceneContainer );
+                        traverseNodes(node, flipContainer );
             }
+
+        // // Create skin meshes
+        buildSkinMeshes();
 
         // Setup animations
         if (root.animations != null)
@@ -160,15 +180,7 @@ class Library extends BaseLibrary {
         var node = root.nodes[ nodeId ];
 
         // Get matrix transform
-        var transform = new h3d.Matrix();
-        transform.identity();
-        if (node.matrix != null) transform.loadValues( node.matrix );
-        if (node.rotation != null) {
-            var q = new h3d.Quat( node.rotation[0], node.rotation[1], node.rotation[2], node.rotation[3] );
-            transform.multiply( transform, q.toMatrix() );
-        }
-        if (node.scale != null) transform.scale( node.scale[0], node.scale[1], node.scale[2] );
-        if (node.translation != null) transform.translate( node.translation[0], node.translation[1], node.translation[2] );
+        var transform = getDefaultTransform( nodeId );
         
         if (node.camera != null) {
             var c = cameras[ node.camera ];
@@ -179,24 +191,44 @@ class Library extends BaseLibrary {
         // Add meshes
         var mesh:h3d.scene.Object = null;
         if (node.mesh != null) {
-            mesh = loadMesh( node.mesh, transform, parent, node.name );
+            if (node.skin != null) {
+                mesh = createSkinMesh( node.mesh, transform, parent, node.name, node.skin );
+                skinMeshes.push( { nodeId:node.mesh, skinId:node.skin, skinMesh:cast mesh } );
+            } else
+                mesh = createMesh( node.mesh, transform, parent, node.name );
             nodeObjects[ nodeId ] = mesh;
         } 
 
         if (node.children != null) {
             if (mesh==null) {
                 mesh = new h3d.scene.Object();
-                mesh.name = (node.name==null ? "Node" : node.name) + "Container";
+                mesh.name = getName( nodeId );
                 mesh.setTransform( transform );
                 nodeObjects[ nodeId ] = mesh;
                 #if debug_gltf
                 trace("Create Empty(Container)-forChildObjects:"+mesh.name+" parent:"+(parent.name == null ? Type.getClassName(Type.getClass(parent)) : parent.name)+" transform:"+transform.getFloats());
                 #end
-                    }
+            }
             for ( child in node.children ) {
                 traverseNodes(child, mesh);
             }
             parent.addChild( mesh );
         }
+
+        if (node.mesh==null && node.children==null) {
+            var o = new h3d.scene.Object( parent );
+            o.name = getName( nodeId );
+            o.setTransform( transform );
+            nodeObjects[ nodeId ] = o;
+        }
+    }
+
+    function getName( id:Int ) {
+        var n = root.nodes[ id ];
+        if (n.name!=null) return n.name;
+
+        if (allJointNodes.indexOf( id )>-1) return "Joint_"+jointCtr++;
+
+        return "Container_"+containerCtr++;
     }
 }

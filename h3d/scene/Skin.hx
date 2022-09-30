@@ -77,7 +77,7 @@ class Skin extends MultiMaterial {
 	var skinShader : h3d.shader.SkinBase;
 	var jointsGraphics : Graphics;
 
-	public var showJoints : Bool;
+	public var showJoints : Bool = false;
 	public var enableRetargeting : Bool = true;
 
 	public function new(s, ?mat, ?parent) {
@@ -180,7 +180,8 @@ class Skin extends MultiMaterial {
 					hasNormalMap = true;
 					break;
 				}
-			skinShader = hasNormalMap ? new h3d.shader.SkinTangent() : new h3d.shader.Skin();
+			
+			skinShader = Std.isOfType(s.primitive, h3d.prim.GltfModel) ? (hasNormalMap ? new h3d.shader.pbrsinglepass.SkinTangent() : new h3d.shader.pbrsinglepass.Skin()) : (hasNormalMap ? new h3d.shader.SkinTangent() : new h3d.shader.Skin());
 			skinShader.fourBonesByVertex = skinData.bonesPerVertex == 4;
 			var maxBones = 0;
 			if( skinData.splitJoints != null ) {
@@ -233,6 +234,7 @@ class Skin extends MultiMaterial {
 			var id = j.index;
 			var m = currentAbsPose[id];
 			var r = currentRelPose[id];
+			if (r==null) r = Matrix.I();
 			var bid = j.bindIndex;
 			if( r == null ) r = j.defMat else if( j.retargetAnim && enableRetargeting ) { tmpMat.load(r); r = tmpMat; r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
 			if( j.parent == null )
@@ -262,7 +264,7 @@ class Skin extends MultiMaterial {
 			if( jointsGraphics == null ) {
 				jointsGraphics = new Graphics(this);
 				jointsGraphics.material.mainPass.depth(false, Always);
-				jointsGraphics.material.mainPass.setPassName("overlay");
+				jointsGraphics.material.mainPass.setPassName( Std.is(jointsGraphics.material, h3d.mat.PbrMaterial) ? "overlay" : "additive");
 			}
 			var topParent : Object = this;
 			while( topParent.parent != null )
@@ -274,7 +276,8 @@ class Skin extends MultiMaterial {
 			for( j in skinData.allJoints ) {
 				var m = currentAbsPose[j.index];
 				var mp = j.parent == null ? absPos : currentAbsPose[j.parent.index];
-				g.lineStyle(1, j.parent == null ? 0xFF0000FF : 0xFFFFFF00);
+				if (currentRelPose[j.index]==null) continue;
+				g.lineStyle(3, j.parent == null ? 0xFF0000FF : 0xFFFFFF00, 1.);
 				g.moveTo(mp._41, mp._42, mp._43);
 				g.lineTo(m._41, m._42, m._43);
 			}

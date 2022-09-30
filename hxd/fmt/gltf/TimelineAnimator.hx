@@ -17,22 +17,32 @@ class TimelineAnimator {
         anims = [];
     }
 
-    public function addAnimtion( o, a ) {
-
+    public function addAnimation( o, a ) {
         if (!contains( o, a ))
             anims.push( {obj:o, anim:a} );
 
         @:privateAccess if (a.totalDuration > globalDuration) {
             globalDuration = a.totalDuration;
             @:privateAccess for (anim in anims) anim.anim.totalDuration = globalDuration;
-            trace("Updating all anims ("+anims.length+") with globaDuration="+globalDuration);
         }
     }
 
     public function playAnimation() {
         for (a in anims) {
-            a.obj.playAnimation( a.anim );
+            playObjAnimation( a.obj, a.anim );
         }
+    }
+
+    function playObjAnimation( o:h3d.scene.Object, a:h3d.anim.TimelineAnimation ) {
+
+        o.playAnimation( a );
+        if (o.numChildren > 0) {
+            for (cI in 0...o.numChildren) {
+                var c = o.getChildAt( cI );
+                    playObjAnimation( c, a );
+            }
+        }
+
     }
 
     function contains( o, a ) {
