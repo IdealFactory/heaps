@@ -71,6 +71,7 @@ class GltfModel extends MeshPrimitive {
 			if( z > bounds.zMax ) bounds.zMax = z;
 			if( z < bounds.zMin ) bounds.zMin = z;
 		}
+		trace("Bounds: x:"+bounds.xMin+"/"+bounds.xMax+" y:"+bounds.yMin+"/"+bounds.yMax+" z:"+bounds.zMin+"/"+bounds.zMax);
 		return bounds;
 	}
 
@@ -180,6 +181,10 @@ class GltfModel extends MeshPrimitive {
 		curMaterial = -1;
 	}
 
+	public function loadSkin(skin) {
+		lib.loadSkin(geom, skin);
+	}
+
 	function initCollider( poly : h3d.col.PolygonBuffer ) {
 		#if neko
 		var verts = haxe.ds.Vector.fromArrayCopy(geom.getVertices().getNative());
@@ -196,7 +201,13 @@ class GltfModel extends MeshPrimitive {
 		var uvs = haxe.ds.Vector.fromData(geom.getUVs().getNative());
 		#end
 
-		poly.setData(verts, inds, uvs);
+		var colliderVerts:haxe.ds.Vector<hxd.impl.Float32> = verts.copy();
+		var vI = 0;
+		while (vI < colliderVerts.length) {
+			colliderVerts[vI] = colliderVerts[vI];
+			vI+=3;
+		}
+		poly.setData(colliderVerts, inds, uvs);
 		if( collider == null ) {
 			collider = new h3d.col.Collider.OptimizedCollider(getBounds(), poly);
 		}

@@ -594,10 +594,10 @@ class GltfTools {
 		var flipZ = (invert & 4)>0;
 		while ( bytePtr.pos < bytes.length ) {
 			f = getFloat( ct, bytes, bytePtr );
-			if (ctr < 32) out += f+" ";
 			if (flipX && (ctr % 3)==0) f=-f;
 			if (flipY && (ctr % 3)==1) f=-f;
 			if (flipZ && (ctr % 3)==2) f=-f;
+			if (ctr < 32) out += f+" ";
 			buffer.push( f );
 			ctr++;
 		}
@@ -751,6 +751,7 @@ class GltfTools {
 	public static function getMatrixArrayBufferByAccessor( l, accId ):Array<Matrix> {
 		var acc = l.root.accessors[ accId ];
 		var bvId = acc.bufferView;
+		if (bvId==null) bvId = 0;
 		var ct:ComponentType = acc.componentType;
 		var count:Int = acc.count;
 		var t:AccessorType = acc.type;
@@ -801,6 +802,7 @@ class GltfTools {
 	public static function getBufferBytesByAccessor( l, accId ):Bytes {
 		var acc = l.root.accessors[ accId ];
 		var bvId = acc.bufferView;
+		if (bvId==null) bvId = 0;
 		var ct:ComponentType = acc.componentType;
 		var c:Int = acc.count;
 		var t:AccessorType = acc.type;
@@ -811,6 +813,7 @@ class GltfTools {
 	}
 
 	public static function getBufferBytes( l, bvId, acc:Accessor = null ):Bytes {
+		if (bvId==null) bvId = 0;
 		var bv = l.root.bufferViews[ bvId ];
 		var accOffset = acc==null ? 0 : (!Reflect.hasField( acc, "byteOffset") ? 0 : acc.byteOffset);
 		var offset = !Reflect.hasField( bv, "byteOffset") ? 0 : bv.byteOffset;
@@ -839,7 +842,7 @@ class GltfTools {
 			}
 		}
 		d += " componentSize:"+componentSize+" componentCount:"+componentCount;
-
+		trace("PreBlit: "+d);
 		if (acc == null || stride == 0) {
 			var size = acc == null ? bv.byteLength : acc.count * componentSize * componentCount;
 			bytes = Bytes.alloc( size );

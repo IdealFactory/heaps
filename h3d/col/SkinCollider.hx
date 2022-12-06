@@ -10,6 +10,7 @@ class SkinCollider implements Collider {
 	var transform : PolygonBuffer;
 	var lastFrame = -1;
 	var lastBoundsFrame = -1;
+	static var flip = h3d.Matrix.L([-1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1., 0., 0., 0., 0., 1.]);
 
 	public function new( obj, col ) {
 		this.obj = obj;
@@ -80,6 +81,8 @@ class SkinCollider implements Collider {
 				}
 				var bid = obj.skinData.vertexJoints[j++];
 				var p2 = p.clone();
+				// var m = flip.clone();
+				// m.multiply(m, obj.currentPalette[bid]);
 				p2.transform(obj.currentPalette[bid]);
 				px += p2.x * w;
 				py += p2.y * w;
@@ -110,9 +113,12 @@ class SkinColliderDebugObj extends h3d.scene.Object {
 
 	var box : h3d.scene.Box;
 	var boxes : Array<h3d.scene.Box> = [];
-
+	
 	public function new(col : SkinCollider) {
 		super(null);
+		// trace("FLIP="+SkinCollider.flip);
+		// trace("I="+h3d.Matrix.I());
+	
 		this.col = col;
 		this.skin = col.obj;
 		this.box = new h3d.scene.Box(0xFFFFFF, col.currentBounds);
@@ -128,9 +134,9 @@ class SkinColliderDebugObj extends h3d.scene.Object {
 			if( j.offsets != null ) {
 				b.bounds.empty();
 				var pt = j.offsets.getMin();
-				b.bounds.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay);
+				b.bounds.addSpherePos(-pt.x, pt.y, pt.z, j.offsetRay);
 				var pt = j.offsets.getMax();
-				b.bounds.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay);
+				b.bounds.addSpherePos(-pt.x, pt.y, pt.z, j.offsetRay);
 			} else {
 				b.bounds.empty();
 				b.bounds.addSpherePos(0,0,0,0.1);
@@ -140,14 +146,19 @@ class SkinColliderDebugObj extends h3d.scene.Object {
 	}
 
 	function updateJoints() {
+		var m:h3d.Matrix;
 		for( i in 0...boxes.length ) {
 			var j = skin.skinData.allJoints[i];
 			var b = boxes[i];
 			if( j.offsets != null ) {
-				var m = skin.currentPalette[j.bindIndex];
-				b.setTransform(m);
-			} else
+				// m = SkinCollider.flip.clone();
+				// m.multiply(m, skin.currentPalette[j.bindIndex]);
+				b.setTransform(skin.currentPalette[j.bindIndex]);
+			} else {
+				// m = SkinCollider.flip.clone();
+				// m.multiply(m, skin.currentAbsPose[j.index]);
 				b.setTransform(skin.currentAbsPose[j.index]);
+			}
 		}
 	}
 

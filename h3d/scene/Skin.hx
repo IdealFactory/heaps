@@ -103,8 +103,10 @@ class Skin extends MultiMaterial {
 		if( flags.has(FIgnoreBounds) )
 			return b;
 		syncJoints();
-		if( skinData.vertexWeights == null )
-			cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
+		if( skinData.vertexWeights == null ) {
+			if (Std.isOfType(primitive, h3d.prim.HMDModel)) cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
+			if (Std.isOfType(primitive, h3d.prim.GltfModel)) cast(primitive, h3d.prim.GltfModel).loadSkin(skinData);
+		}
 		var absScale = getAbsPos().getScale();
 		var scale = Math.max(Math.max(absScale.x, absScale.y), absScale.z);
 		for( j in skinData.allJoints ) {
@@ -155,7 +157,12 @@ class Skin extends MultiMaterial {
 
 	override function getGlobalCollider() {
 		var col = cast(primitive.getCollider(), h3d.col.Collider.OptimizedCollider);
-		cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
+		if (Std.isOfType(primitive, h3d.prim.HMDModel))
+			cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
+		if (Std.isOfType(primitive, h3d.prim.GltfModel)) {
+			cast(primitive, h3d.prim.GltfModel).loadSkin(skinData);
+			trace("GetGlobalCollider: skinData="+skinData);
+		}
 		return new h3d.col.SkinCollider(this, cast(col.b, h3d.col.PolygonBuffer));
 	}
 
@@ -192,6 +199,7 @@ class Skin extends MultiMaterial {
 				maxBones = skinData.boundJoints.length;
 			if( skinShader.MaxBones < maxBones )
 				skinShader.MaxBones = maxBones;
+
 			for( m in materials )
 				if( m != null ) {
 					if( m.normalMap != null )
@@ -234,14 +242,13 @@ class Skin extends MultiMaterial {
 			var id = j.index;
 			var m = currentAbsPose[id];
 			var r = currentRelPose[id];
-			if (r==null) r = Matrix.I();
 			var bid = j.bindIndex;
-			if( r == null ) r = j.defMat else if( j.retargetAnim && enableRetargeting ) { tmpMat.load(r); r = tmpMat; r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
+			if( r == null ) r = j.defMat.clone() else if( j.retargetAnim && enableRetargeting ) { tmpMat.load(r); r = tmpMat; r._41 = j.defMat._41; r._42 = j.defMat._42; r._43 = j.defMat._43; }
 			if( j.parent == null )
 				m.multiply3x4inline(r, absPos);
 			else
 				m.multiply3x4inline(r, currentAbsPose[j.parent.index]);
-			if( bid >= 0 )
+			if( bid >= 0)
 				currentPalette[bid].multiply3x4inline(j.transPos, m);
 		}
 		skinShader.bonesMatrixes = currentPalette;
@@ -276,7 +283,7 @@ class Skin extends MultiMaterial {
 			for( j in skinData.allJoints ) {
 				var m = currentAbsPose[j.index];
 				var mp = j.parent == null ? absPos : currentAbsPose[j.parent.index];
-				if (currentRelPose[j.index]==null) continue;
+				// if (currentRelPose[j.index]==null) continue;
 				g.lineStyle(3, j.parent == null ? 0xFF0000FF : 0xFFFFFF00, 1.);
 				g.moveTo(mp._41, mp._42, mp._43);
 				g.lineTo(m._41, m._42, m._43);
@@ -299,4 +306,13 @@ class Skin extends MultiMaterial {
 		}
 	}
 
+	public function getJointAbsTransform(j:h3d.anim.Skin.Joint):Matrix {
+		var m = j.defMat.clone();
+		if (j.parent != null) {
+			m.multiply(m, getJointAbsTransform(j.parent));
+		} else {
+            m.multiply(m, this.getAbsPos());
+        }
+		return m;
+	}
 }

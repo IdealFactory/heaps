@@ -28,6 +28,8 @@ class ObjectCollider implements Collider {
 		r.load(tmpRay);
 		TMP_RAY = tmpRay;
 		return hit.updateHit(hxd.Math.distance(pt.x - r.px, pt.y - r.py, pt.z - r.pz));
+		// return  hit.updateHit(hxd.Math.distance(pt.x - r.px, pt.y - r.py, h3d.Camera.isYUp ? r.pz - pt.z : pt.z - r.pz));
+
 	}
 
 	public function contains( p : Point ) {

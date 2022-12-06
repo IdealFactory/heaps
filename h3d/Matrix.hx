@@ -9,6 +9,150 @@ typedef ColorAdjust = {
 	?gain : { color : Int, alpha : Float },
 };
 
+class Basis {
+	public var _11 : Float;
+	public var _12 : Float;
+	public var _13 : Float;
+	public var _21 : Float;
+	public var _22 : Float;
+	public var _23 : Float;
+	public var _31 : Float;
+	public var _32 : Float;
+	public var _33 : Float;
+	var mat:Matrix;
+
+	public function new(m:h3d.Matrix) {
+		mat = m;
+	}
+
+	public function multiply( a : Basis, b : Basis ) {
+		var a11 = a._11; var a12 = a._12; var a13 = a._13;
+		var a21 = a._21; var a22 = a._22; var a23 = a._23;
+		var a31 = a._31; var a32 = a._32; var a33 = a._33;
+		var b11 = b._11; var b12 = b._12; var b13 = b._13;
+		var b21 = b._21; var b22 = b._22; var b23 = b._23;
+		var b31 = b._31; var b32 = b._32; var b33 = b._33;
+
+		_11 = a11 * b11 + a12 * b21 + a13 * b31;
+		_12 = a11 * b12 + a12 * b22 + a13 * b32;
+		_13 = a11 * b13 + a12 * b23 + a13 * b33;
+
+		_21 = a21 * b11 + a22 * b21 + a23 * b31;
+		_22 = a21 * b12 + a22 * b22 + a23 * b32;
+		_23 = a21 * b13 + a22 * b23 + a23 * b33;
+
+		_31 = a31 * b11 + a32 * b21 + a33 * b31;
+		_32 = a31 * b12 + a32 * b22 + a33 * b32;
+		_33 = a31 * b13 + a32 * b23 + a33 * b33;
+		toMatrix(mat);
+	}
+
+	public function scale( x = 1., y = 1., z = 1. ) {
+		_11 *= x;
+		_21 *= x;
+		_31 *= x;
+		_12 *= y;
+		_22 *= y;
+		_32 *= y;
+		_13 *= z;
+		_23 *= z;
+		_33 *= z;
+		toMatrix(mat);
+	}
+
+	public function orthonormalize() {
+		var x = new h3d.Vector(_11, _12, _13);
+		var y = new h3d.Vector(_21, _22, _23);
+		var z = new h3d.Vector(_31, _32, _33);
+	
+		x.normalize();
+		y = y.sub( x.multiply (x.dot(y)) );
+		y.normalize();
+		z = z.sub(x.multiply(x.dot(z)).sub(y.multiply(y.dot(z))));
+		z.normalize();
+	
+		loadValues([ x.x, x.y, x.z, y.x, y.y, y.z, z.x, z.y, z.z ]);
+		toMatrix(mat);
+	}
+
+	public function initRotationAxis( axis : Vector, angle : Float ) {
+		var cos = Math.cos(angle), sin = Math.sin(angle);
+		var cos1 = 1 - cos;
+		var x = -axis.x, y = -axis.y, z = -axis.z;
+		var xx = x * x, yy = y * y, zz = z * z;
+		var len = Math.invSqrt(xx + yy + zz);
+		x *= len;
+		y *= len;
+		z *= len;
+		var xcos1 = x * cos1, zcos1 = z * cos1;
+		_11 = cos + x * xcos1;
+		_12 = y * xcos1 - z * sin;
+		_13 = x * zcos1 + y * sin;
+		_21 = y * xcos1 + z * sin;
+		_22 = cos + y * y * cos1;
+		_23 = y * zcos1 - x * sin;
+		_31 = x * zcos1 - y * sin;
+		_32 = y * zcos1 + x * sin;
+		_33 = cos + z * zcos1;
+		toMatrix(mat);
+	}
+
+	public function rotateAxis( axis, angle ) {
+		var tmp = clone();
+		tmp.initRotationAxis(axis, angle);
+		multiply(this, tmp);
+	}
+
+	public function rotate_to_align( v2:h3d.Vector, v1:h3d.Vector)
+		{
+			var axis = v1.cross(v2);
+			var cosA = v1.dot(v2);
+			var k = 1.0 / (1.0 + cosA);
+
+			_11 = (axis.x * axis.x * k) + cosA;
+			_12 = (axis.y * axis.x * k) - axis.z;
+			_13 = (axis.z * axis.x * k) + axis.y;
+			_21 = (axis.x * axis.y * k) + axis.z;
+			_22 = (axis.y * axis.y * k) + cosA;    
+			_23 = (axis.z * axis.y * k) - axis.x;
+			_31 = (axis.x * axis.z * k) - axis.y;
+			_32 = (axis.y * axis.z * k) + axis.x;
+			_33 = (axis.z * axis.z * k) + cosA;
+		}
+
+	public function fromMatrix( m:Matrix ) {
+		loadValues([ m._11, m._12, m._13, m._21, m._22, m._23, m._31, m._32, m._33 ]);
+	}
+
+	public function toMatrix( m:Matrix ) {
+		m._11 = _11;
+		m._12 = _12;
+		m._13 = _13;
+		m._21 = _21;
+		m._22 = _22;
+		m._23 = _23;
+		m._31 = _31;
+		m._32 = _32;
+		m._33 = _33;
+	}
+
+	public function loadValues( a : Array<Float> ) {
+		_11 = a[0]; _12 = a[1]; _13 = a[2]; 
+		_21 = a[3]; _22 = a[4]; _23 = a[5];
+		_31 = a[6]; _32 = a[7]; _33 = a[8]; 
+	}
+
+	public function clone() {
+		return new Basis(mat);
+	}
+
+	public static function L( a : Array<Float> ) {
+		var m = new Matrix();
+		m.loadValues(a);
+		return m;
+	}
+}
+
 @:noDebug
 class Matrix {
 
@@ -30,20 +174,28 @@ class Matrix {
 	public var _42 : Float;
 	public var _43 : Float;
 	public var _44 : Float;
+	var _basis:Basis;
 
 	public var tx(get, set) : Float;
 	public var ty(get, set) : Float;
 	public var tz(get, set) : Float;
+	public var origin(get, set) : Vector;
+	public var basis(get, set) : Basis;
 
 	public function new() {
+		_basis = new Basis(this);
 	}
 
 	inline function get_tx() return _41;
 	inline function get_ty() return _42;
 	inline function get_tz() return _43;
+	inline function get_origin() return new Vector(_41, _42, _43);
+	inline function get_basis() { _basis.fromMatrix(this); return _basis; }
 	inline function set_tx(v) return _41 = v;
 	inline function set_ty(v) return _42 = v;
 	inline function set_tz(v) return _43 = v;
+	inline function set_origin(v:Vector) { _41=v.x; _42=v.y; _43=v.z; return v; }
+	inline function set_basis(b:Basis) { _basis.toMatrix(this); return _basis; }
 
 	public function equal( other : Matrix ) {
 		return	_11 == other._11 && _12 == other._12 && _13 == other._13 && _14 == other._14
@@ -320,6 +472,16 @@ class Matrix {
 		_44 = 1;
 	}
 
+	function xform(a, b) {
+		return new h3d.Vector( new h3d.Vector(a._11, a._21, a._31).dot(b), new h3d.Vector(a._12, a._22, a._32).dot(b), new h3d.Vector(a._13, a._23, a._33).dot(b) );
+		// return new h3d.Vector( new h3d.Vector(a._11, a._12, a._13).dot(b), new h3d.Vector(a._21, a._22, a._23).dot(b), new h3d.Vector(a._31, a._33, a._33).dot(b) );
+	}
+
+	public function multiplyBasis( a : Matrix, b : Matrix ) {
+		origin = xform(a.basis, b.origin);
+		basis.multiply(a.basis, b.basis);
+	}
+
 	public function multiply( a : Matrix, b : Matrix ) {
 		var a11 = a._11; var a12 = a._12; var a13 = a._13; var a14 = a._14;
 		var a21 = a._21; var a22 = a._22; var a23 = a._23; var a24 = a._24;
@@ -567,6 +729,25 @@ class Matrix {
 		q.initRotateMatrix(this);
 		q.normalize();
 		return q.getDirection();
+	}
+
+	public static function interpolate( mat1:Matrix, mat2:Matrix, v:Float)
+	{
+		var rot1 = new h3d.Quat();
+		rot1.initRotateMatrix(mat1);
+		rot1.normalize();
+		var rot2 = new h3d.Quat();
+		rot2.initRotateMatrix(mat2);
+		rot2.normalize();
+
+		var finalRot = new h3d.Quat();
+		finalRot.slerp(rot1, rot2, v);
+
+		var finalMat = finalRot.toMatrix();
+
+		finalMat.origin = mat1.origin.multiply(1 - v).add( mat2.origin.multiply( v ) );
+		
+		return finalMat;
 	}
 
 	/**
@@ -848,3 +1029,4 @@ class Matrix {
 		return m;
 	}
 }
+

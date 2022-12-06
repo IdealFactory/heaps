@@ -103,7 +103,7 @@ class Library {
 		return { vertex : outVertex, index : outIndex };
 	}
 
-	@:noDebug
+
 	public function getBuffers( geom : Geometry, format : Array<GeometryFormat>, ?defaults : Array<h3d.Vector>, ?material : Int ) {
 
 		if( material == 0 && geom.indexCounts.length == 1 )
@@ -626,6 +626,7 @@ class Library {
 			}];
 		}
 
+		trace("FBX-Range="+ranges[0]);
 
 		// for each joint, calculate the bounds of vertexes skinned to this joint, in absolute position
 		for( r in ranges ) {
@@ -643,6 +644,7 @@ class Library {
 				var w1 = vbuf[p++];
 				var w2 = vbuf[p++];
 				var w3 = vbuf[p++];
+				trace("FBX-Range0: vIdx="+vidx+" p="+p+" xyz="+x+"/"+y+"/"+z+" w123="+w1+"/"+w2+"/"+w3);
 
 				var vout = vidx * 3;
 				skin.vertexWeights[vout] = w1;
@@ -651,6 +653,7 @@ class Library {
 
 				var w = (w1 == 0 ? 1 : 0) | (w2 == 0 ? 2 : 0) | (w3 == 0 ? 4 : 0);
 				var idx = haxe.io.FPHelper.floatToI32(vbuf[p++]);
+				trace("FBX-IDX="+idx);
 				bounds.addPos(x,y,z);
 				for( i in 0...3 ) {
 					if( w & (1<<i) != 0 ) {
@@ -658,6 +661,7 @@ class Library {
 						continue;
 					}
 					var idx = (idx >> (i<<3)) & 0xFF;
+					trace(" - i="+i+" idx="+idx);
 					var j = r.joints[idx];
 					j.offsets.addPos(x,y,z);
 					skin.vertexJoints[vout++] = j.bindIndex;
@@ -725,6 +729,9 @@ class Library {
 			b.setMin(pt1);
 			b.setMax(pt2);
 			j.offsetRay = r;
+
+			trace("J-OffsetRay:"+j.offsetRay+" min="+pt1+" max="+pt2);
+
 		}
 	}
 

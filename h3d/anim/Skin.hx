@@ -11,6 +11,11 @@ class Joint {
 	public var parent : Joint;
 	public var follow : Joint;
 	public var subs : Array<Joint>;
+	public var minAngle : h3d.Vector;
+	public var maxAngle : h3d.Vector;
+	#if !macro
+	public var constraint : h3d.scene.SkeletonIK.Constraint;
+	#end 
 
 	public var offsets : h3d.col.Bounds;
 	public var offsetRay : Float;
@@ -26,7 +31,6 @@ class Joint {
 		splitIndex = -1;
 		subs = [];
 	}
-
 }
 
 private class Permut {
@@ -88,10 +92,11 @@ class Skin {
 				namedJoints.set(j.name, j);
 	}
 
-	public inline function addInfluence( vid : Int, j : Joint, w : Float ) {
+	public  function addInfluence( vid : Int, j : Joint, w : Float ) {
 		var il = envelop[vid];
 		if( il == null )
 			il = envelop[vid] = [];
+		if (j==null) throw "Joint is null adding influence!!!!!";
 		il.push(new Influence(j,w));
 	}
 
@@ -103,8 +108,9 @@ class Skin {
 		return splitJoints != null;
 	}
 
-	public function initWeights() {
-		boundJoints = [];
+	public function initWeights(updateJoints:Bool = true) {
+		if (updateJoints)
+			boundJoints = [];
 		var pos = 0;
 		for( i in 0...vertexCount ) {
 			var il = envelop[i];
@@ -124,7 +130,8 @@ class Skin {
 				} else {
 					if( i.j.bindIndex == -1 ) {
 						i.j.bindIndex = boundJoints.length;
-						boundJoints.push(i.j);
+						if (updateJoints)
+							boundJoints.push(i.j);
 					}
 					vertexJoints[pos] = i.j.bindIndex;
 					vertexWeights[pos] = i.w * tw;

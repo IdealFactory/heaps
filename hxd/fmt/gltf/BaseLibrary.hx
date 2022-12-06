@@ -46,6 +46,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	public var meshJoints:Map<h3d.scene.Object, Array<Int>>;
 	public var jointMesh:Array<h3d.scene.Skin>;
 	public var nodeObjects:Array<h3d.scene.Object>;
+	public var skinMeshes:Array<SkinMeshLink>;
 
 	public var hasDracoExt:Bool = false;
 	public var requiresDracoExt:Bool = false;
@@ -57,9 +58,8 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 	var animId = 0;
 	var s3d : h3d.scene.Scene;
 	public var baseURL:String = "";
-	var skinMeshes:Array<SkinMeshLink>;
 
-	static var defaultMaterial:h3d.mat.PBRSinglePass;
+	static var defMat:Material;
 
 	#if openfl
 	var dependencyInfo:Map<openfl.net.URLLoader,LoadInfo>;
@@ -72,9 +72,8 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		this.s3d = s3d;
 		
 		// Create default material for objects that do not have one
-		if (defaultMaterial == null) {
-			var defMat:Material = { pbrMetallicRoughness: { baseColorFactor: [ 0.5, 0.5, 0.5, 1.0 ], metallicFactor: 0, roughnessFactor: 1 }};
-			defaultMaterial = createMaterial( defMat);
+		if (defMat == null) {
+			defMat = { pbrMetallicRoughness: { baseColorFactor: [ 0.5, 0.5, 0.5, 1.0 ], metallicFactor: 0, roughnessFactor: 1 }};
 		}
 
 		reset();
@@ -709,7 +708,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		var meshName = (meshNode.name != null) ? meshNode.name : (nodeName != null ? nodeName : "Mesh_"+StringTools.hex(Std.random(0x7FFFFFFF), 8));
 		
 		var mesh = new h3d.scene.Object( parent );
-		mesh.name = meshName;
+		mesh.name = meshName+"_container";
 		mesh.setTransform( transform );
 		meshes.push( mesh );
 		#if debug_gltf
@@ -726,12 +725,17 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			// TODO: Modes other than triangles?
 			if ( prim.mode != Triangles ) throw "Only triangles mode allowed in mesh primitive!";
 
-			var primName = meshName+"_"+primCounter++;
+			var primName = meshName + (primCounter>0 ? "_"+primCounter : "");
+			primCounter++;
 
+			trace("Draco: hasExt="+hasDracoExt+" requires="+requiresDracoExt);
 			var meshPrim = new GltfModel( new Geometry(this, prim, hasDracoExt, requiresDracoExt ), this );
 			meshPrim.name = primName;
+			if (primName=="INSIDE") {
+				trace("GOT An INSIDE");
+			}
 
-			var mat = materials[ prim.material ] != null ? materials[ prim.material ] : defaultMaterial;
+			var mat = materials[ prim.material ] != null ? cast(materials[ prim.material ].clone(), h3d.mat.PBRSinglePass) : createMaterial( defMat );
 			if (prim.targets!=null) {
 				var idx = 0;
 				for (t in prim.targets) {
@@ -749,7 +753,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			#if debug_gltf
 			trace("LoadMesh:meshPrim:"+meshPrim.name+" TriCount="+meshPrim.triCount());	
 			trace(" - got material: hasTangentBuffer="+mat.hasTangentBuffer);
-			trace(" - mesh primitive:"+primMesh.name);
+			trace(" - primName:"+primMesh.name);
 			#end
 
 			#if debug_gltf_normals
@@ -813,7 +817,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		var meshName = (skinNode.name != null) ? skinNode.name : (nodeName != null ? nodeName : "Skin_"+StringTools.hex(Std.random(0x7FFFFFFF), 8));
 		
 		var mesh = new h3d.scene.Object( parent );
-		mesh.name = meshName;
+		mesh.name = meshName+"_container";
 		mesh.setTransform( transform );
 		meshes.push( mesh );
 		#if debug_gltf
@@ -831,13 +835,14 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			var meshNode = root.meshes[ skinMeshLink.nodeId ];
 			var skinNode = root.skins[ skinMeshLink.skinId ];
 			var mesh = skinMeshLink.skinMesh;
+			var meshName = meshNode.name != null ? meshNode.name : mesh.name;
 
 			// Create collection of joints and primitives for this mesh
 			if (!meshJoints.exists( mesh )) meshJoints[mesh] = [];
 			if (!primitives.exists( mesh )) primitives[mesh] = [];
 
 			#if debug_gltf
-			trace("Building SkinMesh-Primitives:"+mesh.name+" id="+skinMeshLink.nodeId+" skinid="+skinMeshLink.skinId);
+			trace("Building SkinMesh-Primitives: meshName="+meshName+" skinName="+mesh.name+" id="+skinMeshLink.nodeId+" skinid="+skinMeshLink.skinId);
 			#end
 
 			var jointLookup = new Map<Int, h3d.anim.Skin.Joint>();
@@ -849,16 +854,22 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				// TODO: Modes other than triangles?
 				if ( prim.mode != Triangles ) throw "Only triangles mode allowed in mesh primitive!";
 
-				var primName = mesh.name+"_"+primCounter++;
+				var primName = meshName + (primCounter>0 ? "_"+primCounter : "");
+				primCounter++;
 
-				var meshPrim = new GltfModel( new Geometry(this, prim), this );
+				var meshPrim = new GltfModel( new Geometry(this, prim, hasDracoExt, requiresDracoExt ), this );
 				meshPrim.name = primName;	
-				var mat = materials[ prim.material ] != null ? materials[ prim.material ] : defaultMaterial;
+				if (primName=="INSIDE") {
+					trace("GOT An INSIDE");
+				}
+				var mat = materials[ prim.material ] != null ? materials[ prim.material ] : createMaterial( defMat );
 				//mat.blendMode = AlphaMultiply;
 			
 				var skinName = (skinNode.name != null) ? skinNode.name : "Skin_"+StringTools.hex(Std.random(0x7FFFFFFF), 8);
 				var inverseBindMatrices:Array<Matrix> = GltfTools.getMatrixArrayBufferByAccessor( this, skinNode.inverseBindMatrices );
-				
+				for (m in inverseBindMatrices) {
+					rightHandToLeft(m);
+				}
 				#if debug_gltf
 				trace("InverseBindMatrices:");
 				var mCtr =0;
@@ -880,6 +891,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				var vertCount = meshPrim.vertexCount();
 
 				#if debug_gltf
+				trace("SkeletonRoot: "+skeletonRoot);
 				trace("VertexCount:"+vertCount);
 				trace("JointCount:"+jointData.length);
 				trace("WeightCount:"+weights.length);
@@ -899,7 +911,10 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 					j.bindIndex = jCtr;
 					j.name = jNode!=null ? jNode.name : "Joint_"+jCtr;
 					j.retargetAnim = true;
-					skinData.boundJoints.push( j );
+					skinData.boundJoints[jCtr] = j;
+					#if debug_gltf
+					trace(" - Binding: jCtr="+jCtr+" j="+j.name+"("+j.index+")");
+					#end
 
 					j.defMat = Matrix.I();
 					j.transPos = inverseBindMatrices[ jCtr ];
@@ -955,10 +970,35 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 
 				for (j in joints) {
 					j.defMat = getJointTransform( mesh, j, j.transPos );
+					// rightHandToLeft(j.defMat);
 				}
+				
+				#if debug_gltf
+				inline function r(v:Float) return Std.int((v * 10000) + 0.5) / 10000;
+				function mtos(m:h3d.Matrix, preF:String = "") return m==null ? "--NULL--" : (preF==null ? "" : preF+": ")+r(m._11)+","+r(m._12)+","+r(m._13)+","+r(m._14)+","+r(m._21)+","+r(m._22)+","+r(m._23)+","+r(m._24)+","+r(m._31)+","+r(m._32)+","+r(m._33)+","+r(m._34)+","+r(m._41)+","+r(m._42)+","+r(m._43)+","+r(m._44);
+			
+				function traceJoint( j:h3d.anim.Skin.Joint, i:Int=0 ) {
+					var ind = "";
+					for (iTab in 0...i) ind+="- ";
+					if (j!=null) {
+						trace(ind+"Joint:"+j.name+"("+j.index+") numChildren="+j.subs.length+" par="+(j.parent!=null ? j.parent.name+"("+j.parent.index+")" : "--null--"));
+						trace(ind+" # defMat"+mtos(j.defMat));
+						trace(ind+" # trnPos"+mtos(j.transPos));
+						for (jc in 0...j.subs.length) {
+							traceJoint(j.subs[jc], i+1);
+						}
+					} else {
+						trace(ind+"Joint: IS NULL");
+					}
+				}
+				trace("Tree-1: root="+skeletonRoot+"("+skinNode.skeleton+")");
+				var r = jointLookup[skinNode.skeleton];
+				traceJoint( r, 1 );
+				#end
 
 				var rootJoints = [ jointLookup[skinNode.skeleton] ];
 				skinData.setJoints( joints, rootJoints );
+				skinData.initWeights( false );
 				meshPrim.setSkin(skinData);
 
 				var primSkin = new h3d.scene.Skin( skinData, [mat], mesh );
@@ -975,6 +1015,21 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				#end
 			}
 		}
+	}
+	inline function r(v:Float) return Std.int((v * 10000) + 0.5) / 10000;
+	function mtos(m:h3d.Matrix, preF:String = "") return m==null ? "--NULL--" : (preF==null ? "" : preF+": ")+r(m._11)+","+r(m._12)+","+r(m._13)+","+r(m._14)+","+r(m._21)+","+r(m._22)+","+r(m._23)+","+r(m._24)+","+r(m._31)+","+r(m._32)+","+r(m._33)+","+r(m._34)+","+r(m._41)+","+r(m._42)+","+r(m._43)+","+r(m._44);
+
+	public function setJointTransform( mat:h3d.Matrix, j:h3d.anim.Skin.Joint, mesh:h3d.scene.Skin) {
+		var m = j.transPos.clone();
+		m.multiply(m, mat);
+		m.invert();
+		if (j.parent!=null) {
+			var parMat:Matrix = getTransform( mesh, j.parent ); /// Need parent absPos transform
+			parMat.invert();
+			m.multiply(m, parMat);
+		}
+		mesh.currentRelPose[j.index] = m;
+		mesh.jointsUpdated = true;
 	}
 
 	function getJointTransform( mesh:h3d.scene.Skin, j:h3d.anim.Skin.Joint, invBindMat:Matrix ):Matrix {
@@ -1029,6 +1084,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
             m.multiply( m, q.toMatrix() );
         }
         if (node.translation != null) m.translate( node.translation[0], node.translation[1], node.translation[2] );
+		rightHandToLeft(m);
 		return m;
 	}
 
@@ -1055,5 +1111,185 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 		for (key in animations.keys()) 
 			keys.push( key );
 		return keys;
+	}
+
+	@:allow(h3d.anim.Skin)
+	public function loadSkin( geom : Geometry, skin : h3d.anim.Skin, optimize = true ) {
+		if( skin.vertexWeights != null )
+			return;
+
+		var bonesPerVertex = skin.bonesPerVertex;
+		if( !(bonesPerVertex == 3 || bonesPerVertex == 4) )
+			throw "assert";
+		var use4Bones = bonesPerVertex == 4;
+
+		var formatStride = 7;
+
+		var verts = geom.getVertices();
+		var indices = geom.getIndices();
+		var weights = geom.getWeights();
+
+		@:privateAccess skin.vertexCount =  Std.int(verts.length / 3);
+
+		// Build single buffer
+		var vbuf = new haxe.ds.Vector(formatStride * skin.vertexCount);
+		var vid=0;
+		var vertStride = 3;
+		var vOffset = 0;
+		var weightStride = 4;
+		var wOffset = 0;
+		var vidx = 0;
+		var idx = 0;
+		for( i in 0...vbuf.length ) {
+			
+			vidx = indices[i];
+			vOffset = vidx * vertStride;
+			vbuf[idx++] = verts[vOffset++];
+			vbuf[idx++] = verts[vOffset++];
+			vbuf[idx++] = verts[vOffset++];
+
+			wOffset = vidx * weightStride;
+			vbuf[idx++] = verts[wOffset++];
+			vbuf[idx++] = verts[wOffset++];
+			vbuf[idx++] = verts[wOffset++];
+			vbuf[idx++] = verts[wOffset++];
+		}
+
+		skin.vertexWeights = new haxe.ds.Vector(skin.vertexCount * bonesPerVertex);
+		skin.vertexJoints = new haxe.ds.Vector(skin.vertexCount * bonesPerVertex);
+
+		for( j in skin.boundJoints )
+			j.offsets = new h3d.col.Bounds();
+
+		var idx = 0;
+		var bounds = new h3d.col.Bounds();
+		var out = Math.NaN;
+		var ranges;
+		// if( skin.splitJoints == null ) {
+			var jointsByBind = [];
+			for( j in skin.boundJoints )
+				jointsByBind[j.bindIndex] = j;
+			ranges = [{ index : 0, pos : 0, count : indices.length, joints : jointsByBind }];
+		// } else {
+		// 	var idx = 0;
+		// 	var triPos = [], pos = 0;
+		// 	for( n in geom.indexCounts ) {
+		// 		triPos.push(pos);
+		// 		pos += n;
+		// 	}
+		// 	ranges = [for( j in skin.splitJoints ) @:privateAccess {
+		// 		index : idx,
+		// 		pos : triPos[idx],
+		// 		count : geom.indexCounts[idx++],
+		// 		joints : j.joints,
+		// 	}];
+		// }
+
+
+		// for each joint, calculate the bounds of vertexes skinned to this joint, in absolute position
+		for( r in ranges ) {
+			for( idx in r.pos...r.pos+r.count ) {
+				var vidx = indices[idx];
+				var p = vidx * formatStride;
+				var x = vbuf[p];
+				if( x != x ) {
+					// already processed
+					continue;
+				}
+				vbuf[p++] = out;
+				var y = vbuf[p++];
+				var z = vbuf[p++];
+				var w1 = vbuf[p++];
+				var w2 = vbuf[p++];
+				var w3 = vbuf[p++];
+				var w4 = 0.0;
+
+				var vout = vidx * bonesPerVertex;
+				skin.vertexWeights[vout] = w1;
+				skin.vertexWeights[vout+1] = w2;
+				skin.vertexWeights[vout+2] = w3;
+
+				if(use4Bones) {
+					w4 = 1.0 - w1 - w2 - w3;
+					skin.vertexWeights[vout+3] = w4;
+				}
+
+				var w = (w1 == 0 ? 1 : 0) | (w2 == 0 ? 2 : 0) | (w3 == 0 ? 4 : 0) | (w4 == 0 ? 8 : 0);
+				var idx = haxe.io.FPHelper.floatToI32(vbuf[p++]);
+				bounds.addPos(x,y,z);
+				for( i in 0...bonesPerVertex ) {
+					if( w & (1<<i) != 0 ) {
+						skin.vertexJoints[vout++] = -1;
+						continue;
+					}
+					var idx = (idx >> (i<<3)) & 0xFF;
+					var j = r.joints[idx];
+					j.offsets.addPos(-x,y,z);
+					skin.vertexJoints[vout++] = j.bindIndex;
+				}
+			}
+		}
+
+		if( optimize ) {
+			var idx = skin.allJoints.length - 1;
+			var optOut = 0;
+			var refVolume = bounds.getVolume();
+			while( idx >= 0 ) {
+				var j = skin.allJoints[idx--];
+				if( j.offsets == null || j.parent == null || j.parent.offsets == null ) continue;
+				var poff = j.parent.offsets;
+
+				// assume our joints will only rotate
+				var sp = j.offsets.toSphere();
+				if( poff.containsSphere(sp) ) {
+					j.offsets = null;
+					optOut++;
+					continue;
+				}
+
+				var pext = poff.clone();
+				pext.addSphere(sp);
+
+				// heuristic to allow children bounds to be merged within parent
+				// this allow to calculate less joints when getting skin bounds
+				var ratio = Math.sqrt((refVolume * 1.5) / pext.getVolume());
+				var k = pext.getVolume() / poff.getVolume();
+
+				if( k < ratio ) {
+					j.parent.offsets = pext;
+					j.offsets = null;
+					optOut++;
+					continue;
+				}
+			}
+		}
+
+		// transform bounds into two spheres aligned on largest
+		// size. this allows Skin.getBounds to perform two transforms
+		// insteas of height for each bounds corners
+		for( j in skin.allJoints ) {
+			if( j.offsets == null ) {
+				j.offsetRay = -1;
+				continue;
+			}
+			var b = j.offsets;
+			var pt1, pt2, off = b.getCenter(), r;
+			if( b.xSize > b.ySize && b.xSize > b.zSize ) {
+				r = Math.max(b.ySize, b.zSize) * 0.5;
+				pt1 = new h3d.col.Point(b.xMin + r, off.y, off.z);
+				pt2 = new h3d.col.Point(b.xMax - r, off.y, off.z);
+			} else if( b.ySize > b.zSize ) {
+				r = Math.max(b.xSize, b.zSize) * 0.5;
+				pt1 = new h3d.col.Point(off.x, b.yMin + r, off.z);
+				pt2 = new h3d.col.Point(off.x, b.yMax - r, off.z);
+			} else {
+				r = Math.max(b.xSize, b.ySize) * 0.5;
+				pt1 = new h3d.col.Point(off.x, off.y, b.zMin + r);
+				pt2 = new h3d.col.Point(off.x, off.y, b.zMax - r);
+			}
+			b.setMin(pt1);
+			b.setMax(pt2);
+			j.offsetRay = r;
+		}
 	}
 }

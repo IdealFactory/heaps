@@ -304,13 +304,13 @@ class Cache {
 		Printer.check(s.fragment,[prev]);
 		#end
 
-		#if shader_debug_dump
-		if( dbg != null ) {
-			dbg.writeString("----- SPLIT ----\n\n");
-			dbg.writeString(Printer.shaderToString(s.vertex, DEBUG_IDS) + "\n\n");
-			dbg.writeString(Printer.shaderToString(s.fragment, DEBUG_IDS) + "\n\n");
-		}
-		#end
+		// #if shader_debug_dump
+		// if( dbg != null ) {
+			// trace("----- SPLIT ----\n\n");
+			// trace(Printer.shaderToString(s.vertex) + "\n\n");
+			// trace(Printer.shaderToString(s.fragment) + "\n\n");
+		// }
+		// #end
 
 		var prev = s;
 		var s = new hxsl.Dce().dce(s.vertex, s.fragment);
@@ -356,12 +356,12 @@ class Cache {
 		else
 			byID.set(r.signature, r);
 
-		#if shader_debug_dump
-		dbg.writeString("---- OUTPUT -----\n\n");
-		dbg.writeString(h3d.Engine.getCurrent().driver.getNativeShaderCode(r)+"\n\n");
-		if( dbg != null ) dbg.close();
-		haxe.Log.trace = oldTrace;
-		#end
+		// #if shader_debug_dump
+		// trace("---- OUTPUT -----\n\n");
+		// trace(h3d.Engine.getCurrent().driver.getNativeShaderCode(r)+"\n\n");
+		// if( dbg != null ) dbg.close();
+		// haxe.Log.trace = oldTrace;
+		// #end
 
 		return r;
 	}

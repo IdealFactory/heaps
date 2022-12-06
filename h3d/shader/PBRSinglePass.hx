@@ -111,7 +111,7 @@ class PBRSinglePass extends h3d.shader.pbrsinglepass.PBRSinglePassLib {
         var flip:Mat4;
  
 		function __init__() {
-            flip = mat4( vec4(-1, 0, 0, 0), vec4(0, 1, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, 0, 1));
+            flip = mat4( vec4(1, 0, 0, 0), vec4(0, 1, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, 0, 1));
             gmv = global.modelView * flip;
             relativePosition = input.position;// * flip.mat3x4();
             transformedPosition = relativePosition;//* global.modelView.mat3x4() * flip.mat3x4();

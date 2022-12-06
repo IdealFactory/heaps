@@ -57,25 +57,29 @@ class Geometry {
 		return intCache[ "INDEX" ] = GltfTools.getIndexBuffer( "INDEX", l, accId );
 	}
 
+	/* CHANGES: 
+	Removed the +accNode on the cache map names due to draco simple using the 'POSITION' with no additional reference - as it doesn't know about it
+	May be breaking changes for target lookups - getTargetData
+	*/
 	public function getVertices( accNode = -1 ) {
 		var accId:Null<Int> = accNode==-1 ? root.attributes.get( "POSITION" ) : accNode;
 		if (accId == null) return null;
-		if (floatCache.exists( "POSITION"+accNode )) return floatCache[ "POSITION"+accNode ];
-		return floatCache[ "POSITION"+accNode ] = GltfTools.getFloatBuffer( "POSITION", l, accId );
+		if (floatCache.exists( "POSITION" )) return floatCache[ "POSITION" ];
+		return floatCache[ "POSITION" ] = GltfTools.getFloatBuffer( "POSITION", l, accId, 1 );
 	}
 
 	public function getNormals( accNode = -1 ) {
 		var accId:Null<Int> = accNode==-1 ? root.attributes.get( "NORMAL" ) : accNode;
 		if (accId == null) return buildNormalBuffer();
-		if (floatCache.exists( "NORMAL"+accNode )) return floatCache[ "NORMAL"+accNode ];
-		return floatCache[ "NORMAL"+accNode ] = GltfTools.getFloatBuffer( "NORMAL", l, accId );
+		if (floatCache.exists( "NORMAL" )) return floatCache[ "NORMAL" ];
+		return floatCache[ "NORMAL" ] = GltfTools.getFloatBuffer( "NORMAL", l, accId, 1 );
 	}
 
 	public function getTangents( accNode = -1 ) {
 		var accId:Null<Int> = accNode==-1 ? root.attributes.get( "TANGENT" ) : accNode;
 		if (accId == null) return null;
-		if (floatCache.exists( "TANGENT"+accNode )) return floatCache[ "TANGENT"+accNode ];
-		return floatCache[ "TANGENT"+accNode ] = GltfTools.getFloatBuffer( "TANGENT", l, accId );
+		if (floatCache.exists( "TANGENT" )) return floatCache[ "TANGENT" ];
+		return floatCache[ "TANGENT" ] = GltfTools.getFloatBuffer( "TANGENT", l, accId, 1 );
 	}
 
 	public function getUVs() {
@@ -116,9 +120,10 @@ class Geometry {
 	public function getTargetData() {
 		if (root.targets==null) return [];
 
-		trace("Getting Targets: count="+root.targets.length);
+		// trace("Getting Targets: count="+root.targets.length);
 		var targets = [];
 		for (t in root.targets) {
+			// trace("WARNING!!!! maybe problematic Target: t.POSITION="+t.POSITION+" t.NORMAL="+t.NORMAL+" t.TANGENT="+t.TANGENT);
 			var p = getVertices( t.POSITION );
 			var n = getNormals( t.NORMAL );
 			var t = getTangents( t.TANGENT );
@@ -303,5 +308,27 @@ class Geometry {
 		#end
 		return uv2s;
 	}
+
+	// function convertPoints( a : FloatBuffer ) {
+	// 	var p = 0;
+	// 	for( i in 0...Std.int(a.length / 3) ) {
+	// 		a[p] = -a[p]; // inverse X axis
+	// 		p += 3;
+	// 	}
+	// }
+
+	// public function leftHandConvert(buf) {
+	// 	for( g in root.getAll("Objects.Geometry") ) {
+	// 		for( v in g.getAll("Vertices") )
+	// 			convertPoints(v.getFloats());
+	// 		for( v in g.getAll("LayerElementNormal.Normals") )
+	// 			convertPoints(v.getFloats());
+	// 		for( v in g.getAll("LayerElementTangent.Tangents") )
+	// 			convertPoints(v.getFloats());
+	// 		for( v in g.getAll("LayerElementBinormal.Binormals") )
+	// 			convertPoints(v.getFloats());
+	// 	}
+	// }
+
 
 }

@@ -240,7 +240,7 @@ class TimelineLinearAnimation extends TimelineAnimation {
 	}
 
 	@:access(h3d.scene.Skin)
-	@:noDebug
+	// @:noDebug
 	override function sync( decompose = false ) {
 		if( frame == syncFrame && !decompose )
 			return;
@@ -441,6 +441,8 @@ class TimelineLinearAnimation extends TimelineAnimation {
 						m._33 = 1;
 					}
 				}
+				if (Std.isOfType(o.targetSkin.primitive, h3d.prim.GltfModel))
+					rightHandToLeft(m);
 				o.targetSkin.currentRelPose[o.targetJoint] = m;
 				o.targetSkin.jointsUpdated = true;
 			} 
@@ -450,7 +452,7 @@ class TimelineLinearAnimation extends TimelineAnimation {
 		restartAnim = false;
 	}
 
-	public static inline function rightHandToLeft( m : h3d.Matrix ) {
+	public function rightHandToLeft( m : h3d.Matrix ) {
 		// if [x,y,z] is our original point and M the matrix
 		// in right hand we have [x,y,z] * M = [x',y',z']
 		// we need to ensure that left hand matrix convey the x axis flip,

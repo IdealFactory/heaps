@@ -161,6 +161,27 @@ class Vector #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 		return new Vector(px,py,pz);
 	}
 
+	public inline function applyQuaternion( q : h3d.Quat ) {
+		var ix = q.w * x + q.y * z - q.z * y;
+		var iy = q.w * y + q.z * x - q.x * z;
+		var iz = q.w * z + q.x * y - q.y * x;
+		var iw = - q.x * x - q.y * y - q.z * z;
+
+		// calculate result * inverse quat
+
+		x = ix * q.w + iw * - q.x + iy * - q.z - iz * - q.y;
+		y = iy * q.w + iw * - q.y + iz * - q.x - ix * - q.z;
+		z = iz * q.w + iw * - q.z + ix * - q.y - iy * - q.x;
+	}
+
+	public inline function applyAxisAngle( x, y, z, angle ) {
+		var q = new h3d.Quat();
+		q.initRotateAxis(x, y, z, angle);
+		return applyQuaternion( q );
+
+	}
+
+
 	public inline function clone() {
 		return new Vector(x,y,z,w);
 	}
@@ -194,6 +215,25 @@ class Vector #if apicheck implements h2d.impl.PointApi<Vector,Matrix> #end {
 		z = pz * iw;
 		w = 1;
 	}
+
+	public inline function directionTo( to : Vector ) {
+		var ret = new Vector(to.x - x, to.y - y, to.z - z, 1);
+		ret.normalize();
+		return ret;
+	}
+
+	public inline function angleTo( v:Vector ) {
+
+		var denominator:Float = Math.sqrt( this.lengthSq() * v.lengthSq() );
+		if ( denominator == 0 ) return Math.PI / 2;
+
+		var theta:Float = this.dot( v ) / denominator;
+
+		// clamp, to handle numerical problems
+		return Math.acos( hxd.Math.clamp( theta, - 1, 1 ) );
+
+	}
+
 
 	/// ----- COLOR FUNCTIONS
 

@@ -40,6 +40,10 @@ class PBRSinglePass extends Material {
     public var clearCoatRoughness(default, set):Float;
     public var clearCoatIndexOfRefraction(default, set):Float;
 
+    public var reflectivityMap(get, set) : h3d.mat.Texture;
+	public var emissiveLightMap(get, set) : h3d.mat.Texture;
+	public var occlusionMap(get, set) : h3d.mat.Texture;
+
     private var baseMeshOffset:Int = 1;
 
     public function new() {
@@ -77,9 +81,58 @@ class PBRSinglePass extends Material {
         mainPass.addShaderAtIndex(colorTransform, 11 + baseMeshOffset);
     }
 
-	public var reflectivityMap(get, set) : h3d.mat.Texture;
-	public var emissiveLightMap(get, set) : h3d.mat.Texture;
-	public var occlusionMap(get, set) : h3d.mat.Texture;
+	override function clone( ?m : BaseMaterial ) : BaseMaterial {
+        var m = m == null ? new PBRSinglePass() : cast m;
+		super.clone(m);
+
+        m.pbrshader = this.pbrshader;
+        m.baseColor = this.baseColor;
+        m.baseColorUV = this.baseColorUV;
+        m.normalMapping = this.normalMapping;
+        m.tangent = this.tangent;
+        m.uv1 = this.uv1;
+        m.surface = this.surface;
+        m.surfaceMap = this.surfaceMap;
+        m.irradiance = this.irradiance;
+        m.irradianceMap = this.irradianceMap;
+        m.envLighting = this.envLighting;
+        m.ambientMonochrome = this.ambientMonochrome;
+        m.ambientMonochromeLum = this.ambientMonochromeLum;
+        m.specEnvReflect = this.specEnvReflect;
+        m.specEnvReflectMap = this.specEnvReflectMap;
+        m.sheen = this.sheen;
+        m.clearCoat = this.clearCoat;
+        m.finalCombination = this.finalCombination;
+        m.emissive = this.emissive;
+        m.emissiveMap = this.emissiveMap;
+        m.ambientOcclusion = this.ambientOcclusion;
+        m.ambientOcclusionMap = this.ambientOcclusionMap;
+        m.output = this.output;
+        m.colorTransform = this.colorTransform;
+    
+        m.hasTangentBuffer = this.hasTangentBuffer;
+    
+        m.metalnessFactor = this.metalnessFactor;
+        m.roughnessFactor = this.roughnessFactor;
+        m.sheenColor = this.sheenColor;
+        m.sheenIntensity = this.sheenIntensity;
+        m.sheenRoughness = this.sheenRoughness;
+        m.clearCoatIntensity = this.clearCoatIntensity;
+        m.clearCoatRoughness = this.clearCoatRoughness;
+        m.clearCoatIndexOfRefraction = this.clearCoatIndexOfRefraction;
+
+        m.reflectivityMap = this.reflectivityMap;
+        m.emissiveLightMap = this.emissiveLightMap;
+        m.occlusionMap = this.occlusionMap;
+    
+        m.baseMeshOffset = this.baseMeshOffset;
+
+        var pIdx = 0;
+        @:privateAccess m.passes = this.mainPass.clone();
+        m.mainPass.load( this.mainPass );
+
+        return m;
+	}
 
     override function get_texture() {
         if( uv1 == null ) return null;
@@ -101,23 +154,23 @@ class PBRSinglePass extends Material {
 
 	override function set_normalMap(t) {
         if( t != null) {
-            if (this.hasTangentBuffer) {
-                if (tangent==null) addTangent();
-                tangent.bumpSampler = t;
-            } else {
+            // if (this.hasTangentBuffer) {
+            //     if (tangent==null) addTangent();
+            //     tangent.bumpSampler = t;
+            // } else {
                 if (normalMapping==null) addNormalMap();
                 normalMapping.bumpSampler = t;
-            }
+            // }
         }
 		return t;
     }
     
     function set_hasTangentBuffer( val:Bool ):Bool {
-        this.hasTangentBuffer = val;
-        if (val) {
-            if (tangent==null) addTangent();
-        }
-        return val;
+        // this.hasTangentBuffer = val;
+        // if (val) {
+        //     if (tangent==null) addTangent();
+        // }
+        return false;//val;
     }
 
 
@@ -294,22 +347,22 @@ class PBRSinglePass extends Material {
     }
 
     function addTangent() {
-        if (uv1 == null) addBaseColorUV();
-        var oldN = mainPass.getShader( h3d.shader.pbrsinglepass.Normal );
-        var oldNM = mainPass.getShader( h3d.shader.pbrsinglepass.NormalMap );
-        if (oldN != null) {
-            mainPass.removeShader( oldN ); // Remove old Normal shader
-        }
-        if (oldNM != null) {
-            mainPass.removeShader( oldNM ); // Remove old NormalMap shader
-        }
-        if (tangent == null) {
-            tangent = new h3d.shader.pbrsinglepass.Tangent();
-            if (oldNM != null) {
-                tangent.bumpSampler = oldNM.bumpSampler;
-            }
-        }
-        mainPass.addShaderAtIndex(tangent, 1+baseMeshOffset);
+        // if (uv1 == null) addBaseColorUV();
+        // var oldN = mainPass.getShader( h3d.shader.pbrsinglepass.Normal );
+        // var oldNM = mainPass.getShader( h3d.shader.pbrsinglepass.NormalMap );
+        // if (oldN != null) {
+        //     mainPass.removeShader( oldN ); // Remove old Normal shader
+        // }
+        // if (oldNM != null) {
+        //     mainPass.removeShader( oldNM ); // Remove old NormalMap shader
+        // }
+        // if (tangent == null) {
+        //     tangent = new h3d.shader.pbrsinglepass.Tangent();
+        //     if (oldNM != null) {
+        //         tangent.bumpSampler = oldNM.bumpSampler;
+        //     }
+        // }
+        // mainPass.addShaderAtIndex(tangent, 1+baseMeshOffset);
     }
 
     function addAmbientOcculsion() {

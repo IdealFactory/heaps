@@ -164,8 +164,9 @@ class Camera {
 	**/
 	public function unproject( screenX : Float, screenY : Float, camZ ) {
 		var p = new h3d.Vector(screenX, screenY, camZ);
-		if (isYUp) yUpInv.multiply( getInverseViewProj(), yUpFlip );
-		p.project(isYUp ? yUpInv : getInverseViewProj());
+		// if (isYUp) yUpInv.multiply( getInverseViewProj(), yUpFlip );
+		// p.project(isYUp ? yUpInv : getInverseViewProj());
+		p.project(getInverseViewProj());
 		return p;
 	}
 
