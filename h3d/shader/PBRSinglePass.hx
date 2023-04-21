@@ -50,7 +50,6 @@ class PBRSinglePass extends h3d.shader.pbrsinglepass.PBRSinglePassLib {
 		var relativePosition : Vec3;
 		var transformedPosition : Vec3;
 		var pixelTransformedPosition : Vec3;
-		var relativeNormal : Vec3;
 		var transformedNormal : Vec3;
 		var projectedPosition : Vec4;
 		var pixelColor : Vec4;
@@ -111,13 +110,12 @@ class PBRSinglePass extends h3d.shader.pbrsinglepass.PBRSinglePassLib {
         var flip:Mat4;
  
 		function __init__() {
-            flip = mat4( vec4(-1, 0, 0, 0), vec4(0, 1, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, 0, 1));
-            gmv = global.modelView * flip;
-            relativePosition = input.position;// * flip.mat3x4();
-            transformedPosition = relativePosition;//* global.modelView.mat3x4() * flip.mat3x4();
-            projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
-			relativeNormal = input.normal; //input.normal;// * flip.mat3x4();
-			transformedNormal = (relativeNormal.xyz * gmv.mat3x4()).normalize();
+			flip = mat4( vec4(1, 0, 0, 0), vec4(0, -1, 0, 0), vec4(0, 0, 1, 0), vec4(0, 0, 0, 1));
+			gmv = global.modelView * flip;
+			relativePosition = input.position;
+			transformedPosition = relativePosition * gmv.mat3x4();
+			projectedPosition = vec4(transformedPosition, 1) * camera.viewProj;
+			transformedNormal = (vec3(input.normal.x, input.normal.y, input.normal.z) * gmv.mat3x4()).normalize();
 
             camera.dir = (camera.position - transformedPosition).normalize();
 			pixelColor = color;
@@ -132,10 +130,6 @@ class PBRSinglePass extends h3d.shader.pbrsinglepass.PBRSinglePassLib {
             finalSheenRadianceScaled = vec3(0.);
             finalClearCoatScaled = vec3(0.);
 		}
-
-        function __init__vertex() {
-            transformedPosition *= gmv.mat3x4();
-        }
 
 		function __init__fragment() {
 			transformedNormal = transformedNormal.normalize();

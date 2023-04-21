@@ -145,8 +145,8 @@ class Library extends BaseLibrary {
                 sceneContainer.name = "SceneContainer";
                 var flipContainer = new h3d.scene.Object();
                 flipContainer.rotate( Math.PI/2, 0, 0 );
-                flipContainer.scaleX = -1;
-                flipContainer.scaleZ = -1;
+//                flipContainer.scaleX = -1;
+//                flipContainer.scaleZ = -1;
                 sceneContainer.addChild(flipContainer);
                 scenes.push( sceneContainer );
                 if (scene.nodes != null)

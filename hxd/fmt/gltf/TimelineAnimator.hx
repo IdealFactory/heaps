@@ -1,5 +1,6 @@
 package hxd.fmt.gltf;
 
+import StringTools;
 import haxe.Timer;
 
 typedef ObjectAnimation = {
@@ -27,8 +28,28 @@ class TimelineAnimator {
         }
     }
 
-    public function playAnimation() {
+	public function playAnimation(name:String, loop:Bool = false) {
+		for (animationObject in anims) {
+			if(StringTools.contains(animationObject.anim.name, name)) {
+
+				animationObject.anim.loop = loop;
+				animationObject.obj.stopAnimation(true);
+				animationObject.obj.playAnimation(animationObject.anim);
+			}
+		}
+	}
+
+	public function playAnimationByIndex(index:Int, loop:Bool = false) {
+		if(index >= 0 && index < anims.length && anims[index] != null) {
+			anims[index].anim.loop = loop;
+			anims[index].obj.playAnimation(anims[index].anim);
+		}
+	}
+
+    public function playAllAnimations(loop:Bool = false) {
         for (a in anims) {
+			a.anim.loop = loop;
+			a.obj.alwaysSync = true;
             playObjAnimation( a.obj, a.anim );
         }
     }
@@ -44,6 +65,25 @@ class TimelineAnimator {
         }
 
     }
+
+    public function stopAllAnimations() {
+        for (a in anims) {
+            a.obj.stopAnimation(true);
+        }
+    }
+
+	public function getAnimationsLength():Int {
+		return anims.length;
+	}
+
+	public function getAnimationsNames():Array<String> {
+		var result = [];
+		for (anim in anims) {
+			result.push(anim.anim.name);
+			result.push(anim.obj.name);
+		}
+		return result;
+	}
 
     function contains( o, a ) {
         for (anim in anims) {
