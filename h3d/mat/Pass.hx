@@ -95,66 +95,42 @@ class Pass {
 	}
 
 	public function setBlendMode( b : BlendMode ) {
+		blendOp = Add;
+		blendAlphaOp = Add;
+
 		switch( b ) {
 		case None: // Out = 1 * Src + 0 * Dst
 			blend(One, Zero);
-			blendOp = Add;
-			blendAlphaOp = Add;
 		case Alpha: // Out = SrcA * Src + (1 - SrcA) * Dst
 			blend(SrcAlpha, OneMinusSrcAlpha);
-			blendOp = Add;
-			blendAlphaOp = Add;
+			blendAlphaSrc = One;
 		case Add: // Out = SrcA * Src + 1 * Dst
 			blend(SrcAlpha, One);
-			blendOp = Add;
-			blendAlphaOp = Add;
+			blendAlphaSrc = One;
 		case AlphaAdd: // Out = Src + (1 - SrcA) * Dst
 			blend(One, OneMinusSrcAlpha);
-			blendOp = Add;
-			blendAlphaOp = Add;
 		case SoftAdd: // Out = (1 - Dst) * Src + 1 * Dst
 			blend(OneMinusDstColor, One);
-			blendOp = Add;
-			blendAlphaOp = Add;
+			blendAlphaSrc = One;
 		case Multiply: // Out = Dst * Src + 0 * Dst
 			blend(DstColor, Zero);
-			blendOp = Add;
-			blendAlphaOp = Add;
+			blendAlphaSrc = One;
 		case AlphaMultiply: // Out = Dst * Src + (1 - SrcA) * Dst
 			blend(DstColor, OneMinusSrcAlpha);
-			blendOp = Add;
-			blendAlphaOp = Add;
 		case Erase: // Out = 0 * Src + (1 - Srb) * Dst
 			blend(Zero, OneMinusSrcColor);
-			blendOp = Add;
-			blendAlphaOp = Add;
 		case Screen: // Out = 1 * Src + (1 - Srb) * Dst
 			blend(One, OneMinusSrcColor);
-			blendOp = Add;
-			blendAlphaOp = Add;
 		case Sub: // Out = 1 * Dst - SrcA * Src
 			blend(SrcAlpha, One);
 			blendOp = ReverseSub;
 			blendAlphaOp = ReverseSub;
-
-		// The output color min/max of the source and dest colors.
-		// The blend parameters Src and Dst are ignored for this equation.
 		case Max: // Out = MAX( Src, Dst )
-			blendSrc = Zero;
-			blendAlphaSrc = Zero;
-			blendDst = Zero;
-			blendAlphaDst = Zero;
-			blendAlphaSrc = Zero;
-			blendAlphaDst = Zero;
+			blend(One, One);
 			blendAlphaOp = Max;
 			blendOp = Max;
 		case Min: // Out = MIN( Src, Dst )
-			blendSrc = Zero;
-			blendAlphaSrc = Zero;
-			blendDst = Zero;
-			blendAlphaDst = Zero;
-			blendAlphaSrc = Zero;
-			blendAlphaDst = Zero;
+			blend(One, One);
 			blendAlphaOp = Min;
 			blendOp = Min;
 		}
@@ -177,6 +153,14 @@ class Pass {
 		case A: setColorMask(false, false, false, true);
 		default: throw "Unsupported channel "+c;
 		}
+	}
+
+	public function setColorMaski(r, g, b, a, i) {
+		if ( i > 8 )
+			throw "Color mask i supports 8 Render target";
+		var mask = (r?1:0) | (g?2:0) | (b?4:0) | (a?8:0);
+		mask = mask << (i * 4);
+		this.colorMask = this.colorMask | mask;
 	}
 
 	public function addShader<T:hxsl.Shader>(s:T) : T {

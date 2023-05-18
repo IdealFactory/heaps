@@ -94,14 +94,14 @@ class Skin extends MultiMaterial {
 		return s;
 	}
 
-	override function getBoundsRec( b : h3d.col.Bounds ) {
+	override function addBoundsRec( b : h3d.col.Bounds, relativeTo : h3d.Matrix ) {
 		// ignore primitive bounds !
 		var old = primitive;
 		primitive = null;
-		b = super.getBoundsRec(b);
+		super.addBoundsRec(b, relativeTo);
 		primitive = old;
 		if( flags.has(FIgnoreBounds) )
-			return b;
+			return;
 		syncJoints();
 		if( skinData.vertexWeights == null )
 			cast(primitive, h3d.prim.HMDModel).loadSkin(skinData);
@@ -119,7 +119,6 @@ class Skin extends MultiMaterial {
 				b.addSpherePos(pt.x, pt.y, pt.z, j.offsetRay * scale);
 			}
 		}
-		return b;
 	}
 
 	public function getCurrentSkeletonBounds() {
@@ -180,7 +179,7 @@ class Skin extends MultiMaterial {
 					hasNormalMap = true;
 					break;
 				}
-			
+
 			skinShader = Std.isOfType(s.primitive, h3d.prim.GltfModel) ? (hasNormalMap ? new h3d.shader.pbrsinglepass.SkinTangent() : new h3d.shader.pbrsinglepass.Skin()) : (hasNormalMap ? new h3d.shader.SkinTangent() : new h3d.shader.Skin());
 			skinShader.fourBonesByVertex = skinData.bonesPerVertex == 4;
 			var maxBones = 0;
@@ -218,7 +217,7 @@ class Skin extends MultiMaterial {
 	}
 
 	override function sync( ctx : RenderContext ) {
-		if( !ctx.visibleFlag && !alwaysSync )
+		if( !ctx.visibleFlag && !alwaysSyncAnimation )
 			return;
 		syncJoints();
 	}

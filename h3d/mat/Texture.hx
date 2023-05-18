@@ -19,6 +19,7 @@ class Texture {
 		#else
 			RGBA
 		#end;
+	public static var TRILINEAR_FILTERING_ENABLED : Bool = true;
 
 	public static var textureMaxAnisotropy = 0;
 	public static var maxTextureMaxAnisotropy = 0;
@@ -112,7 +113,10 @@ class Texture {
 
 		this.width = w;
 		this.height = h;
-		this.mipMap = this.flags.has(MipMapped) ? Linear : None;
+		if ( this.flags.has(MipMapped) )
+			this.mipMap = TRILINEAR_FILTERING_ENABLED ? Linear : Nearest;
+		else
+			this.mipMap = None;
 		this.filter = Linear;
 		this.anisotropy = this.mipMap != None ? 1 : 0;
 		this.wrap = Clamp;

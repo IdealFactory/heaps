@@ -68,6 +68,13 @@ class MeshBatch extends MultiMaterial {
 	public var primitiveSubPart : MeshBatchPart;
 	var primitiveSubBytes : haxe.io.Bytes;
 
+	/**
+		If set, exact bounds will be recalculated during emitInstance (default true)
+	**/
+	public var calcBounds = true;
+
+	var instancedParams : hxsl.Cache.BatchInstanceParams;
+
 	public function new( primitive, ?material, ?parent ) {
 		instanced = new h3d.prim.Instanced();
 		instanced.commands = new h3d.impl.InstanceBuffer();
@@ -115,13 +122,15 @@ class MeshBatch extends MultiMaterial {
 				var manager = cast(ctx,h3d.pass.Default).manager;
 				var shaders = p.getShadersRec();
 				var rt = manager.compileShaders(shaders, false);
-				var shader = manager.shaderCache.makeBatchShader(rt, shaders);
+				var shader = manager.shaderCache.makeBatchShader(rt, shaders, instancedParams);
 
 				var b = new BatchData();
 				b.indexCount = matInfo.count;
 				b.indexStart = matInfo.start;
 				b.paramsCount = shader.paramsSize;
 				b.maxInstance = Std.int(MAX_BUFFER_ELEMENTS / b.paramsCount);
+				 if ( b.maxInstance <= 0 )
+					throw "Mesh batch shaders needs at least one perInstance parameter";
 				b.params = shader.params;
 				b.shader = shader;
 				b.pass = p;
@@ -257,24 +266,30 @@ class MeshBatch extends MultiMaterial {
 		needUpload = true;
 	}
 
-	override function getBoundsRec( b : h3d.col.Bounds ) {
+	override function addBoundsRec( b : h3d.col.Bounds, relativeTo: h3d.Matrix ) {
 		var old = primitive;
 		primitive = null;
-		b = super.getBoundsRec(b);
+		super.addBoundsRec(b, relativeTo);
 		primitive = old;
 		if( primitive == null || flags.has(FIgnoreBounds) )
-			return b;
-		b.add(primitive.getBounds());
-		return b;
+			return;
+		// already transformed in absolute
+		var bounds = primitive.getBounds();
+		if( relativeTo == null )
+			b.add(bounds);
+		else
+			b.addTransform(bounds, relativeTo);
 	}
 
 	public function emitInstance() {
 		if( worldPosition == null ) syncPos();
 		var ps = primitiveSubPart;
 		if( ps != null ) @:privateAccess {
-			instanced.tmpBounds.load(primitiveSubPart.bounds);
-			instanced.tmpBounds.transform(worldPosition == null ? absPos : worldPosition);
-			instanced.bounds.add(instanced.tmpBounds);
+			if(calcBounds) {
+				instanced.tmpBounds.load(primitiveSubPart.bounds);
+				instanced.tmpBounds.transform(worldPosition == null ? absPos : worldPosition);
+				instanced.bounds.add(instanced.tmpBounds);
+			}
 
 			if( primitiveSubBytes == null ) {
 				primitiveSubBytes = haxe.io.Bytes.alloc(128);
@@ -291,7 +306,7 @@ class MeshBatch extends MultiMaterial {
 			primitiveSubBytes.setInt32(p + 8, ps.indexStart);
 			primitiveSubBytes.setInt32(p + 12, ps.baseVertex);
 			primitiveSubBytes.setInt32(p + 16, 0);
-		} else
+		} else if(calcBounds)
 			instanced.addInstanceBounds(worldPosition == null ? absPos : worldPosition);
 		var p = dataPasses;
 		while( p != null ) {
