@@ -232,6 +232,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
     function requestURL( url:String, onComplete:openfl.events.Event->Void ) {
 		trace("requestURL:"+url);
         var request = new openfl.net.URLRequest( url );
+        request.idleTimeout = 180 * 1000;
         var loader = new openfl.net.URLLoader();
         loader.dataFormat = openfl.net.URLLoaderDataFormat.BINARY;
 		var ext = url.substr( url.lastIndexOf(".")+1 );
