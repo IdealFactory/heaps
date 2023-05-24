@@ -101,6 +101,14 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		return 1;
 	}
 
+	function sortHitPoint2ByCameraDistance( i1 : Interactive, i2 : Interactive ) {
+		var z1 = i1.hitInfo.hit;
+		var z2 = i2.hitInfo.hit;
+		if( z1 > z2 )
+			return -1;
+		return 1;
+	}
+
 	@:dox(hide) @:noCompletion
 	public function dispatchEvent( event : hxd.Event, to : hxd.SceneEvents.Interactive ) {
 		var i : Interactive = cast to;
@@ -207,7 +215,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 					p.project(camera.m);
 					i.hitPoint.w = p.z + wfactor;
 				}
-				hitInteractives.sort(sortHitPointByCameraDistance);
+				//sorting by hitPoint.w messes up the right order so using hitInfo.hit which works fine
+				hitInteractives.sort(sortHitPoint2ByCameraDistance);
 			}
 
 			hitInteractives.unshift(null);

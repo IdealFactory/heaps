@@ -6,7 +6,7 @@ abstract class Collider {
 		Returns the distance of intersection between the ray and the collider, or negative if no collision.
 		If bestMatch is false, only negative/positive value needs to be returned, with no additional precision.
 	**/
-	public abstract function rayIntersection( r : Ray, bestMatch : Bool ) : Float;
+	public abstract function rayIntersection( r : Ray, bestMatch : Bool ) : HitPoint;
 	public abstract function contains( p : Point ) : Bool;
 	public abstract function inFrustum( f : Frustum, ?localMatrix : h3d.Matrix ) : Bool;
 	public abstract function inSphere( s : Sphere ) : Bool;
@@ -27,9 +27,9 @@ class OptimizedCollider extends Collider {
 		this.b = b;
 	}
 
-	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
+	public function rayIntersection( r : Ray, bestMatch : Bool ) : HitPoint {
 		if( a.rayIntersection(r, bestMatch) < 0 )
-			return -1;
+			return new HitPoint(-1.);
 		return b.rayIntersection(r, bestMatch);
 	}
 
@@ -70,8 +70,8 @@ class GroupCollider extends Collider {
 		this.colliders = colliders;
 	}
 
-	public function rayIntersection( r : Ray, bestMatch : Bool ) : Float {
-		var best = -1.;
+	public function rayIntersection( r : Ray, bestMatch : Bool ) : HitPoint {
+		var best = new HitPoint(-1.);
 		for( c in colliders ) {
 			var d = c.rayIntersection(r, bestMatch);
 			if( d >= 0 ) {
