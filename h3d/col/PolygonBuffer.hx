@@ -117,7 +117,9 @@ class PolygonBuffer extends Collider {
 			var e2 = p2.sub(p0);
 			var p = rdir.cross(e2);
 			var det = e1.dot(p);
-			if( det < hxd.Math.EPSILON ) continue; // backface culling (negative) and near parallel (epsilon)
+            //Allow ray intersection for both front and back of polygons
+//            if( det < hxd.Math.EPSILON ) continue;
+//			if( det > -hxd.Math.EPSILON ) continue; // backface culling (negative) and near parallel (epsilon)
 
 			var invDet = 1 / det;
 			var T = r0.sub(p0);
@@ -132,7 +134,7 @@ class PolygonBuffer extends Collider {
 
 			var t = new HitPoint(e2.dot(q) * invDet);
 
-			if( t < hxd.Math.EPSILON ) continue;
+            if( t < hxd.Math.EPSILON || Math.isNaN(t.hit)) continue;
 
 			var s0x = p1.x - p0.x; // s0 = p1 - p0
 			var s0y = p1.y - p0.y;
@@ -211,7 +213,6 @@ class PolygonBuffer extends Collider {
 		}
 		return best;
 	}
-	var sz = 50;
 
 	#if !macro
 	public function makeDebugObj() : h3d.scene.Object {

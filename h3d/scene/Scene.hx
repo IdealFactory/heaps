@@ -1,4 +1,6 @@
 package h3d.scene;
+import h3d.prim.Primitive;
+import h3d.prim.Polygon;
 
 /**
 	h3d.scene.Scene is the root class for a 3D scene. All root objects are added to it before being drawn on screen.
@@ -33,6 +35,8 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 	var hitInteractives : Array<Interactive>;
 	var eventListeners : Array<hxd.Event -> Void>;
 	var window : hxd.Window;
+    var graphics:Graphics;
+    var debugHitSphere:Mesh;
 	#if debug
 	public var checkPasses = true;
 	#end
@@ -52,8 +56,20 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 		if( engine != null )
 			camera.screenRatio = engine.width / engine.height;
 		ctx = new RenderContext();
+
+        graphics = new Graphics(this);
 		if( createRenderer ) renderer = h3d.mat.MaterialSetup.current.createRenderer();
 		if( createLightSystem ) lightSystem = h3d.mat.MaterialSetup.current.createLightSystem();
+
+        var prim = new h3d.prim.Sphere();
+//        prim.scale(0.1);
+        prim.scale(0.01);
+        prim.unindex();
+
+        // add face normals
+        prim.addNormals();
+//        debugHitSphere = new Mesh(prim, this);
+//        debugHitSphere.material.color.setColor(0xFFB280);
 	}
 
 	@:noCompletion @:dox(hide) public function setEvents(events) {
@@ -141,6 +157,12 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			var saveR = r.clone();
 			var priority = 0x80000000;
 
+            //DEBUG intersection Ray
+//            graphics.clear();
+//            graphics.lineStyle(2, 0xFF0000);
+//            graphics.moveTo(r.px, r.py, r.pz);
+//            graphics.lineTo(r.px + r.lx * 100, r.py + r.ly * 100, r.pz + r.lz * 100);
+
 			for( i in interactives ) {
 
 				if( i.priority < priority ) continue;
@@ -181,7 +203,7 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 					priority = i.priority;
 				}
 
-				hitInteractives.push(i);
+                if(!Math.isNaN(i.hitInfo.hit)) hitInteractives.push(i);
 			}
 
 			if( hitInteractives.length == 0 )
@@ -233,6 +255,9 @@ class Scene extends Object implements h3d.IDrawable implements hxd.SceneEvents.I
 			event.relZ = i.hitPoint.z;
 			event.hitInfo = i.hitInfo;
 			i.handleEvent(event);
+            if(debugHitSphere != null && i.hitPoint != null) {
+                debugHitSphere.setPosition(i.hitPoint.x, i.hitPoint.y, i.hitPoint.z);
+            }
 
 			if( event.cancel ) {
 				event.cancel = false;

@@ -1,5 +1,6 @@
 package h3d.prim;
 import h3d.col.Point;
+import h3d.col.Collider;
 
 class Polygon extends MeshPrimitive {
 
@@ -9,6 +10,7 @@ class Polygon extends MeshPrimitive {
 	public var uvs : Array<UV>;
 	public var idx : hxd.IndexBuffer;
 	public var colors : Array<Point>;
+    public var collider:Collider;
 	var scaled = 1.;
 	var translatedX = 0.;
 	var translatedY = 0.;
@@ -260,6 +262,8 @@ class Polygon extends MeshPrimitive {
 	}
 
 	override function getCollider() : h3d.col.Collider {
+        if(collider != null) return collider;
+
 		var vertexes = new haxe.ds.Vector<hxd.impl.Float32>(points.length * 3);
 		var indexes = new haxe.ds.Vector<Int>(idx.length);
 		var vid = 0;
@@ -272,6 +276,7 @@ class Polygon extends MeshPrimitive {
 			indexes[i] = idx[i];
 		var poly = new h3d.col.Polygon();
 		poly.addBuffers(vertexes, indexes);
+        collider = poly;
 		return poly;
 	}
 
