@@ -322,15 +322,19 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				material.texture = tex;
 
                 //TODO: Alpha mode might be not complete
-                if (materialNode.alphaMode == MaterialAlphaMode.Blend || materialNode.alphaMode == MaterialAlphaMode.Mask) {
+                if (materialNode.alphaMode == MaterialAlphaMode.Blend) {
                     material.uv1.hasAlpha = 1;
                     material.blendMode = Alpha;
                     material.mainPass.depthWrite = false; // Added: Disable depth writing
                     material.mainPass.depthTest = LessEqual; // Added: Set depth test
-                    if (materialNode.alphaMode == MaterialAlphaMode.Mask)
-                        material.uv1.alphaCutoff = Reflect.hasField(materialNode, "alphaCutoff") ? materialNode.alphaCutoff : 0.5;
                 }
-			}
+                if (materialNode.alphaMode == MaterialAlphaMode.Mask) {
+                    material.uv1.hasAlpha = 1;
+                    material.mainPass.culling = None;
+
+                    material.uv1.alphaCutoff = Reflect.hasField(materialNode, "alphaCutoff") ? materialNode.alphaCutoff : 0.5;
+                }
+            }
 
 			var a:Float, r:Float, g:Float, b:Float;
 			a = r = g = b = 1;
