@@ -296,7 +296,7 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 				camera.zFar = cameraNode.perspective.znear;
 		}
 		return camera;
-	} 
+	}
 
 	function createMaterial( materialNode ) {
 		var material = new h3d.mat.PBRSinglePass();
@@ -309,25 +309,27 @@ class BaseLibrary #if openfl extends openfl.events.EventDispatcher #end {
 			return material;
 		}
 
-		if ( materialNode.name != null ) {
-			material.name = materialNode.name;
-		}
-		
-		if ( materialNode.pbrMetallicRoughness != null ) {
-			var pbrmr = materialNode.pbrMetallicRoughness;
-			var tex:h3d.mat.Texture = null;
+        if ( materialNode.name != null ) {
+            material.name = materialNode.name;
+        }
+
+        if (materialNode.pbrMetallicRoughness != null) {
+            var pbrmr = materialNode.pbrMetallicRoughness;
+            var tex:h3d.mat.Texture = null;
 
 			if ( pbrmr.baseColorTexture != null ) {
 				tex = getTexture(pbrmr.baseColorTexture.index);
 				material.texture = tex;
 
-				//TODO: Alpha mode is still not quite working
-				if ( materialNode.alphaMode == MaterialAlphaMode.Blend || materialNode.alphaMode == MaterialAlphaMode.Mask) {
-					material.uv1.hasAlpha = 1;
-					material.blendMode = Alpha;
-					if (materialNode.alphaMode == MaterialAlphaMode.Mask)
-						material.uv1.alphaCutoff = Reflect.hasField(materialNode, "alphaCutoff") ? materialNode.alphaCutoff : 0.5;
-				}
+                //TODO: Alpha mode might be not complete
+                if (materialNode.alphaMode == MaterialAlphaMode.Blend || materialNode.alphaMode == MaterialAlphaMode.Mask) {
+                    material.uv1.hasAlpha = 1;
+                    material.blendMode = Alpha;
+                    material.mainPass.depthWrite = false; // Added: Disable depth writing
+                    material.mainPass.depthTest = LessEqual; // Added: Set depth test
+                    if (materialNode.alphaMode == MaterialAlphaMode.Mask)
+                        material.uv1.alphaCutoff = Reflect.hasField(materialNode, "alphaCutoff") ? materialNode.alphaCutoff : 0.5;
+                }
 			}
 
 			var a:Float, r:Float, g:Float, b:Float;
