@@ -1,11 +1,19 @@
 package h3d.shader.pbrsinglepass;
 
-class Clearcoat extends h3d.shader.pbrsinglepass.PBRSinglePassLib  {
+class Clearcoat extends PBRSinglePassLib {
 
-	static var SRC = {
+    // Public fields for external access (e.g., from PBRSinglePass.hx)
+    public var clearCoatIntensity(default, set) : Float = 0.0;
+    public var clearCoatRoughness(default, set) : Float = 0.0;
 
-        @param var vClearCoatParams : Vec2;
+    static var SRC = {
+
+        @param var vClearCoatParams : Vec2;  // Legacy: base intensity.x, roughness.y
         @param var vClearCoatRefractionParams : Vec4;
+
+        // New sampler params for textures
+        @param var clearCoatIntensitySampler : Sampler2D;
+        @param var clearCoatRoughnessSampler : Sampler2D;
 
         var normalW:Vec3;
         var geometricNormalW:Vec3;
@@ -33,9 +41,21 @@ class Clearcoat extends h3d.shader.pbrsinglepass.PBRSinglePassLib  {
             // Function clearcoatBlock
             var clearCoatIntensity = vClearCoatParams.x;
             var clearCoatRoughness = vClearCoatParams.y;
+
+            // Sample textures and modulate (Babylon.js ref: pbr.fragment.ts ~1243-1280)
+            // Use vMainUV1 for UVs (standard in PBRSinglePassLib)
+            var texIntensity = clearCoatIntensitySampler.get(vMainUV1).r;
+            var texRoughness = clearCoatRoughnessSampler.get(vMainUV1).r;
+            clearCoatIntensity *= texIntensity;
+            clearCoatRoughness *= texRoughness;
+
+            // Clamp to [0,1] for safety (assuming saturate is defined in lib; else use clamp(clearCoatIntensity, 0., 1.))
+            clearCoatIntensity = saturate(clearCoatIntensity);
+            clearCoatRoughness = saturate(clearCoatRoughness);
+
             var ccOutClearCoatIntensity:Float = clearCoatIntensity;
             var ccOutClearCoatRoughness:Float = clearCoatRoughness;
-            var specularEnvironmentR0Updated:Vec3 = getR0RemappedForClearCoat(specularEnvironmentR0); 
+            var specularEnvironmentR0Updated:Vec3 = getR0RemappedForClearCoat(specularEnvironmentR0);
             var ccOutSpecularEnvironmentR0:Vec3 = mix(specularEnvironmentR0, specularEnvironmentR0Updated, clearCoatIntensity);
             var clearCoatNormalW:Vec3 = geometricNormalW;
             var ccOutClearCoatNormalW:Vec3 = clearCoatNormalW;
@@ -82,12 +102,26 @@ class Clearcoat extends h3d.shader.pbrsinglepass.PBRSinglePassLib  {
 
             energyConservationFactor = getEnergyConservationFactor(ccOutSpecularEnvironmentR0, environmentBrdf);
         }
-    }
-    
-    public function new() {
+    };
+
+    public function new( ?intensity : Float = 0.0, ?roughness : Float = 0.0, ?intensityTex : h3d.mat.Texture, ?roughnessTex : h3d.mat.Texture ) {
         super();
-        
-        this.vClearCoatParams.set( 0, 0 );
-        this.vClearCoatRefractionParams.set( 0.0400, 0.6667, -0.5000, 2.5000 );
+        clearCoatIntensity = intensity;
+        clearCoatRoughness = roughness;
+        vClearCoatParams.set(intensity, roughness);  // Sync to legacy uniform
+        vClearCoatRefractionParams.set( 0.0400, 0.6667, -0.5000, 2.5000 );
+        // Set samplers to textures or white defaults (multiplies by 1.0 if null)
+        clearCoatIntensitySampler = intensityTex != null ? intensityTex : h3d.mat.Texture.fromColor(0xFFFFFFFF);
+        clearCoatRoughnessSampler = roughnessTex != null ? roughnessTex : h3d.mat.Texture.fromColor(0xFFFFFFFF);
+    }
+
+    function set_clearCoatIntensity(v : Float) : Float {
+        vClearCoatParams.x = v;
+        return clearCoatIntensity = v;
+    }
+
+    function set_clearCoatRoughness(v : Float) : Float {
+        vClearCoatParams.y = v;
+        return clearCoatRoughness = v;
     }
 }

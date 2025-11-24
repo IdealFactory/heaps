@@ -63,6 +63,10 @@ class PBRSinglePass extends Material {
         mainPass.addShaderAtIndex(pbrshader, baseMeshOffset);
         baseMeshOffset--;
         addBaseColor();
+        addUV1();
+        if (uv1 != null && uv1.albedoSampler == null) {
+            uv1.albedoSampler = h3d.mat.Texture.fromColor(0xFFFFFFFF); // white default, fixes missing param
+        }
         addAmbientOcculsion();
         addSurface();
         addIrradiance();
@@ -71,7 +75,7 @@ class PBRSinglePass extends Material {
         addSpecEnvReflect();
         mainPass.addShaderAtIndex(finalCombination, 8 + baseMeshOffset);
         addSheen([1, 1, 1], 0, 0);
-        addClearCoat( 0, 0 );
+//        addClearCoat( 0, 0 );
         addEmissive();
         mainPass.addShaderAtIndex(output, 10 + baseMeshOffset);
         mainPass.addShaderAtIndex(colorTransform, 11 + baseMeshOffset);
@@ -495,19 +499,18 @@ class PBRSinglePass extends Material {
     }
 
     public function addClearCoat( ccFactor:Float, ccRoughnessFactor:Float, ccTexture:h3d.mat.Texture = null, ccRoughnessTexture:h3d.mat.Texture = null, ccNormalTexture:h3d.mat.Texture = null ) {
-        if (clearCoat == null) clearCoat = new h3d.shader.pbrsinglepass.Clearcoat();
+        if (clearCoat == null) clearCoat = new h3d.shader.pbrsinglepass.Clearcoat(ccFactor, ccRoughnessFactor, ccTexture, ccRoughnessTexture);
 
         clearCoatIntensity = ccFactor;
         clearCoatRoughness = ccRoughnessFactor;
 
         if (ccTexture != null) {
-            // clearCoat.clearCoatSampler = ccTexture;
+            clearCoat.clearCoatIntensitySampler = ccTexture;
         }
         if (ccRoughnessTexture != null) {
-            // clearCoat.reflectivitySampler = ccRoughnessTexture;
+            clearCoat.clearCoatRoughnessSampler = ccRoughnessTexture;
         }
         if (ccNormalTexture != null) {
-            // clearCoat.reflectivitySampler = ccNormalTexture;
         }
 
         mainPass.addShaderAtIndex(clearCoat, 10+baseMeshOffset);
