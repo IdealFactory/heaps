@@ -65,7 +65,8 @@ class PBRSinglePass extends Material {
         addBaseColor();
         addUV1();
         if (uv1 != null && uv1.albedoSampler == null) {
-            uv1.albedoSampler = h3d.mat.Texture.fromColor(0xFFFFFFFF); // white default, fixes missing param
+            uv1.albedoSampler = h3d.mat.Texture.fromColor(0xFFFFFFFF, 1.,
+            true);  // bypassCache=true unique per material; cached would be shared
         }
         addAmbientOcculsion();
         addSurface();
@@ -171,7 +172,6 @@ class PBRSinglePass extends Material {
             var f0 = Math.pow((-a / b), 2); // Schlicks approx: (ior1 - ior2) / (ior1 + ior2) where ior2 for air is close to vacuum = 1.
             var eta = 1 / clearCoatIndexOfRefraction;
             clearCoat.vClearCoatRefractionParams.set(f0, eta, a, b);
-            trace("CC.RefractionParams:"+clearCoat.vClearCoatRefractionParams);
         };
         return val;
     }
@@ -249,7 +249,7 @@ class PBRSinglePass extends Material {
     function shaderList(sl:hxsl.ShaderList, ind:Int=0){
         if (sl!=null) {
             var txt = [ for (i in 0...ind) "  " ].join('');
-            trace(txt+" - :"+Type.getClassName(Type.getClass(sl.s)));
+//            trace(txt+" - :"+Type.getClassName(Type.getClass(sl.s)));
             if (sl.next!=null)
                 shaderList( sl.next, ind+1 );
         }
