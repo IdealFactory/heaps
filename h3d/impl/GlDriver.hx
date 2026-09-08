@@ -1088,7 +1088,7 @@ class GlDriver extends Driver {
 		if (b.multiSample == 0)
 			gl.renderbufferStorage(GL.RENDERBUFFER, format, b.width, b.height);
 		else
-			gl.renderbufferStorageMultisample(GL.RENDERBUFFER, b.multiSample, GL.DEPTH_COMPONENT16, b.width, b.height);
+			gl.renderbufferStorageMultisample(GL.RENDERBUFFER, b.multiSample, format, b.width, b.height);
 		#end
 		gl.bindRenderbuffer(GL.RENDERBUFFER, null);
 		return { r : r #if multidriver, driver : this #end };
