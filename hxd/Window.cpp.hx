@@ -1,5 +1,7 @@
 package hxd;
 
+import hxd.impl.MouseMode;
+
 enum DisplayMode {
 	Windowed;
 	Borderless;
@@ -16,7 +18,10 @@ class Window {
 	public var height(get, never) : Int;
 	public var mouseX(get, never) : Int;
 	public var mouseY(get, never) : Int;
+	@:deprecated("Use mouseMode = AbsoluteUnbound(true)")
 	public var mouseLock(get, set) : Bool;
+	public var mouseClip(get, set) : Bool;
+	public var mouseMode(default, set) : MouseMode = Absolute;
 	public var vsync(get, set) : Bool;
 	public var isFocused(get, never) : Bool;
 
@@ -122,13 +127,40 @@ class Window {
 		return windowHeight;
 	}
 
+	public dynamic function onMouseModeChange( from : MouseMode, to : MouseMode ) : Null<MouseMode> {
+		return null;
+	}
+
+	public function setCursorPos( x : Int, y : Int, emitEvent : Bool = false ) : Void {
+		if( mouseMode == Absolute && limeApp.window != null ) limeApp.window.warpMouse(x, y);
+		if( emitEvent ) event(new hxd.Event(EMove, x, y));
+	}
+
 	function get_mouseLock() : Bool {
-		return false;
+		return switch( mouseMode ) { case AbsoluteUnbound(_): true; default: false; };
 	}
 
 	function set_mouseLock( v : Bool ) : Bool {
-		if( v ) throw "Not implemented";
+		return set_mouseMode(v ? AbsoluteUnbound(true) : Absolute).equals(AbsoluteUnbound(true));
+	}
+
+	function get_mouseClip() : Bool {
 		return false;
+	}
+
+	function set_mouseClip( v : Bool ) : Bool {
+		if( v ) throw "Can't clip cursor on this platform.";
+		return false;
+	}
+
+	function set_mouseMode( v : MouseMode ) : MouseMode {
+		if( v.equals(mouseMode) ) return v;
+
+		var forced = onMouseModeChange(mouseMode, v);
+		if( forced != null ) v = forced;
+
+		if( limeApp.window != null ) limeApp.window.mouseLock = v != Absolute;
+		return mouseMode = v;
 	}
 
 	function get_vsync() : Bool return true;
